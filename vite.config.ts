@@ -17,9 +17,9 @@ export default defineConfig({
         "apple-touch-icon.png",
       ],
       manifest: {
-        name: "Plano de Manutenção",
-        short_name: "Plano de Manutenção",
-        description: "Plano de Manutenção",
+        name: "Veneza Sempre em Ação",
+        short_name: "Veneza Sempre em Ação",
+        description: "Veneza Sempre em Ação",
         theme_color: "#f0ab00",
         background_color: "#ffffff",
         display: "standalone",
