@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: #555454;
+  --color-surface: #f0ab00;
+  --color-surface-muted: #f4f4f4;
+  --color-surface-strong: #e9e9e9;
+  --color-label-text: #e9e9e9;
+  --color-border: #000000;
+  --color-border-strong: #bcbcbc;
+  --color-brand: #f0ab00;
+  --color-brand-strong: #f0ab00;
+  --color-accent: #f0ab00;
+  --color-foreground: #111111;
+  --color-foreground-muted: #1e1e1e;
+  --color-foreground-soft: #787878;
+  --color-contrast: #000000;
+}
+
+@utility no-scrollbar {
+  @apply [scrollbar-width:none] [&::-webkit-scrollbar]:hidden;
+}
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  @apply bg-background text-foreground antialiased;
+}
