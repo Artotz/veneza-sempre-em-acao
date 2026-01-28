@@ -1,12 +1,29 @@
-﻿export default function App() {
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import AppointmentDetail from "./screens/AppointmentDetail";
+import MonthView from "./screens/MonthView";
+import NotFound from "./screens/NotFound";
+import WeekView from "./screens/WeekView";
+import { ScheduleProvider } from "./state/ScheduleContext";
+
+export default function App() {
   return (
-    <main className="min-h-screen bg-background text-foreground flex items-center justify-center px-6">
-      <section className="text-center space-y-2">
-        <h1 className="text-2xl font-semibold">Ola mundo</h1>
-        <p className="text-sm text-foreground-soft">
-          Esqueleto minimo de PWA pronto para evoluir.
-        </p>
-      </section>
-    </main>
+    <ScheduleProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Navigate to="/cronograma/semana" replace />} />
+          <Route
+            path="/cronograma"
+            element={<Navigate to="/cronograma/semana" replace />}
+          />
+          <Route path="/cronograma/semana" element={<WeekView />} />
+          <Route path="/cronograma/mes" element={<MonthView />} />
+          <Route
+            path="/cronograma/agendamento/:id"
+            element={<AppointmentDetail />}
+          />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
+    </ScheduleProvider>
   );
 }
