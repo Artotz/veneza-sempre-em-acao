@@ -52,13 +52,13 @@ export default function AppointmentDetail() {
       <AppShell title="Agendamento" subtitle="Detalhe do atendimento.">
         <EmptyState
           title="Agendamento nao encontrado"
-          description="Volte para a semana e selecione outro horario."
+          description="Volte para o dia e selecione outro horario."
         />
         <Link
-          to="/cronograma/semana"
+          to="/cronograma/dia"
           className="mt-4 inline-flex items-center justify-center rounded-full border border-border px-4 py-2 text-xs font-semibold text-foreground-soft"
         >
-          Voltar para a semana
+          Voltar para o dia
         </Link>
       </AppShell>
     );
@@ -102,10 +102,10 @@ export default function AppointmentDetail() {
     <AppShell title="Detalhe do agendamento" subtitle="Acoes mockadas no dispositivo.">
       <div className="space-y-4">
         <Link
-          to="/cronograma/semana"
+          to="/cronograma/dia"
           className="inline-flex items-center gap-2 text-xs font-semibold text-foreground-soft"
         >
-          ← Voltar para a semana
+          ← Voltar para o dia
         </Link>
 
         <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
@@ -262,3 +262,4 @@ export default function AppointmentDetail() {
     </AppShell>
   );
 }
+

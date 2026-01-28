@@ -20,7 +20,7 @@ export default function MonthView() {
   return (
     <AppShell
       title="Visao mensal"
-      subtitle="Resumo simples do mes com acesso rapido por semana."
+      subtitle="Resumo simples do mes com acesso rapido por dia."
       rightSlot={monthLabel}
     >
       {state.loading ? (
@@ -62,7 +62,7 @@ export default function MonthView() {
                     return (
                       <Link
                         key={day.id}
-                        to={`/cronograma/semana?week=${weekIndex + 1}&day=${dayIndex}`}
+                        to={`/cronograma/dia?week=${weekIndex + 1}&day=${dayIndex}`}
                         className="block rounded-2xl border border-border bg-surface-muted px-3 py-3 text-sm transition hover:border-accent/40 hover:bg-white"
                       >
                         <div className="flex items-center justify-between">

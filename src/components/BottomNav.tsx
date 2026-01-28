@@ -1,8 +1,10 @@
 import { NavLink } from "react-router-dom";
 
 const navItems = [
+  { to: "/cronograma/dia", label: "Dia" },
   { to: "/cronograma/semana", label: "Semana" },
   { to: "/cronograma/mes", label: "Mes" },
+  { to: "/cronograma/lista", label: "Lista" },
 ];
 
 export const BottomNav = () => {
