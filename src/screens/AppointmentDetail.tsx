@@ -13,7 +13,7 @@ import {
   sortByStart,
 } from "../lib/schedule";
 import { useCamera } from "../hooks/useCamera";
-import { useGeo } from "../hooks/useGeo";
+import { useGeolocation } from "../hooks/useGeolocation";
 import { useSchedule } from "../state/useSchedule";
 import {
   APPOINTMENT_SELECT,
@@ -51,8 +51,11 @@ export default function AppointmentDetail() {
   const [error, setError] = useState<string | null>(null);
   const [absenceReason, setAbsenceReason] = useState("");
   const [absenceNote, setAbsenceNote] = useState("");
+  const [geoIntent, setGeoIntent] = useState<"check_in" | "check_out" | null>(
+    null
+  );
 
-  const geo = useGeo();
+  const geo = useGeolocation();
   const camera = useCamera();
 
   useEffect(() => {
@@ -151,13 +154,54 @@ export default function AppointmentDetail() {
     !blocked &&
     (appointment.status ?? "scheduled") !== "done" &&
     (appointment.status ?? "scheduled") !== "absent";
+  const isCheckInCapturing = geo.isCapturing && geoIntent === "check_in";
+  const isCheckOutCapturing = geo.isCapturing && geoIntent === "check_out";
+
+  const formatCoordinates = (lat?: number | null, lng?: number | null) => {
+    if (lat == null || lng == null) return "Nao registrado";
+    return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+  };
+
+  const formatAccuracy = (accuracy?: number | null) => {
+    if (accuracy == null) return "Nao registrado";
+    return `+/- ${Math.round(accuracy)} m`;
+  };
+
+  const formatGeoTime = (value?: string | null) =>
+    value ? formatTime(new Date(value)) : "Nao registrado";
+
+  const isGeoError = (value: unknown) => {
+    const code = (value as { code?: unknown })?.code;
+    return (
+      typeof code === "string" &&
+      [
+        "PERMISSION_DENIED",
+        "POSITION_UNAVAILABLE",
+        "TIMEOUT",
+        "UNSUPPORTED",
+        "UNKNOWN",
+      ].includes(code)
+    );
+  };
 
   const handleCheckIn = async () => {
-    if (!canCheckIn) return;
+    if (!canCheckIn || busy || geo.isCapturing) return;
+    setError(null);
+    geo.resetError();
+    setGeoIntent("check_in");
     try {
-      await actions.checkIn(appointment.id);
+      const position = await geo.capture();
+      const now = new Date().toISOString();
+      await actions.checkIn(appointment.id, {
+        at: now,
+        lat: position.lat,
+        lng: position.lng,
+        accuracy: position.accuracy,
+      });
       await loadDetail();
+      setGeoIntent(null);
     } catch (actionError) {
+      if (isGeoError(actionError)) return;
       setError(
         actionError instanceof Error
           ? actionError.message
@@ -167,11 +211,23 @@ export default function AppointmentDetail() {
   };
 
   const handleCheckOut = async () => {
-    if (!canCheckOut) return;
+    if (!canCheckOut || busy || geo.isCapturing) return;
+    setError(null);
+    geo.resetError();
+    setGeoIntent("check_out");
     try {
-      await actions.checkOut(appointment.id);
+      const position = await geo.capture();
+      const now = new Date().toISOString();
+      await actions.checkOut(appointment.id, {
+        at: now,
+        lat: position.lat,
+        lng: position.lng,
+        accuracy: position.accuracy,
+      });
       await loadDetail();
+      setGeoIntent(null);
     } catch (actionError) {
+      if (isGeoError(actionError)) return;
       setError(
         actionError instanceof Error
           ? actionError.message
@@ -193,6 +249,21 @@ export default function AppointmentDetail() {
           : "Nao foi possivel registrar a ausencia."
       );
     }
+  };
+
+  const handleRetryGeo = async () => {
+    if (geoIntent === "check_in") {
+      await handleCheckIn();
+      return;
+    }
+    if (geoIntent === "check_out") {
+      await handleCheckOut();
+    }
+  };
+
+  const handleCancelGeo = () => {
+    geo.resetError();
+    setGeoIntent(null);
   };
 
   const locationLabel = [company?.city, company?.state].filter(Boolean).join(" - ");
@@ -302,28 +373,61 @@ export default function AppointmentDetail() {
           <div className="grid gap-2">
             <button
               type="button"
-              disabled={!canCheckIn || busy}
+              disabled={!canCheckIn || busy || geo.isCapturing}
               onClick={handleCheckIn}
               className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${
-                canCheckIn && !busy
+                canCheckIn && !busy && !geo.isCapturing
                   ? "bg-success text-white"
                   : "cursor-not-allowed bg-surface-muted text-foreground-muted"
               }`}
             >
-              Fazer check-in
+              {isCheckInCapturing ? "Capturando localizacao..." : "Fazer check-in"}
             </button>
             <button
               type="button"
-              disabled={!canCheckOut || busy}
+              disabled={!canCheckOut || busy || geo.isCapturing}
               onClick={handleCheckOut}
               className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${
-                canCheckOut && !busy
+                canCheckOut && !busy && !geo.isCapturing
                   ? "bg-info text-white"
                   : "cursor-not-allowed bg-surface-muted text-foreground-muted"
               }`}
             >
-              Fazer check-out
+              {isCheckOutCapturing ? "Capturando localizacao..." : "Fazer check-out"}
             </button>
+            {geo.isCapturing ? (
+              <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
+                Capturando localizacao. Aguarde alguns segundos...
+              </div>
+            ) : null}
+            {geo.error ? (
+              <div className="rounded-2xl border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-foreground-soft">
+                <p className="font-semibold text-foreground">
+                  {geo.error.message}
+                </p>
+                <p className="mt-1 text-foreground-soft">
+                  {geo.error.code === "PERMISSION_DENIED"
+                    ? "Permita localizacao no navegador para concluir o registro."
+                    : "Voce pode tentar novamente ou cancelar."}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={handleRetryGeo}
+                    className="rounded-full border border-border bg-white px-3 py-1 text-[10px] font-semibold text-foreground"
+                  >
+                    Tentar novamente
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCancelGeo}
+                    className="rounded-full border border-border bg-white px-3 py-1 text-[10px] font-semibold text-foreground-soft"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            ) : null}
             <div className="rounded-2xl border border-border bg-surface-muted p-3">
               <p className="text-xs font-semibold text-foreground">
                 Justificar ausencia
@@ -368,13 +472,56 @@ export default function AppointmentDetail() {
         </section>
 
         <section className="rounded-3xl border border-border bg-white p-4 shadow-sm">
-          <SectionHeader title="Recursos (placeholders)" />
-          <div className="mt-3 space-y-2 text-xs text-foreground-muted">
-            <div className="flex items-center justify-between">
-              <span>Geo (mock)</span>
-              <span className="font-semibold text-foreground">
-                {geo.position.lat.toFixed(2)}, {geo.position.lng.toFixed(2)}
-              </span>
+          <SectionHeader title="Recursos" subtitle="Geolocalizacao registrada." />
+          <div className="mt-3 space-y-3 text-xs text-foreground-muted">
+            <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2">
+              <p className="text-[11px] font-semibold text-foreground">Check-in</p>
+              <div className="mt-2 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span>Geo</span>
+                  <span className="font-semibold text-foreground">
+                    {formatCoordinates(appointment.checkInLat, appointment.checkInLng)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Precisao</span>
+                  <span className="font-semibold text-foreground">
+                    {formatAccuracy(appointment.checkInAccuracyM)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Horario</span>
+                  <span className="font-semibold text-foreground">
+                    {formatGeoTime(appointment.checkInAt)}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2">
+              <p className="text-[11px] font-semibold text-foreground">Check-out</p>
+              <div className="mt-2 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span>Geo</span>
+                  <span className="font-semibold text-foreground">
+                    {formatCoordinates(
+                      appointment.checkOutLat,
+                      appointment.checkOutLng
+                    )}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Precisao</span>
+                  <span className="font-semibold text-foreground">
+                    {formatAccuracy(appointment.checkOutAccuracyM)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Horario</span>
+                  <span className="font-semibold text-foreground">
+                    {formatGeoTime(appointment.checkOutAt)}
+                  </span>
+                </div>
+              </div>
             </div>
             <div className="flex items-center justify-between">
               <span>Camera (mock)</span>

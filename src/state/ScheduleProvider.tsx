@@ -221,17 +221,29 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
         const activeRef = { active: true };
         await loadSchedule(state.range, activeRef);
       },
-      checkIn: async (id: string) =>
+      checkIn: async (
+        id: string,
+        payload: { at: string; lat: number; lng: number; accuracy: number }
+      ) =>
         runUpdate(id, () =>
           updateAppointment(id, {
-            check_in_at: new Date().toISOString(),
+            check_in_at: payload.at,
+            check_in_lat: payload.lat,
+            check_in_lng: payload.lng,
+            check_in_accuracy_m: payload.accuracy,
             status: "in_progress",
           })
         ),
-      checkOut: async (id: string) =>
+      checkOut: async (
+        id: string,
+        payload: { at: string; lat: number; lng: number; accuracy: number }
+      ) =>
         runUpdate(id, () =>
           updateAppointment(id, {
-            check_out_at: new Date().toISOString(),
+            check_out_at: payload.at,
+            check_out_lat: payload.lat,
+            check_out_lng: payload.lng,
+            check_out_accuracy_m: payload.accuracy,
             status: "done",
           })
         ),

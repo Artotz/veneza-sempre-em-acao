@@ -21,6 +21,12 @@ export type Appointment = {
   status?: SupabaseAppointmentStatus;
   checkInAt?: string | null;
   checkOutAt?: string | null;
+  checkInLat?: number | null;
+  checkInLng?: number | null;
+  checkInAccuracyM?: number | null;
+  checkOutLat?: number | null;
+  checkOutLng?: number | null;
+  checkOutAccuracyM?: number | null;
   absenceReason?: string | null;
   absenceNote?: string | null;
   notes?: string | null;

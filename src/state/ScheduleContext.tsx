@@ -20,8 +20,14 @@ export type ScheduleContextValue = {
   actions: {
     setRange: (range: { startAt: Date; endAt: Date }) => void;
     refresh: () => Promise<void>;
-    checkIn: (id: string) => Promise<Appointment | null>;
-    checkOut: (id: string) => Promise<Appointment | null>;
+    checkIn: (
+      id: string,
+      payload: { at: string; lat: number; lng: number; accuracy: number }
+    ) => Promise<Appointment | null>;
+    checkOut: (
+      id: string,
+      payload: { at: string; lat: number; lng: number; accuracy: number }
+    ) => Promise<Appointment | null>;
     justifyAbsence: (
       id: string,
       reason: string,

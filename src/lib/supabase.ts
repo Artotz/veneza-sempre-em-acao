@@ -27,6 +27,12 @@ type AppointmentRow = {
   status?: SupabaseAppointmentStatus | null;
   check_in_at?: string | null;
   check_out_at?: string | null;
+  check_in_lat?: number | null;
+  check_in_lng?: number | null;
+  check_in_accuracy_m?: number | null;
+  check_out_lat?: number | null;
+  check_out_lng?: number | null;
+  check_out_accuracy_m?: number | null;
   absence_reason?: string | null;
   absence_note?: string | null;
   notes?: string | null;
@@ -39,7 +45,7 @@ export const COMPANY_SELECT =
   "id, document, name, state, csa, carteira_def, client_class, carteira_def2, classe_cliente, validacao, referencia, created_at";
 
 export const APPOINTMENT_SELECT =
-  "id, company_id, appointment_id, consultant_id, consultant_name, starts_at, ends_at, status, check_in_at, check_out_at, absence_reason, absence_note, notes, created_at, updated_at";
+  "id, company_id, appointment_id, consultant_id, consultant_name, starts_at, ends_at, status, check_in_at, check_out_at, check_in_lat, check_in_lng, check_in_accuracy_m, check_out_lat, check_out_lng, check_out_accuracy_m, absence_reason, absence_note, notes, created_at, updated_at";
 
 export const mapCompany = (row: CompanyRow): Company => ({
   id: row.id,
@@ -76,6 +82,12 @@ export const mapAppointment = (row: AppointmentRow): Appointment => ({
   status: row.status ?? "scheduled",
   checkInAt: row.check_in_at ?? null,
   checkOutAt: row.check_out_at ?? null,
+  checkInLat: row.check_in_lat ?? null,
+  checkInLng: row.check_in_lng ?? null,
+  checkInAccuracyM: row.check_in_accuracy_m ?? null,
+  checkOutLat: row.check_out_lat ?? null,
+  checkOutLng: row.check_out_lng ?? null,
+  checkOutAccuracyM: row.check_out_accuracy_m ?? null,
   absenceReason: row.absence_reason ?? null,
   absenceNote: row.absence_note ?? null,
   notes: row.notes ?? null,
