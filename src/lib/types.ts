@@ -27,6 +27,7 @@ export type Appointment = {
   checkOutLat?: number | null;
   checkOutLng?: number | null;
   checkOutAccuracyM?: number | null;
+  addressSnapshot?: string | null;
   absenceReason?: string | null;
   absenceNote?: string | null;
   notes?: string | null;
@@ -40,6 +41,8 @@ export type Company = {
   name: string;
   document?: string | null;
   state?: string | null;
+  lat?: number | null;
+  lng?: number | null;
   csa?: string | null;
   carteiraDef?: string | null;
   clientClass?: string | null;
@@ -49,5 +52,4 @@ export type Company = {
   referencia?: string | null;
   createdAt?: string | null;
   segment?: string | null;
-  city?: string | null;
 };

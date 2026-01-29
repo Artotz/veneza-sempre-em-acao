@@ -173,12 +173,10 @@ export default function AllAppointments() {
               orderedAppointments.map((appointment) => {
                 const company = selectors.getCompany(appointment.companyId);
                 const companyName = company?.name ?? "Empresa";
-                const location = [company?.city, company?.state]
-                  .filter(Boolean)
-                  .join(" - ");
                 const appointmentDetail = getAppointmentTitle(appointment);
-                const detailLabel = location
-                  ? `${appointmentDetail} - ${location}`
+                const snapshot = appointment.addressSnapshot;
+                const detailLabel = snapshot
+                  ? `${appointmentDetail} - ${snapshot}`
                   : appointmentDetail;
                 const key = buildDayKey(new Date(appointment.startAt));
                 const dayAppointments = dayGroups.get(key) ?? [];

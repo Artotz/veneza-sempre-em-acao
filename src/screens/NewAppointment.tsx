@@ -10,6 +10,14 @@ import { createSupabaseBrowserClient } from "../lib/supabaseClient";
 import { COMPANY_SELECT, mapCompany } from "../lib/supabase";
 import type { Company } from "../lib/types";
 
+const buildAddressSnapshot = (company: Company): string | null => {
+  if (company.lat == null || company.lng == null) return null;
+  const lat = Number(company.lat);
+  const lng = Number(company.lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  return `Empresa georreferenciada (lat: ${lat.toFixed(5)}, lng: ${lng.toFixed(5)})`;
+};
+
 export default function NewAppointment() {
   const { id } = useParams();
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
@@ -67,6 +75,10 @@ export default function NewAppointment() {
       setError("Empresa nao encontrada.");
       return;
     }
+    if (!company) {
+      setError("Empresa nao encontrada.");
+      return;
+    }
 
     if (!startsAt || !endsAt) {
       setError("Preencha inicio e fim.");
@@ -90,6 +102,7 @@ export default function NewAppointment() {
 
     const consultantName = getUserDisplayName(user);
 
+    const addressSnapshot = buildAddressSnapshot(company);
     const { error: insertError } = await supabase.from("apontamentos").insert({
       company_id: id,
       starts_at: startsAtDate.toISOString(),
@@ -97,6 +110,7 @@ export default function NewAppointment() {
       consultant_id: user?.id ?? null,
       consultant_name: consultantName ?? user?.email ?? null,
       status: "scheduled",
+      address_snapshot: addressSnapshot,
     });
 
     setSaving(false);
@@ -157,10 +171,8 @@ export default function NewAppointment() {
             <p className="text-lg font-semibold text-foreground">
               {company.name}
             </p>
-            {[company.city, company.state].filter(Boolean).length ? (
-              <p className="text-sm text-foreground-muted">
-                {[company.city, company.state].filter(Boolean).join(" - ")}
-              </p>
+            {company.state ? (
+              <p className="text-sm text-foreground-muted">{company.state}</p>
             ) : null}
           </div>
         </section>
@@ -176,6 +188,10 @@ export default function NewAppointment() {
               {error}
             </div>
           ) : null}
+
+          <div className="rounded-2xl border border-border bg-surface-muted px-4 py-3 text-xs text-foreground-soft">
+            Endereco sera registrado automaticamente com base na empresa.
+          </div>
 
           <div className="grid gap-3 md:grid-cols-2">
             <label className="space-y-2 text-sm font-semibold text-foreground">

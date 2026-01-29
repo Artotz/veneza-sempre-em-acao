@@ -266,7 +266,7 @@ export default function AppointmentDetail() {
     setGeoIntent(null);
   };
 
-  const locationLabel = [company?.city, company?.state].filter(Boolean).join(" - ");
+  const snapshotLabel = appointment.addressSnapshot ?? null;
 
   const absenceLabel =
     absenceReasonLabels[appointment.absenceReason ?? ""] ??
@@ -317,11 +317,11 @@ export default function AppointmentDetail() {
                 {appointment.consultant || "Nao informado"}
               </span>
             </div>
-            {locationLabel ? (
+            {snapshotLabel ? (
               <div className="flex items-center justify-between">
-                <span>Local</span>
+                <span>Endereco (snapshot)</span>
                 <span className="font-semibold text-foreground">
-                  {locationLabel}
+                  {snapshotLabel}
                 </span>
               </div>
             ) : null}
