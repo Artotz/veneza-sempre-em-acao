@@ -32,14 +32,16 @@ const buildDayGroups = (appointments: Appointment[]) => {
 
 type AppointmentListItemProps = {
   appointment: Appointment;
-  companyLabel: string;
+  companyName: string;
+  detailLabel: string;
   blocked: boolean;
   onClick: () => void;
 };
 
 const AppointmentListItem = ({
   appointment,
-  companyLabel,
+  companyName,
+  detailLabel,
   blocked,
   onClick,
 }: AppointmentListItemProps) => {
@@ -60,9 +62,9 @@ const AppointmentListItem = ({
             {dayLabel} - {formatAppointmentWindow(appointment)}
           </p>
           <h3 className="mt-1 text-base font-semibold text-foreground">
-            {getAppointmentTitle(appointment)}
+            {companyName}
           </h3>
-          <p className="mt-1 text-sm text-foreground-muted">{companyLabel}</p>
+          <p className="mt-1 text-sm text-foreground-muted">{detailLabel}</p>
         </div>
         <StatusBadge status={status} />
       </div>
@@ -170,12 +172,14 @@ export default function AllAppointments() {
             {orderedAppointments.length ? (
               orderedAppointments.map((appointment) => {
                 const company = selectors.getCompany(appointment.companyId);
+                const companyName = company?.name ?? "Empresa";
                 const location = [company?.city, company?.state]
                   .filter(Boolean)
                   .join(" - ");
-                const companyLabel = location
-                  ? `${company?.name ?? "Empresa"} - ${location}`
-                  : company?.name ?? "Empresa";
+                const appointmentDetail = getAppointmentTitle(appointment);
+                const detailLabel = location
+                  ? `${appointmentDetail} - ${location}`
+                  : appointmentDetail;
                 const key = buildDayKey(new Date(appointment.startAt));
                 const dayAppointments = dayGroups.get(key) ?? [];
                 const blocked = isBlocked(appointment, dayAppointments);
@@ -184,7 +188,8 @@ export default function AllAppointments() {
                   <AppointmentListItem
                     key={appointment.id}
                     appointment={appointment}
-                    companyLabel={companyLabel}
+                    companyName={companyName}
+                    detailLabel={detailLabel}
                     blocked={blocked}
                     onClick={() => handleOpenAppointment(appointment.id)}
                   />

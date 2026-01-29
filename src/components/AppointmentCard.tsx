@@ -37,9 +37,11 @@ export const AppointmentCard = ({
             #{order} - {formatAppointmentWindow(appointment)}
           </p>
           <h3 className="mt-1 text-base font-semibold text-foreground">
-            {getAppointmentTitle(appointment)}
+            {companyName}
           </h3>
-          <p className="mt-1 text-sm text-foreground-muted">{companyName}</p>
+          <p className="mt-1 text-sm text-foreground-muted">
+            {getAppointmentTitle(appointment)}
+          </p>
         </div>
         <StatusBadge status={status} />
       </div>

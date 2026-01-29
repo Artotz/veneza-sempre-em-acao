@@ -10,14 +10,14 @@ import {
   formatWeekRange,
   isSameDay,
 } from "../lib/date";
-import { getAppointmentTitle, sortByStart } from "../lib/schedule";
+import { sortByStart } from "../lib/schedule";
 import { useSchedule } from "../state/useSchedule";
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(Math.max(value, min), max);
 
 export default function WeekView() {
-  const { state, actions } = useSchedule();
+  const { state, actions, selectors } = useSchedule();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
@@ -108,18 +108,25 @@ export default function WeekView() {
                     </div>
                     <div className="flex min-w-0 flex-col gap-1">
                       {dayAppointments.length ? (
-                        dayAppointments.map((appointment) => (
-                          <button
-                            key={appointment.id}
-                            type="button"
-                            onClick={() => handleOpenAppointment(appointment.id)}
-                            className="min-w-0 rounded-md border border-border bg-white px-1 py-1 text-[9px] font-semibold text-foreground transition hover:border-accent/40"
-                          >
-                            <span className="block truncate">
-                              {getAppointmentTitle(appointment)}
-                            </span>
-                          </button>
-                        ))
+                        dayAppointments.map((appointment) => {
+                          const companyName =
+                            selectors.getCompany(appointment.companyId)?.name ??
+                            "Empresa";
+                          return (
+                            <button
+                              key={appointment.id}
+                              type="button"
+                              onClick={() =>
+                                handleOpenAppointment(appointment.id)
+                              }
+                              className="min-w-0 rounded-md border border-border bg-white px-1 py-1 text-[9px] font-semibold text-foreground transition hover:border-accent/40"
+                            >
+                              <span className="block truncate">
+                                {companyName}
+                              </span>
+                            </button>
+                          );
+                        })
                       ) : (
                         <div className="rounded-md border border-dashed border-border px-1 py-1 text-center text-[9px] text-foreground-muted">
                           Sem
