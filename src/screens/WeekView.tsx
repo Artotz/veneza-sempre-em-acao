@@ -11,13 +11,13 @@ import {
   isSameDay,
 } from "../lib/date";
 import { sortByStart } from "../lib/schedule";
-import { useSchedule } from "../state/ScheduleContext";
+import { useSchedule } from "../state/useSchedule";
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(Math.max(value, min), max);
 
 export default function WeekView() {
-  const { state } = useSchedule();
+  const { state, actions } = useSchedule();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
@@ -39,6 +39,10 @@ export default function WeekView() {
 
   const week = weeks[selectedWeekIndex] ?? weeks[0];
 
+  useEffect(() => {
+    actions.setRange({ startAt: week.startAt, endAt: week.endAt });
+  }, [actions, week.endAt, week.startAt]);
+
   const dayGroups = useMemo(() => {
     return week.days.map((day) =>
       state.appointments
@@ -52,7 +56,7 @@ export default function WeekView() {
   const weekAppointments = dayGroups.flat();
 
   const handleOpenAppointment = (id: string) => {
-    navigate(`/cronograma/agendamento/${id}`);
+    navigate(`/apontamentos/${id}`);
   };
 
   return (

@@ -1,10 +1,10 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppShell } from "../components/AppShell";
 import { EmptyState } from "../components/EmptyState";
 import { SectionHeader } from "../components/SectionHeader";
 import { StatusBadge } from "../components/StatusBadge";
-import { formatDateShort, formatMonthYear } from "../lib/date";
+import { buildMonthWeeks, formatDateShort, formatMonthYear } from "../lib/date";
 import {
   formatAppointmentWindow,
   getAppointmentStatus,
@@ -12,7 +12,7 @@ import {
   sortByStart,
 } from "../lib/schedule";
 import type { Appointment } from "../lib/types";
-import { useSchedule } from "../state/ScheduleContext";
+import { useSchedule } from "../state/useSchedule";
 
 const buildDayKey = (date: Date) =>
   `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
@@ -84,8 +84,19 @@ const AppointmentListItem = ({
 };
 
 export default function AllAppointments() {
-  const { state, selectors } = useSchedule();
+  const { state, selectors, actions } = useSchedule();
   const navigate = useNavigate();
+
+  const weeks = useMemo(() => buildMonthWeeks(new Date()), []);
+  const monthRange = useMemo(() => {
+    const startAt = weeks[0]?.startAt ?? new Date();
+    const endAt = weeks[weeks.length - 1]?.endAt ?? new Date();
+    return { startAt, endAt };
+  }, [weeks]);
+
+  useEffect(() => {
+    actions.setRange({ startAt: monthRange.startAt, endAt: monthRange.endAt });
+  }, [actions, monthRange.endAt, monthRange.startAt]);
 
   const orderedAppointments = useMemo(
     () => [...state.appointments].sort(sortByStart),
@@ -113,7 +124,7 @@ export default function AllAppointments() {
   }, [state.appointments]);
 
   const handleOpenAppointment = (id: string) => {
-    navigate(`/cronograma/agendamento/${id}`);
+    navigate(`/apontamentos/${id}`);
   };
 
   return (

@@ -7,13 +7,13 @@ export default function NotFound() {
     <AppShell title="Pagina nao encontrada">
       <EmptyState
         title="Rota invalida"
-        description="Escolha uma opcao para voltar ao cronograma."
+        description="Escolha uma opcao para voltar ao app."
       />
       <Link
-        to="/cronograma/dia"
+        to="/empresas"
         className="mt-4 inline-flex items-center justify-center rounded-full border border-border px-4 py-2 text-xs font-semibold text-foreground-soft"
       >
-        Ir para o dia
+        Ir para empresas
       </Link>
     </AppShell>
   );

@@ -30,7 +30,7 @@ export const AppointmentCard = ({
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold text-foreground-soft">
-            #{order} · {formatAppointmentWindow(appointment)}
+            #{order} - {formatAppointmentWindow(appointment)}
           </p>
           <h3 className="mt-1 text-base font-semibold text-foreground">
             {appointment.title}

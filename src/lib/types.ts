@@ -4,24 +4,48 @@ export type AppointmentStatus =
   | "concluido"
   | "ausente";
 
+export type SupabaseAppointmentStatus =
+  | "scheduled"
+  | "in_progress"
+  | "done"
+  | "absent";
+
 export type Appointment = {
   id: string;
   companyId: string;
+  appointmentId?: string | null;
+  consultantId?: string | null;
   title: string;
   consultant: string;
   address: string;
   city: string;
+  state?: string | null;
   startAt: string;
   endAt: string;
-  checkInAt?: string;
-  checkOutAt?: string;
-  absenceReason?: string;
-  notes?: string;
+  equipment?: string | null;
+  status?: SupabaseAppointmentStatus;
+  checkInAt?: string | null;
+  checkOutAt?: string | null;
+  absenceReason?: string | null;
+  absenceNote?: string | null;
+  notes?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
 };
 
 export type Company = {
   id: string;
   name: string;
-  segment: string;
-  city: string;
+  document?: string | null;
+  state?: string | null;
+  csa?: string | null;
+  carteiraDef?: string | null;
+  clientClass?: string | null;
+  carteiraDef2?: string | null;
+  classeCliente?: string | null;
+  validacao?: string | null;
+  referencia?: string | null;
+  createdAt?: string | null;
+  segment?: string | null;
+  city?: string | null;
 };

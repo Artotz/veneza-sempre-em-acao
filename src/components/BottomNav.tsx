@@ -1,6 +1,7 @@
 import { NavLink } from "react-router-dom";
 
 const navItems = [
+  { to: "/empresas", label: "Empresas" },
   { to: "/cronograma/dia", label: "Dia" },
   { to: "/cronograma/semana", label: "Semana" },
   { to: "/cronograma/mes", label: "Mes" },

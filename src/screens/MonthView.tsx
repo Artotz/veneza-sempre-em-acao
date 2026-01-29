@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { AppShell } from "../components/AppShell";
 import { EmptyState } from "../components/EmptyState";
@@ -10,12 +10,21 @@ import {
   isSameDay,
 } from "../lib/date";
 import { sortByStart } from "../lib/schedule";
-import { useSchedule } from "../state/ScheduleContext";
+import { useSchedule } from "../state/useSchedule";
 
 export default function MonthView() {
-  const { state } = useSchedule();
+  const { state, actions } = useSchedule();
   const weeks = useMemo(() => buildMonthWeeks(new Date()), []);
   const monthLabel = formatMonthYear(new Date());
+  const monthRange = useMemo(() => {
+    const startAt = weeks[0]?.startAt ?? new Date();
+    const endAt = weeks[weeks.length - 1]?.endAt ?? new Date();
+    return { startAt, endAt };
+  }, [weeks]);
+
+  useEffect(() => {
+    actions.setRange({ startAt: monthRange.startAt, endAt: monthRange.endAt });
+  }, [actions, monthRange.endAt, monthRange.startAt]);
 
   return (
     <AppShell
@@ -68,14 +77,14 @@ export default function MonthView() {
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="font-semibold text-foreground">
-                              {day.short} · {day.label}
+                              {day.short} - {day.label}
                             </p>
                             <p className="mt-1 text-xs text-foreground-muted">
                               {dayAppointments.length
                                 ? dayAppointments
                                     .slice(0, 2)
                                     .map((appointment) => appointment.title)
-                                    .join(" · ")
+                                    .join(" - ")
                                 : "Sem agendamentos"}
                             </p>
                           </div>

@@ -4,14 +4,19 @@ import { formatTime } from "./date";
 export const getAppointmentStatus = (
   appointment: Appointment
 ): AppointmentStatus => {
-  if (appointment.absenceReason) return "ausente";
-  if (appointment.checkOutAt) return "concluido";
-  if (appointment.checkInAt) return "em_execucao";
+  if (appointment.status === "absent" || appointment.absenceReason)
+    return "ausente";
+  if (appointment.status === "done" || appointment.checkOutAt)
+    return "concluido";
+  if (appointment.status === "in_progress" || appointment.checkInAt)
+    return "em_execucao";
   return "pendente";
 };
 
 export const isPending = (appointment: Appointment) =>
-  !appointment.checkOutAt && !appointment.absenceReason;
+  appointment.status
+    ? appointment.status === "scheduled"
+    : !appointment.checkOutAt && !appointment.absenceReason;
 
 export const sortByStart = (a: Appointment, b: Appointment) =>
   new Date(a.startAt).getTime() - new Date(b.startAt).getTime();

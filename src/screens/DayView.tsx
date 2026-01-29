@@ -14,13 +14,13 @@ import {
   isSameDay,
 } from "../lib/date";
 import { getFirstPendingId, isBlocked, isPending, sortByStart } from "../lib/schedule";
-import { useSchedule } from "../state/ScheduleContext";
+import { useSchedule } from "../state/useSchedule";
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(Math.max(value, min), max);
 
 export default function DayView() {
-  const { state, selectors } = useSchedule();
+  const { state, selectors, actions } = useSchedule();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
@@ -51,6 +51,10 @@ export default function DayView() {
 
   const week = weeks[selectedWeekIndex] ?? weeks[0];
 
+  useEffect(() => {
+    actions.setRange({ startAt: week.startAt, endAt: week.endAt });
+  }, [actions, week.endAt, week.startAt]);
+
   const dayGroups = useMemo(() => {
     return week.days.map((day) => {
       const items = state.appointments.filter((appointment) =>
@@ -67,7 +71,7 @@ export default function DayView() {
   const firstPendingId = getFirstPendingId(activeDayAppointments);
 
   const handleOpenAppointment = (id: string) => {
-    navigate(`/cronograma/agendamento/${id}`);
+    navigate(`/apontamentos/${id}`);
   };
 
   return (
@@ -121,7 +125,7 @@ export default function DayView() {
                   {activeDay.full}
                 </p>
                 <p className="text-xs text-foreground-muted">
-                  {activeDay.label} · {activeDayAppointments.length} agendamentos
+                  {activeDay.label} - {activeDayAppointments.length} agendamentos
                 </p>
               </div>
               {firstPendingId ? (

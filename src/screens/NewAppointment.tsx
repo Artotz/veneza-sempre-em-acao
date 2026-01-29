@@ -1,0 +1,287 @@
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { AppShell } from "../components/AppShell";
+import { EmptyState } from "../components/EmptyState";
+import { SectionHeader } from "../components/SectionHeader";
+import { useAuth } from "../contexts/useAuth";
+import { getUserDisplayName } from "../lib/auth";
+import { useSchedule } from "../state/useSchedule";
+import { createSupabaseBrowserClient } from "../lib/supabaseClient";
+import { COMPANY_SELECT, mapCompany } from "../lib/supabase";
+import type { Company } from "../lib/types";
+
+export default function NewAppointment() {
+  const { id } = useParams();
+  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { actions } = useSchedule();
+
+  const [company, setCompany] = useState<Company | null>(null);
+  const [loadingCompany, setLoadingCompany] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [title, setTitle] = useState("");
+  const [startsAt, setStartsAt] = useState("");
+  const [endsAt, setEndsAt] = useState("");
+  const [equipment, setEquipment] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [address, setAddress] = useState("");
+  const [notes, setNotes] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    const loadCompany = async () => {
+      if (!id) {
+        setError("Empresa nao encontrada.");
+        setLoadingCompany(false);
+        return;
+      }
+
+      const { data, error: companyError } = await supabase
+        .from("companies")
+        .select(COMPANY_SELECT)
+        .eq("id", id)
+        .single();
+
+      if (!active) return;
+
+      if (companyError) {
+        setError(companyError.message);
+        setLoadingCompany(false);
+        return;
+      }
+
+      setCompany(data ? mapCompany(data) : null);
+      setLoadingCompany(false);
+    };
+
+    void loadCompany();
+
+    return () => {
+      active = false;
+    };
+  }, [id, supabase]);
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError(null);
+
+    if (!id) {
+      setError("Empresa nao encontrada.");
+      return;
+    }
+
+    if (!title.trim() || !startsAt || !endsAt) {
+      setError("Preencha titulo, inicio e fim.");
+      return;
+    }
+
+    const startsAtDate = new Date(startsAt);
+    const endsAtDate = new Date(endsAt);
+
+    if (Number.isNaN(startsAtDate.getTime()) || Number.isNaN(endsAtDate.getTime())) {
+      setError("Datas invalidas.");
+      return;
+    }
+
+    if (endsAtDate <= startsAtDate) {
+      setError("Fim precisa ser depois do inicio.");
+      return;
+    }
+
+    setSaving(true);
+
+    const consultantName = getUserDisplayName(user);
+
+    const { error: insertError } = await supabase.from("apontamentos").insert({
+      company_id: id,
+      title: title.trim(),
+      starts_at: startsAtDate.toISOString(),
+      ends_at: endsAtDate.toISOString(),
+      equipment: equipment.trim() || null,
+      city: city.trim() || null,
+      state: state.trim() || null,
+      address_snapshot: address.trim() || null,
+      notes: notes.trim() || null,
+      consultant_id: user?.id ?? null,
+      consultant_name: consultantName ?? user?.email ?? null,
+      status: "scheduled",
+    });
+
+    setSaving(false);
+
+    if (insertError) {
+      setError(insertError.message);
+      return;
+    }
+
+    await actions.refresh();
+    navigate("/cronograma/dia", { replace: true });
+  };
+
+  if (loadingCompany) {
+    return (
+      <AppShell title="Novo apontamento" subtitle="Carregando empresa...">
+        <div className="space-y-3">
+          <div className="h-24 animate-pulse rounded-3xl bg-surface-muted" />
+          <div className="h-32 animate-pulse rounded-3xl bg-surface-muted" />
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (!company) {
+    return (
+      <AppShell title="Novo apontamento" subtitle="Empresa nao encontrada.">
+        <EmptyState
+          title="Empresa nao encontrada"
+          description={error ?? "Verifique o link ou escolha outra empresa."}
+        />
+        <Link
+          to="/empresas"
+          className="mt-4 inline-flex items-center justify-center rounded-full border border-border px-4 py-2 text-xs font-semibold text-foreground-soft"
+        >
+          Voltar para empresas
+        </Link>
+      </AppShell>
+    );
+  }
+
+  return (
+    <AppShell title="Novo apontamento" subtitle="Preencha os dados essenciais.">
+      <div className="space-y-4">
+        <Link
+          to="/empresas"
+          className="inline-flex items-center gap-2 text-xs font-semibold text-foreground-soft"
+        >
+          Voltar para empresas
+        </Link>
+
+        <section className="space-y-2 rounded-3xl border border-border bg-white p-4 shadow-sm">
+          <SectionHeader title="Empresa" />
+          <div className="space-y-1">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-foreground-soft">
+              {company.document ?? "Sem documento"}
+            </p>
+            <p className="text-lg font-semibold text-foreground">
+              {company.name}
+            </p>
+            <p className="text-sm text-foreground-muted">
+              {company.state ?? "Estado nao informado"}
+            </p>
+          </div>
+        </section>
+
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-4 rounded-3xl border border-border bg-white p-4 shadow-sm"
+        >
+          <SectionHeader title="Dados do apontamento" />
+
+          {error ? (
+            <div className="rounded-2xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">
+              {error}
+            </div>
+          ) : null}
+
+          <label className="space-y-2 text-sm font-semibold text-foreground">
+            <span>Titulo</span>
+            <input
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              placeholder="Ex: Inspecao preventiva"
+              className="w-full rounded-2xl border border-border bg-surface-muted px-4 py-3 text-sm font-normal text-foreground outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
+              required
+            />
+          </label>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <label className="space-y-2 text-sm font-semibold text-foreground">
+              <span>Inicio</span>
+              <input
+                type="datetime-local"
+                value={startsAt}
+                onChange={(event) => setStartsAt(event.target.value)}
+                className="w-full rounded-2xl border border-border bg-surface-muted px-4 py-3 text-sm font-normal text-foreground outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
+                required
+              />
+            </label>
+            <label className="space-y-2 text-sm font-semibold text-foreground">
+              <span>Fim</span>
+              <input
+                type="datetime-local"
+                value={endsAt}
+                onChange={(event) => setEndsAt(event.target.value)}
+                className="w-full rounded-2xl border border-border bg-surface-muted px-4 py-3 text-sm font-normal text-foreground outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
+                required
+              />
+            </label>
+          </div>
+
+          <label className="space-y-2 text-sm font-semibold text-foreground">
+            <span>Equipamento</span>
+            <input
+              value={equipment}
+              onChange={(event) => setEquipment(event.target.value)}
+              placeholder="Opcional"
+              className="w-full rounded-2xl border border-border bg-surface-muted px-4 py-3 text-sm font-normal text-foreground outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
+            />
+          </label>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <label className="space-y-2 text-sm font-semibold text-foreground">
+              <span>Cidade</span>
+              <input
+                value={city}
+                onChange={(event) => setCity(event.target.value)}
+                placeholder="Opcional"
+                className="w-full rounded-2xl border border-border bg-surface-muted px-4 py-3 text-sm font-normal text-foreground outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
+              />
+            </label>
+            <label className="space-y-2 text-sm font-semibold text-foreground">
+              <span>Estado</span>
+              <input
+                value={state}
+                onChange={(event) => setState(event.target.value)}
+                placeholder="Opcional"
+                className="w-full rounded-2xl border border-border bg-surface-muted px-4 py-3 text-sm font-normal text-foreground outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
+              />
+            </label>
+          </div>
+
+          <label className="space-y-2 text-sm font-semibold text-foreground">
+            <span>Endereco snapshot</span>
+            <input
+              value={address}
+              onChange={(event) => setAddress(event.target.value)}
+              placeholder="Opcional"
+              className="w-full rounded-2xl border border-border bg-surface-muted px-4 py-3 text-sm font-normal text-foreground outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
+            />
+          </label>
+
+          <label className="space-y-2 text-sm font-semibold text-foreground">
+            <span>Observacoes</span>
+            <textarea
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+              placeholder="Opcional"
+              className="w-full resize-none rounded-2xl border border-border bg-surface-muted px-4 py-3 text-sm font-normal text-foreground outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
+              rows={3}
+            />
+          </label>
+
+          <button
+            type="submit"
+            disabled={saving}
+            className="w-full rounded-2xl bg-foreground px-4 py-3 text-sm font-semibold text-white transition hover:bg-foreground/90 disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {saving ? "Salvando..." : "Salvar apontamento"}
+          </button>
+        </form>
+      </div>
+    </AppShell>
+  );
+}
