@@ -104,15 +104,26 @@ export const isSameDay = (a: Date, b: Date) =>
   a.getMonth() === b.getMonth() &&
   a.getDate() === b.getDate();
 
-export const buildMonthWeeks = (referenceDate: Date, weeksCount = 4) => {
+export const buildMonthWeeks = (referenceDate: Date, weeksCount?: number) => {
   const monthStart = new Date(
     referenceDate.getFullYear(),
     referenceDate.getMonth(),
     1
   );
+  const monthEnd = new Date(
+    referenceDate.getFullYear(),
+    referenceDate.getMonth() + 1,
+    0
+  );
   const firstWeekStart = startOfWeekMonday(monthStart);
+  const lastWeekStart = startOfWeekMonday(monthEnd);
+  const weekMs = 7 * 24 * 60 * 60 * 1000;
+  const computedWeeksCount =
+    weeksCount ??
+    Math.floor((lastWeekStart.getTime() - firstWeekStart.getTime()) / weekMs) +
+    1;
 
-  return Array.from({ length: weeksCount }).map((_, index) => {
+  return Array.from({ length: computedWeeksCount }).map((_, index) => {
     const startAt = addDays(firstWeekStart, index * 7);
     const endAt = addDays(startAt, 6);
     const days = WEEK_DAYS.map((day) => {
