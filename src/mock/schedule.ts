@@ -10,8 +10,8 @@ type AppointmentTemplate = {
   title: string;
   companyId: string;
   consultant: string;
-  address: string;
-  city: string;
+  address?: string;
+  city?: string;
   status?: "done" | "inProgress" | "absent";
 };
 
@@ -430,12 +430,10 @@ const buildAppointments = () => {
     const base: Appointment = {
       id: template.id,
       companyId: template.companyId,
-      title: template.title,
       consultant: template.consultant,
-      address: template.address,
-      city: template.city,
       startAt: startAt.toISOString(),
       endAt: endAt.toISOString(),
+      appointmentTitle: template.title,
     };
 
     if (template.status === "done") {

@@ -8,6 +8,7 @@ import { buildMonthWeeks, formatDateShort, formatMonthYear } from "../lib/date";
 import {
   formatAppointmentWindow,
   getAppointmentStatus,
+  getAppointmentTitle,
   isBlocked,
   sortByStart,
 } from "../lib/schedule";
@@ -31,14 +32,14 @@ const buildDayGroups = (appointments: Appointment[]) => {
 
 type AppointmentListItemProps = {
   appointment: Appointment;
-  companyName: string;
+  companyLabel: string;
   blocked: boolean;
   onClick: () => void;
 };
 
 const AppointmentListItem = ({
   appointment,
-  companyName,
+  companyLabel,
   blocked,
   onClick,
 }: AppointmentListItemProps) => {
@@ -59,16 +60,13 @@ const AppointmentListItem = ({
             {dayLabel} - {formatAppointmentWindow(appointment)}
           </p>
           <h3 className="mt-1 text-base font-semibold text-foreground">
-            {appointment.title}
+            {getAppointmentTitle(appointment)}
           </h3>
-          <p className="mt-1 text-sm text-foreground-muted">
-            {companyName} - {appointment.city}
-          </p>
+          <p className="mt-1 text-sm text-foreground-muted">{companyLabel}</p>
         </div>
         <StatusBadge status={status} />
       </div>
-      <div className="mt-3 flex items-center justify-between text-xs text-foreground-soft">
-        <span>{appointment.address}</span>
+      <div className="mt-3 flex items-center justify-end text-xs text-foreground-soft">
         <span
           className={`rounded-full px-2 py-1 text-[10px] font-semibold ${
             blocked
@@ -171,8 +169,13 @@ export default function AllAppointments() {
           <section className="space-y-3">
             {orderedAppointments.length ? (
               orderedAppointments.map((appointment) => {
-                const company =
-                  selectors.getCompany(appointment.companyId)?.name ?? "Empresa";
+                const company = selectors.getCompany(appointment.companyId);
+                const location = [company?.city, company?.state]
+                  .filter(Boolean)
+                  .join(" - ");
+                const companyLabel = location
+                  ? `${company?.name ?? "Empresa"} - ${location}`
+                  : company?.name ?? "Empresa";
                 const key = buildDayKey(new Date(appointment.startAt));
                 const dayAppointments = dayGroups.get(key) ?? [];
                 const blocked = isBlocked(appointment, dayAppointments);
@@ -181,7 +184,7 @@ export default function AllAppointments() {
                   <AppointmentListItem
                     key={appointment.id}
                     appointment={appointment}
-                    companyName={company}
+                    companyLabel={companyLabel}
                     blocked={blocked}
                     onClick={() => handleOpenAppointment(appointment.id)}
                   />

@@ -1,5 +1,9 @@
 import type { Appointment } from "../lib/types";
-import { formatAppointmentWindow, getAppointmentStatus } from "../lib/schedule";
+import {
+  formatAppointmentWindow,
+  getAppointmentStatus,
+  getAppointmentTitle,
+} from "../lib/schedule";
 import { StatusBadge } from "./StatusBadge";
 
 type AppointmentCardProps = {
@@ -33,14 +37,13 @@ export const AppointmentCard = ({
             #{order} - {formatAppointmentWindow(appointment)}
           </p>
           <h3 className="mt-1 text-base font-semibold text-foreground">
-            {appointment.title}
+            {getAppointmentTitle(appointment)}
           </h3>
           <p className="mt-1 text-sm text-foreground-muted">{companyName}</p>
         </div>
         <StatusBadge status={status} />
       </div>
-      <div className="mt-3 flex items-center justify-between text-xs text-foreground-soft">
-        <span>{appointment.address}</span>
+      <div className="mt-3 flex items-center justify-end text-xs text-foreground-soft">
         {blocked ? (
           <span className="rounded-full bg-border px-2 py-1 text-[10px] font-semibold text-foreground-muted">
             Bloqueado

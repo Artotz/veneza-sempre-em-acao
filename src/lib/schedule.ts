@@ -40,3 +40,9 @@ export const formatAppointmentWindow = (appointment: Appointment) => {
   const end = formatTime(new Date(appointment.endAt));
   return `${start} - ${end}`;
 };
+
+export const getAppointmentTitle = (appointment: Appointment) => {
+  const explicit = appointment.appointmentTitle?.trim();
+  if (explicit) return explicit;
+  return `Apontamento - ${formatAppointmentWindow(appointment)}`;
+};

@@ -6,16 +6,20 @@ import { SectionHeader } from "../components/SectionHeader";
 import {
   buildMonthWeeks,
   formatMonthYear,
-  formatWeekRange,
   isSameDay,
+  WEEK_DAYS,
 } from "../lib/date";
-import { sortByStart } from "../lib/schedule";
 import { useSchedule } from "../state/useSchedule";
+
+const getDateKey = (date: Date) =>
+  `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
 
 export default function MonthView() {
   const { state, actions } = useSchedule();
-  const weeks = useMemo(() => buildMonthWeeks(new Date()), []);
-  const monthLabel = formatMonthYear(new Date());
+  const referenceDate = useMemo(() => new Date(), []);
+  const weeks = useMemo(() => buildMonthWeeks(referenceDate), [referenceDate]);
+  const monthLabel = formatMonthYear(referenceDate);
+  const today = useMemo(() => new Date(), []);
   const monthRange = useMemo(() => {
     const startAt = weeks[0]?.startAt ?? new Date();
     const endAt = weeks[weeks.length - 1]?.endAt ?? new Date();
@@ -26,10 +30,20 @@ export default function MonthView() {
     actions.setRange({ startAt: monthRange.startAt, endAt: monthRange.endAt });
   }, [actions, monthRange.endAt, monthRange.startAt]);
 
+  const appointmentCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    state.appointments.forEach((appointment) => {
+      const date = new Date(appointment.startAt);
+      const key = getDateKey(date);
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    });
+    return counts;
+  }, [state.appointments]);
+
   return (
     <AppShell
       title="Visao mensal"
-      subtitle="Resumo simples do mes com acesso rapido por dia."
+      subtitle="Grade mensal em 7 colunas, com acesso rapido por dia."
       rightSlot={monthLabel}
     >
       {state.loading ? (
@@ -45,60 +59,61 @@ export default function MonthView() {
         />
       ) : (
         <div className="space-y-4">
-          {weeks.map((week, weekIndex) => {
-            const weekGroups = week.days.map((day) =>
-              state.appointments
-                .filter((appointment) =>
-                  isSameDay(new Date(appointment.startAt), day.date)
-                )
-                .sort(sortByStart)
-            );
-            const weekCount = weekGroups.flat().length;
-
-            return (
-              <section
-                key={week.id}
-                className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm"
-              >
-                <SectionHeader
-                  title={week.label}
-                  subtitle={formatWeekRange(week.startAt, week.endAt)}
-                  rightSlot={`${weekCount} ag.`}
-                />
-                <div className="space-y-2">
-                  {week.days.map((day, dayIndex) => {
-                    const dayAppointments = weekGroups[dayIndex] ?? [];
-                    return (
-                      <Link
-                        key={day.id}
-                        to={`/cronograma/dia?week=${weekIndex + 1}&day=${dayIndex}`}
-                        className="block rounded-2xl border border-border bg-surface-muted px-3 py-3 text-sm transition hover:border-accent/40 hover:bg-white"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-semibold text-foreground">
-                              {day.short} - {day.label}
-                            </p>
-                            <p className="mt-1 text-xs text-foreground-muted">
-                              {dayAppointments.length
-                                ? dayAppointments
-                                    .slice(0, 2)
-                                    .map((appointment) => appointment.title)
-                                    .join(" - ")
-                                : "Sem agendamentos"}
-                            </p>
-                          </div>
-                          <span className="rounded-full bg-white px-3 py-1 text-[10px] font-semibold text-foreground-muted">
-                            {dayAppointments.length}
-                          </span>
-                        </div>
-                      </Link>
-                    );
-                  })}
+          <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
+            <SectionHeader
+              title="Grade do mes"
+              subtitle="Todos os dias do mes em 7 colunas."
+            />
+            <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-semibold uppercase text-foreground-muted">
+              {WEEK_DAYS.map((day) => (
+                <div key={day.id} className="rounded-lg bg-surface-muted py-2">
+                  {day.short}
                 </div>
-              </section>
-            );
-          })}
+              ))}
+            </div>
+            <div className="grid grid-cols-7 gap-1">
+              {weeks.flatMap((week, weekIndex) =>
+                week.days.map((day) => {
+                  const dayKey = getDateKey(day.date);
+                  const count = appointmentCounts.get(dayKey) ?? 0;
+                  const isCurrentMonth =
+                    day.date.getMonth() === referenceDate.getMonth() &&
+                    day.date.getFullYear() === referenceDate.getFullYear();
+                  const isToday = isSameDay(day.date, today);
+                  const borderClass = isToday ? "border-accent" : "border-border";
+                  const backgroundClass = isToday
+                    ? "bg-white"
+                    : isCurrentMonth
+                      ? "bg-surface-muted"
+                      : "bg-surface-strong";
+                  const textClass = isCurrentMonth
+                    ? "text-foreground"
+                    : "text-foreground-muted";
+                  return (
+                    <Link
+                      key={`${week.id}-${day.date.getTime()}`}
+                      to={`/cronograma/dia?week=${weekIndex + 1}&day=${day.index}`}
+                      aria-label={`${day.label} com ${count} agendamentos`}
+                      className={`group flex min-h-[76px] flex-col justify-between rounded-xl border p-2 text-left transition hover:border-accent/40 hover:bg-white ${borderClass} ${backgroundClass} ${textClass}`}
+                    >
+                      <span className={`text-xs font-semibold ${textClass}`}>
+                        {day.date.getDate()}
+                      </span>
+                      <span
+                        className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                          count
+                            ? "bg-white text-foreground"
+                            : "bg-surface-muted text-foreground-muted"
+                        }`}
+                      >
+                        {count}
+                      </span>
+                    </Link>
+                  );
+                })
+              )}
+            </div>
+          </section>
         </div>
       )}
     </AppShell>

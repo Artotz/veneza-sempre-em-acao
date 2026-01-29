@@ -15,14 +15,9 @@ export type Appointment = {
   companyId: string;
   appointmentId?: string | null;
   consultantId?: string | null;
-  title: string;
   consultant: string;
-  address: string;
-  city: string;
-  state?: string | null;
   startAt: string;
   endAt: string;
-  equipment?: string | null;
   status?: SupabaseAppointmentStatus;
   checkInAt?: string | null;
   checkOutAt?: string | null;
@@ -31,6 +26,7 @@ export type Appointment = {
   notes?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
+  appointmentTitle?: string | null;
 };
 
 export type Company = {

@@ -10,7 +10,7 @@ import {
   formatWeekRange,
   isSameDay,
 } from "../lib/date";
-import { sortByStart } from "../lib/schedule";
+import { getAppointmentTitle, sortByStart } from "../lib/schedule";
 import { useSchedule } from "../state/useSchedule";
 
 const clamp = (value: number, min: number, max: number) =>
@@ -116,7 +116,7 @@ export default function WeekView() {
                             className="min-w-0 rounded-md border border-border bg-white px-1 py-1 text-[9px] font-semibold text-foreground transition hover:border-accent/40"
                           >
                             <span className="block truncate">
-                              {appointment.title}
+                              {getAppointmentTitle(appointment)}
                             </span>
                           </button>
                         ))

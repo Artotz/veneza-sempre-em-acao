@@ -93,10 +93,14 @@ export default function Companies() {
                 <h3 className="text-lg font-semibold text-foreground">
                   {company.name}
                 </h3>
-                <p className="text-sm text-foreground-muted">
-                  {company.state ?? "Estado nao informado"}{" "}
-                  {company.csa ? `- CSA ${company.csa}` : ""}
-                </p>
+                {[company.state, company.csa ? `CSA ${company.csa}` : null].filter(Boolean)
+                  .length ? (
+                  <p className="text-sm text-foreground-muted">
+                    {[company.state, company.csa ? `CSA ${company.csa}` : null]
+                      .filter(Boolean)
+                      .join(" - ")}
+                  </p>
+                ) : null}
               </div>
 
               <div className="flex flex-wrap gap-2 text-[11px] font-semibold text-foreground-muted">
@@ -143,3 +147,6 @@ export default function Companies() {
     </AppShell>
   );
 }
+
+
+

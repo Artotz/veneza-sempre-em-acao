@@ -21,14 +21,8 @@ export default function NewAppointment() {
   const [loadingCompany, setLoadingCompany] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [title, setTitle] = useState("");
   const [startsAt, setStartsAt] = useState("");
   const [endsAt, setEndsAt] = useState("");
-  const [equipment, setEquipment] = useState("");
-  const [city, setCity] = useState("");
-  const [state, setState] = useState("");
-  const [address, setAddress] = useState("");
-  const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -74,8 +68,8 @@ export default function NewAppointment() {
       return;
     }
 
-    if (!title.trim() || !startsAt || !endsAt) {
-      setError("Preencha titulo, inicio e fim.");
+    if (!startsAt || !endsAt) {
+      setError("Preencha inicio e fim.");
       return;
     }
 
@@ -98,14 +92,8 @@ export default function NewAppointment() {
 
     const { error: insertError } = await supabase.from("apontamentos").insert({
       company_id: id,
-      title: title.trim(),
       starts_at: startsAtDate.toISOString(),
       ends_at: endsAtDate.toISOString(),
-      equipment: equipment.trim() || null,
-      city: city.trim() || null,
-      state: state.trim() || null,
-      address_snapshot: address.trim() || null,
-      notes: notes.trim() || null,
       consultant_id: user?.id ?? null,
       consultant_name: consultantName ?? user?.email ?? null,
       status: "scheduled",
@@ -169,9 +157,11 @@ export default function NewAppointment() {
             <p className="text-lg font-semibold text-foreground">
               {company.name}
             </p>
-            <p className="text-sm text-foreground-muted">
-              {company.state ?? "Estado nao informado"}
-            </p>
+            {[company.city, company.state].filter(Boolean).length ? (
+              <p className="text-sm text-foreground-muted">
+                {[company.city, company.state].filter(Boolean).join(" - ")}
+              </p>
+            ) : null}
           </div>
         </section>
 
@@ -186,17 +176,6 @@ export default function NewAppointment() {
               {error}
             </div>
           ) : null}
-
-          <label className="space-y-2 text-sm font-semibold text-foreground">
-            <span>Titulo</span>
-            <input
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              placeholder="Ex: Inspecao preventiva"
-              className="w-full rounded-2xl border border-border bg-surface-muted px-4 py-3 text-sm font-normal text-foreground outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
-              required
-            />
-          </label>
 
           <div className="grid gap-3 md:grid-cols-2">
             <label className="space-y-2 text-sm font-semibold text-foreground">
@@ -220,58 +199,6 @@ export default function NewAppointment() {
               />
             </label>
           </div>
-
-          <label className="space-y-2 text-sm font-semibold text-foreground">
-            <span>Equipamento</span>
-            <input
-              value={equipment}
-              onChange={(event) => setEquipment(event.target.value)}
-              placeholder="Opcional"
-              className="w-full rounded-2xl border border-border bg-surface-muted px-4 py-3 text-sm font-normal text-foreground outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
-            />
-          </label>
-
-          <div className="grid gap-3 md:grid-cols-2">
-            <label className="space-y-2 text-sm font-semibold text-foreground">
-              <span>Cidade</span>
-              <input
-                value={city}
-                onChange={(event) => setCity(event.target.value)}
-                placeholder="Opcional"
-                className="w-full rounded-2xl border border-border bg-surface-muted px-4 py-3 text-sm font-normal text-foreground outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
-              />
-            </label>
-            <label className="space-y-2 text-sm font-semibold text-foreground">
-              <span>Estado</span>
-              <input
-                value={state}
-                onChange={(event) => setState(event.target.value)}
-                placeholder="Opcional"
-                className="w-full rounded-2xl border border-border bg-surface-muted px-4 py-3 text-sm font-normal text-foreground outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
-              />
-            </label>
-          </div>
-
-          <label className="space-y-2 text-sm font-semibold text-foreground">
-            <span>Endereco snapshot</span>
-            <input
-              value={address}
-              onChange={(event) => setAddress(event.target.value)}
-              placeholder="Opcional"
-              className="w-full rounded-2xl border border-border bg-surface-muted px-4 py-3 text-sm font-normal text-foreground outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
-            />
-          </label>
-
-          <label className="space-y-2 text-sm font-semibold text-foreground">
-            <span>Observacoes</span>
-            <textarea
-              value={notes}
-              onChange={(event) => setNotes(event.target.value)}
-              placeholder="Opcional"
-              className="w-full resize-none rounded-2xl border border-border bg-surface-muted px-4 py-3 text-sm font-normal text-foreground outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
-              rows={3}
-            />
-          </label>
 
           <button
             type="submit"

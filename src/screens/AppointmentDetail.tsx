@@ -8,6 +8,7 @@ import { formatDateShort, formatTime, isSameDay } from "../lib/date";
 import {
   formatAppointmentWindow,
   getAppointmentStatus,
+  getAppointmentTitle,
   isBlocked,
   sortByStart,
 } from "../lib/schedule";
@@ -194,9 +195,7 @@ export default function AppointmentDetail() {
     }
   };
 
-  const locationLabel = [appointment.address, appointment.city, appointment.state]
-    .filter(Boolean)
-    .join(" - ");
+  const locationLabel = [company?.city, company?.state].filter(Boolean).join(" - ");
 
   const absenceLabel =
     absenceReasonLabels[appointment.absenceReason ?? ""] ??
@@ -204,7 +203,10 @@ export default function AppointmentDetail() {
     "Nenhuma";
 
   return (
-    <AppShell title="Detalhe do agendamento" subtitle="Atualize o status no banco.">
+    <AppShell
+      title="Detalhe do agendamento"
+      subtitle={getAppointmentTitle(appointment)}
+    >
       <div className="space-y-4">
         <Link
           to="/cronograma/dia"
@@ -226,12 +228,13 @@ export default function AppointmentDetail() {
                 {dayLabel} - {formatAppointmentWindow(appointment)}
               </p>
               <h2 className="mt-2 text-lg font-semibold text-foreground">
-                {appointment.title}
+                {company?.name ?? "Empresa"}
               </h2>
-              <p className="mt-1 text-sm text-foreground-muted">
-                {company?.name ?? "Empresa"}{" "}
-                {company?.document ? `- ${company.document}` : ""}
-              </p>
+              {company?.document ? (
+                <p className="mt-1 text-sm text-foreground-muted">
+                  {company.document}
+                </p>
+              ) : null}
             </div>
             <StatusBadge status={status} />
           </div>
@@ -243,12 +246,14 @@ export default function AppointmentDetail() {
                 {appointment.consultant || "Nao informado"}
               </span>
             </div>
-            <div className="flex items-center justify-between">
-              <span>Endereco</span>
-              <span className="font-semibold text-foreground">
-                {locationLabel || "Nao informado"}
-              </span>
-            </div>
+            {locationLabel ? (
+              <div className="flex items-center justify-between">
+                <span>Local</span>
+                <span className="font-semibold text-foreground">
+                  {locationLabel}
+                </span>
+              </div>
+            ) : null}
           </div>
 
           {blocked ? (
