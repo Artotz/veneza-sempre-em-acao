@@ -12,9 +12,9 @@ import {
   isBlocked,
   sortByStart,
 } from "../lib/schedule";
-import { useCamera } from "../hooks/useCamera";
 import { useGeolocation } from "../hooks/useGeolocation";
 import { useSchedule } from "../state/useSchedule";
+import { useAuth } from "../contexts/useAuth";
 import {
   APPOINTMENT_SELECT,
   COMPANY_SELECT,
@@ -24,6 +24,8 @@ import {
 } from "../lib/supabase";
 import { createSupabaseBrowserClient } from "../lib/supabaseClient";
 import type { Appointment, Company } from "../lib/types";
+import { capturePhoto, type CapturePhotoResult } from "../services/camera";
+import { uploadApontamentoImage } from "../services/storageUploads";
 
 const absenceOptions = [
   { label: "Cliente solicitou remarcacao", value: "client_requested_reschedule" },
@@ -32,9 +34,43 @@ const absenceOptions = [
   { label: "Outro", value: "other" },
 ];
 
+type MediaKind = "checkin" | "checkout" | "absence";
+
+type ApontamentoMediaRow = {
+  id?: string;
+  bucket: string;
+  path: string;
+  kind: MediaKind;
+  mime_type?: string | null;
+  bytes?: number | null;
+  created_at?: string | null;
+};
+
+type AppointmentMediaItem = {
+  id?: string;
+  bucket: string;
+  path: string;
+  kind: MediaKind;
+  mimeType: string | null;
+  bytes: number;
+  createdAt?: string | null;
+  signedUrl: string | null;
+};
+
+type PendingPhoto = CapturePhotoResult & {
+  previewUrl: string;
+};
+
+const mediaKindLabels: Record<MediaKind, string> = {
+  checkin: "Check-in",
+  checkout: "Check-out",
+  absence: "Ausencia",
+};
+
 export default function AppointmentDetail() {
   const { id } = useParams();
   const { state, selectors, actions } = useSchedule();
+  const { session } = useAuth();
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const appointmentFromState = id ? selectors.getAppointment(id) : undefined;
   const companyFromState = appointmentFromState
@@ -54,9 +90,13 @@ export default function AppointmentDetail() {
   const [geoIntent, setGeoIntent] = useState<"check_in" | "check_out" | null>(
     null
   );
+  const [photoStatus, setPhotoStatus] = useState<string | null>(null);
+  const [mediaItems, setMediaItems] = useState<AppointmentMediaItem[]>([]);
+  const [mediaLoading, setMediaLoading] = useState(false);
+  const [mediaError, setMediaError] = useState<string | null>(null);
+  const [absencePhoto, setAbsencePhoto] = useState<PendingPhoto | null>(null);
 
   const geo = useGeolocation();
-  const camera = useCamera();
 
   useEffect(() => {
     if (appointmentFromState) {
@@ -66,6 +106,14 @@ export default function AppointmentDetail() {
       setCompany(companyFromState);
     }
   }, [appointmentFromState, companyFromState]);
+
+  useEffect(() => {
+    return () => {
+      if (absencePhoto?.previewUrl) {
+        URL.revokeObjectURL(absencePhoto.previewUrl);
+      }
+    };
+  }, [absencePhoto?.previewUrl]);
 
   const loadDetail = useCallback(async () => {
     if (!id) return;
@@ -102,9 +150,58 @@ export default function AppointmentDetail() {
     setLoading(false);
   }, [id, supabase]);
 
+  const loadMedia = useCallback(async () => {
+    if (!id) return;
+    setMediaLoading(true);
+    setMediaError(null);
+
+    const { data, error: requestError } = await supabase
+      .from("apontamento_media")
+      .select("id, bucket, path, kind, mime_type, bytes, created_at")
+      .eq("apontamento_id", id)
+      .order("created_at", { ascending: true });
+
+    if (requestError) {
+      setMediaError(requestError.message);
+      setMediaLoading(false);
+      return;
+    }
+
+    const rows = (data ?? []) as ApontamentoMediaRow[];
+    const signedItems = await Promise.all(
+      rows.map(async (item) => {
+        const { data: signedData, error: signedError } = await supabase.storage
+          .from(item.bucket)
+          .createSignedUrl(item.path, 60);
+
+        if (signedError) {
+          console.warn("Falha ao gerar signed url", signedError);
+        }
+
+        return {
+          id: item.id,
+          bucket: item.bucket,
+          path: item.path,
+          kind: item.kind,
+          mimeType: item.mime_type ?? null,
+          bytes: item.bytes ?? 0,
+          createdAt: item.created_at ?? null,
+          signedUrl: signedError ? null : signedData?.signedUrl ?? null,
+        } as AppointmentMediaItem;
+      })
+    );
+
+    setMediaItems(signedItems);
+    setMediaLoading(false);
+  }, [id, supabase]);
+
   useEffect(() => {
     void loadDetail();
   }, [loadDetail]);
+
+  useEffect(() => {
+    void loadMedia();
+  }, [loadMedia]);
 
   const dayAppointments = useMemo(() => {
     if (!appointment) return [];
@@ -156,6 +253,7 @@ export default function AppointmentDetail() {
     (appointment.status ?? "scheduled") !== "absent";
   const isCheckInCapturing = geo.isCapturing && geoIntent === "check_in";
   const isCheckOutCapturing = geo.isCapturing && geoIntent === "check_out";
+  const isPhotoBusy = Boolean(photoStatus);
 
   const formatCoordinates = (lat?: number | null, lng?: number | null) => {
     if (lat == null || lng == null) return "Nao registrado";
@@ -184,13 +282,62 @@ export default function AppointmentDetail() {
     );
   };
 
+  const saveApontamentoMedia = useCallback(
+    async (params: {
+      apontamentoId: string;
+      kind: MediaKind;
+      shot: CapturePhotoResult;
+    }) => {
+      const consultantId = session?.user?.id;
+      if (!consultantId) {
+        throw new Error("Usuario nao autenticado.");
+      }
+      const upload = await uploadApontamentoImage({
+        apontamentoId: params.apontamentoId,
+        consultantId,
+        kind: params.kind,
+        blob: params.shot.blob,
+        mimeType: params.shot.mimeType,
+      });
+
+      const { error: insertError } = await supabase
+        .from("apontamento_media")
+        .insert({
+          apontamento_id: params.apontamentoId,
+          bucket: upload.bucket,
+          path: upload.path,
+          kind: params.kind,
+          mime_type: params.shot.mimeType,
+          bytes: upload.bytes,
+        });
+
+      if (insertError) {
+        throw new Error(insertError.message);
+      }
+
+      return upload;
+    },
+    [session?.user?.id, supabase]
+  );
+
   const handleCheckIn = async () => {
-    if (!canCheckIn || busy || geo.isCapturing) return;
+    if (!canCheckIn || busy || geo.isCapturing || isPhotoBusy) return;
     setError(null);
     geo.resetError();
     setGeoIntent("check_in");
+    let shotPromise: Promise<CapturePhotoResult> | null = null;
     try {
+      setPhotoStatus("Abrindo camera...");
+      shotPromise = capturePhoto();
       const position = await geo.capture();
+      const shot = await shotPromise;
+      setPhotoStatus("Enviando foto...");
+      await saveApontamentoMedia({
+        apontamentoId: appointment.id,
+        kind: "checkin",
+        shot,
+      });
+      setPhotoStatus("Salvando apontamento...");
       const now = new Date().toISOString();
       await actions.checkIn(appointment.id, {
         at: now,
@@ -199,24 +346,45 @@ export default function AppointmentDetail() {
         accuracy: position.accuracy,
       });
       await loadDetail();
+      await loadMedia();
       setGeoIntent(null);
     } catch (actionError) {
-      if (isGeoError(actionError)) return;
+      if (isGeoError(actionError)) {
+        if (shotPromise) {
+          void shotPromise.catch(() => null);
+        }
+        setPhotoStatus(null);
+        return;
+      }
       setError(
         actionError instanceof Error
           ? actionError.message
           : "Nao foi possivel registrar o check-in."
       );
+      setGeoIntent(null);
+    } finally {
+      setPhotoStatus(null);
     }
   };
 
   const handleCheckOut = async () => {
-    if (!canCheckOut || busy || geo.isCapturing) return;
+    if (!canCheckOut || busy || geo.isCapturing || isPhotoBusy) return;
     setError(null);
     geo.resetError();
     setGeoIntent("check_out");
+    let shotPromise: Promise<CapturePhotoResult> | null = null;
     try {
+      setPhotoStatus("Abrindo camera...");
+      shotPromise = capturePhoto();
       const position = await geo.capture();
+      const shot = await shotPromise;
+      setPhotoStatus("Enviando foto...");
+      await saveApontamentoMedia({
+        apontamentoId: appointment.id,
+        kind: "checkout",
+        shot,
+      });
+      setPhotoStatus("Salvando apontamento...");
       const now = new Date().toISOString();
       await actions.checkOut(appointment.id, {
         at: now,
@@ -225,29 +393,76 @@ export default function AppointmentDetail() {
         accuracy: position.accuracy,
       });
       await loadDetail();
+      await loadMedia();
       setGeoIntent(null);
     } catch (actionError) {
-      if (isGeoError(actionError)) return;
+      if (isGeoError(actionError)) {
+        if (shotPromise) {
+          void shotPromise.catch(() => null);
+        }
+        setPhotoStatus(null);
+        return;
+      }
       setError(
         actionError instanceof Error
           ? actionError.message
           : "Nao foi possivel registrar o check-out."
       );
+      setGeoIntent(null);
+    } finally {
+      setPhotoStatus(null);
     }
   };
 
+  const handleCaptureAbsencePhoto = async () => {
+    if (!canAbsence || busy || isPhotoBusy) return;
+    setError(null);
+    try {
+      setPhotoStatus("Abrindo camera...");
+      const shot = await capturePhoto();
+      const previewUrl = URL.createObjectURL(shot.blob);
+      setAbsencePhoto({ ...shot, previewUrl });
+    } catch (actionError) {
+      setError(
+        actionError instanceof Error
+          ? actionError.message
+          : "Nao foi possivel capturar a foto."
+      );
+    } finally {
+      setPhotoStatus(null);
+    }
+  };
+
+  const handleRemoveAbsencePhoto = () => {
+    setAbsencePhoto(null);
+  };
+
   const handleAbsence = async () => {
-    if (!canAbsence) return;
+    if (!canAbsence || busy || isPhotoBusy) return;
+    setError(null);
     const reason = absenceReason.trim() || "other";
     try {
+      if (absencePhoto) {
+        setPhotoStatus("Enviando foto...");
+        await saveApontamentoMedia({
+          apontamentoId: appointment.id,
+          kind: "absence",
+          shot: absencePhoto,
+        });
+      }
+      setPhotoStatus("Salvando apontamento...");
       await actions.justifyAbsence(appointment.id, reason, absenceNote.trim());
       await loadDetail();
+      await loadMedia();
+      setAbsencePhoto(null);
     } catch (actionError) {
       setError(
         actionError instanceof Error
           ? actionError.message
           : "Nao foi possivel registrar a ausencia."
       );
+    } finally {
+      setPhotoStatus(null);
     }
   };
 
@@ -373,10 +588,10 @@ export default function AppointmentDetail() {
           <div className="grid gap-2">
             <button
               type="button"
-              disabled={!canCheckIn || busy || geo.isCapturing}
+              disabled={!canCheckIn || busy || geo.isCapturing || isPhotoBusy}
               onClick={handleCheckIn}
               className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${
-                canCheckIn && !busy && !geo.isCapturing
+                canCheckIn && !busy && !geo.isCapturing && !isPhotoBusy
                   ? "bg-success text-white"
                   : "cursor-not-allowed bg-surface-muted text-foreground-muted"
               }`}
@@ -385,10 +600,10 @@ export default function AppointmentDetail() {
             </button>
             <button
               type="button"
-              disabled={!canCheckOut || busy || geo.isCapturing}
+              disabled={!canCheckOut || busy || geo.isCapturing || isPhotoBusy}
               onClick={handleCheckOut}
               className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${
-                canCheckOut && !busy && !geo.isCapturing
+                canCheckOut && !busy && !geo.isCapturing && !isPhotoBusy
                   ? "bg-info text-white"
                   : "cursor-not-allowed bg-surface-muted text-foreground-muted"
               }`}
@@ -398,6 +613,11 @@ export default function AppointmentDetail() {
             {geo.isCapturing ? (
               <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
                 Capturando localizacao. Aguarde alguns segundos...
+              </div>
+            ) : null}
+            {photoStatus ? (
+              <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
+                {photoStatus}
               </div>
             ) : null}
             {geo.error ? (
@@ -448,6 +668,38 @@ export default function AppointmentDetail() {
                   </button>
                 ))}
               </div>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  disabled={!canAbsence || busy || isPhotoBusy}
+                  onClick={handleCaptureAbsencePhoto}
+                  className={`rounded-full border px-3 py-1 text-[10px] font-semibold ${
+                    canAbsence && !busy && !isPhotoBusy
+                      ? "border-border bg-white text-foreground"
+                      : "cursor-not-allowed border-border bg-white text-foreground-muted"
+                  }`}
+                >
+                  {absencePhoto ? "Trocar foto" : "Anexar foto"}
+                </button>
+                {absencePhoto ? (
+                  <button
+                    type="button"
+                    onClick={handleRemoveAbsencePhoto}
+                    className="rounded-full border border-border bg-white px-3 py-1 text-[10px] font-semibold text-foreground-soft"
+                  >
+                    Remover foto
+                  </button>
+                ) : null}
+              </div>
+              {absencePhoto ? (
+                <div className="mt-3 overflow-hidden rounded-2xl border border-border bg-white">
+                  <img
+                    src={absencePhoto.previewUrl}
+                    alt="Foto da ausencia"
+                    className="h-32 w-full object-cover"
+                  />
+                </div>
+              ) : null}
               <textarea
                 value={absenceNote}
                 onChange={(event) => setAbsenceNote(event.target.value)}
@@ -457,10 +709,10 @@ export default function AppointmentDetail() {
               />
               <button
                 type="button"
-                disabled={!canAbsence || busy}
+                disabled={!canAbsence || busy || isPhotoBusy}
                 onClick={handleAbsence}
                 className={`mt-3 w-full rounded-2xl px-4 py-2 text-xs font-semibold transition ${
-                  canAbsence && !busy
+                  canAbsence && !busy && !isPhotoBusy
                     ? "bg-danger text-white"
                     : "cursor-not-allowed bg-white text-foreground-muted"
                 }`}
@@ -523,12 +775,48 @@ export default function AppointmentDetail() {
                 </div>
               </div>
             </div>
-            <div className="flex items-center justify-between">
-              <span>Camera (mock)</span>
-              <span className="font-semibold text-foreground">
-                {camera.status}
-              </span>
+          </div>
+        </section>
+
+        <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
+          <SectionHeader title="Fotos" subtitle="Registro visual do apontamento." />
+          {mediaLoading ? (
+            <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
+              Carregando fotos...
             </div>
+          ) : null}
+          {mediaError ? (
+            <div className="rounded-2xl border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-foreground-soft">
+              {mediaError}
+            </div>
+          ) : null}
+          {!mediaLoading && mediaItems.length === 0 ? (
+            <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
+              Nenhuma foto registrada ainda.
+            </div>
+          ) : null}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {mediaItems.map((item) => (
+              <div
+                key={item.path}
+                className="overflow-hidden rounded-2xl border border-border bg-white"
+              >
+                {item.signedUrl ? (
+                  <img
+                    src={item.signedUrl}
+                    alt={`Foto ${mediaKindLabels[item.kind]}`}
+                    className="h-28 w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-28 items-center justify-center text-[10px] text-foreground-soft">
+                    URL expirada
+                  </div>
+                )}
+                <div className="px-2 py-1 text-[10px] font-semibold text-foreground">
+                  {mediaKindLabels[item.kind]}
+                </div>
+              </div>
+            ))}
           </div>
         </section>
       </div>
