@@ -121,39 +121,6 @@ const captureWithStream = async (): Promise<Blob> => {
   }
 };
 
-const captureWithInput = () =>
-  new Promise<File>((resolve, reject) => {
-    ensureBrowser();
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "image/*";
-    input.setAttribute("capture", "environment");
-    input.style.position = "fixed";
-    input.style.left = "-9999px";
-
-    const cleanup = () => {
-      input.value = "";
-      input.remove();
-    };
-
-    input.addEventListener(
-      "change",
-      () => {
-        const file = input.files?.[0];
-        cleanup();
-        if (!file) {
-          reject(new Error("Captura cancelada."));
-          return;
-        }
-        resolve(file);
-      },
-      { once: true }
-    );
-
-    document.body.appendChild(input);
-    input.click();
-  });
-
 const loadImage = (blob: Blob) =>
   new Promise<HTMLImageElement>((resolve, reject) => {
     const url = URL.createObjectURL(blob);
@@ -213,21 +180,8 @@ const ensureJpeg = async (blob: Blob): Promise<Blob> => {
 
 export const capturePhoto = async (): Promise<CapturePhotoResult> => {
   ensureBrowser();
-
-  try {
-    const streamBlob = await captureWithStream();
-    const jpegBlob = await ensureJpeg(streamBlob);
-    return {
-      blob: jpegBlob,
-      mimeType: jpegMimeType,
-      extension: jpegExtension,
-    };
-  } catch (error) {
-    console.warn("Falha no modo stream, usando input capture", error);
-  }
-
-  const inputFile = await captureWithInput();
-  const jpegBlob = await ensureJpeg(inputFile);
+  const streamBlob = await captureWithStream();
+  const jpegBlob = await ensureJpeg(streamBlob);
   return {
     blob: jpegBlob,
     mimeType: jpegMimeType,

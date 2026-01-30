@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppShell } from "../components/AppShell";
 import { EmptyState } from "../components/EmptyState";
@@ -12,7 +12,7 @@ import {
   isBlocked,
   sortByStart,
 } from "../lib/schedule";
-import type { Appointment } from "../lib/types";
+import type { Appointment, AppointmentStatus } from "../lib/types";
 import { useSchedule } from "../state/useSchedule";
 
 const buildDayKey = (date: Date) =>
@@ -86,6 +86,9 @@ const AppointmentListItem = ({
 export default function AllAppointments() {
   const { state, selectors, actions } = useSchedule();
   const navigate = useNavigate();
+  const [statusFilter, setStatusFilter] = useState<AppointmentStatus | null>(
+    null
+  );
 
   const weeks = useMemo(() => buildMonthWeeks(new Date()), []);
   const monthRange = useMemo(() => {
@@ -123,6 +126,47 @@ export default function AllAppointments() {
     );
   }, [state.appointments]);
 
+  const filteredAppointments = useMemo(() => {
+    if (!statusFilter) return orderedAppointments;
+    return orderedAppointments.filter(
+      (appointment) => getAppointmentStatus(appointment) === statusFilter
+    );
+  }, [orderedAppointments, statusFilter]);
+
+  const pillOptions = useMemo(
+    () => [
+      {
+        status: "pendente" as const,
+        label: "Pendentes",
+        count: summary.pendente,
+        baseClass: "bg-warning/15 text-warning",
+        ringClass: "ring-warning/30",
+      },
+      {
+        status: "em_execucao" as const,
+        label: "Em execucao",
+        count: summary.em_execucao,
+        baseClass: "bg-info/15 text-info",
+        ringClass: "ring-info/30",
+      },
+      {
+        status: "concluido" as const,
+        label: "Concluidos",
+        count: summary.concluido,
+        baseClass: "bg-success/15 text-success",
+        ringClass: "ring-success/30",
+      },
+      {
+        status: "ausente" as const,
+        label: "Ausentes",
+        count: summary.ausente,
+        baseClass: "bg-danger/15 text-danger",
+        ringClass: "ring-danger/30",
+      },
+    ],
+    [summary]
+  );
+
   const handleOpenAppointment = (id: string) => {
     navigate(`/apontamentos/${id}`);
   };
@@ -153,24 +197,30 @@ export default function AllAppointments() {
               rightSlot={`${summary.total} ag.`}
             />
             <div className="flex flex-wrap gap-2 text-[11px] font-semibold">
-              <span className="rounded-full bg-warning/15 px-3 py-1 text-warning">
-                Pendentes: {summary.pendente}
-              </span>
-              <span className="rounded-full bg-info/15 px-3 py-1 text-info">
-                Em execucao: {summary.em_execucao}
-              </span>
-              <span className="rounded-full bg-success/15 px-3 py-1 text-success">
-                Concluidos: {summary.concluido}
-              </span>
-              <span className="rounded-full bg-danger/15 px-3 py-1 text-danger">
-                Ausentes: {summary.ausente}
-              </span>
+              {pillOptions.map((pill) => {
+                const isActive = statusFilter === pill.status;
+                return (
+                  <button
+                    key={pill.status}
+                    type="button"
+                    onClick={() =>
+                      setStatusFilter(isActive ? null : pill.status)
+                    }
+                    aria-pressed={isActive}
+                    className={`rounded-full px-3 py-1 transition ${
+                      pill.baseClass
+                    } ${isActive ? `ring-2 ${pill.ringClass}` : ""}`}
+                  >
+                    {pill.label}: {pill.count}
+                  </button>
+                );
+              })}
             </div>
           </section>
 
           <section className="space-y-3">
-            {orderedAppointments.length ? (
-              orderedAppointments.map((appointment) => {
+            {filteredAppointments.length ? (
+              filteredAppointments.map((appointment) => {
                 const company = selectors.getCompany(appointment.companyId);
                 const companyName = company?.name ?? "Empresa";
                 const appointmentDetail = getAppointmentTitle(appointment);
@@ -196,7 +246,11 @@ export default function AllAppointments() {
             ) : (
               <EmptyState
                 title="Sem agendamentos"
-                description="Nenhum agendamento cadastrado nesta janela."
+                description={
+                  statusFilter
+                    ? "Nenhum agendamento encontrado para este filtro."
+                    : "Nenhum agendamento cadastrado nesta janela."
+                }
               />
             )}
           </section>

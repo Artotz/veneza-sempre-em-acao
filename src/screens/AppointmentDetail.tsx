@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { AppShell } from "../components/AppShell";
+import { CameraCaptureModal } from "../components/CameraCaptureModal";
 import { EmptyState } from "../components/EmptyState";
 import { SectionHeader } from "../components/SectionHeader";
 import { StatusBadge } from "../components/StatusBadge";
@@ -24,7 +25,7 @@ import {
 } from "../lib/supabase";
 import { createSupabaseBrowserClient } from "../lib/supabaseClient";
 import type { Appointment, Company } from "../lib/types";
-import { capturePhoto, type CapturePhotoResult } from "../services/camera";
+import type { CapturePhotoResult } from "../services/camera";
 import { uploadApontamentoImage } from "../services/storageUploads";
 
 const absenceOptions = [
@@ -91,6 +92,7 @@ export default function AppointmentDetail() {
     null
   );
   const [photoStatus, setPhotoStatus] = useState<string | null>(null);
+  const [cameraIntent, setCameraIntent] = useState<MediaKind | null>(null);
   const [mediaItems, setMediaItems] = useState<AppointmentMediaItem[]>([]);
   const [mediaLoading, setMediaLoading] = useState(false);
   const [mediaError, setMediaError] = useState<string | null>(null);
@@ -211,6 +213,44 @@ export default function AppointmentDetail() {
       .sort(sortByStart);
   }, [appointment, state.appointments]);
 
+  const saveApontamentoMedia = useCallback(
+    async (params: {
+      apontamentoId: string;
+      kind: MediaKind;
+      shot: CapturePhotoResult;
+    }) => {
+      const consultantId = session?.user?.id;
+      if (!consultantId) {
+        throw new Error("Usuario nao autenticado.");
+      }
+      const upload = await uploadApontamentoImage({
+        apontamentoId: params.apontamentoId,
+        consultantId,
+        kind: params.kind,
+        blob: params.shot.blob,
+        mimeType: params.shot.mimeType,
+      });
+
+      const { error: insertError } = await supabase
+        .from("apontamento_media")
+        .insert({
+          apontamento_id: params.apontamentoId,
+          bucket: upload.bucket,
+          path: upload.path,
+          kind: params.kind,
+          mime_type: params.shot.mimeType,
+          bytes: upload.bytes,
+        });
+
+      if (insertError) {
+        throw new Error(insertError.message);
+      }
+
+      return upload;
+    },
+    [session?.user?.id, supabase]
+  );
+
   if (!appointment && loading) {
     return (
       <AppShell title="Agendamento" subtitle="Carregando detalhes.">
@@ -253,7 +293,8 @@ export default function AppointmentDetail() {
     (appointment.status ?? "scheduled") !== "absent";
   const isCheckInCapturing = geo.isCapturing && geoIntent === "check_in";
   const isCheckOutCapturing = geo.isCapturing && geoIntent === "check_out";
-  const isPhotoBusy = Boolean(photoStatus);
+  const isCameraOpen = cameraIntent !== null;
+  const isPhotoBusy = Boolean(photoStatus) || isCameraOpen;
 
   const formatCoordinates = (lat?: number | null, lng?: number | null) => {
     if (lat == null || lng == null) return "Nao registrado";
@@ -282,55 +323,31 @@ export default function AppointmentDetail() {
     );
   };
 
-  const saveApontamentoMedia = useCallback(
-    async (params: {
-      apontamentoId: string;
-      kind: MediaKind;
-      shot: CapturePhotoResult;
-    }) => {
-      const consultantId = session?.user?.id;
-      if (!consultantId) {
-        throw new Error("Usuario nao autenticado.");
-      }
-      const upload = await uploadApontamentoImage({
-        apontamentoId: params.apontamentoId,
-        consultantId,
-        kind: params.kind,
-        blob: params.shot.blob,
-        mimeType: params.shot.mimeType,
-      });
-
-      const { error: insertError } = await supabase
-        .from("apontamento_media")
-        .insert({
-          apontamento_id: params.apontamentoId,
-          bucket: upload.bucket,
-          path: upload.path,
-          kind: params.kind,
-          mime_type: params.shot.mimeType,
-          bytes: upload.bytes,
-        });
-
-      if (insertError) {
-        throw new Error(insertError.message);
-      }
-
-      return upload;
-    },
-    [session?.user?.id, supabase]
-  );
-
-  const handleCheckIn = async () => {
+  const handleCheckIn = () => {
     if (!canCheckIn || busy || geo.isCapturing || isPhotoBusy) return;
+    setError(null);
+    setCameraIntent("checkin");
+  };
+
+  const handleCheckOut = () => {
+    if (!canCheckOut || busy || geo.isCapturing || isPhotoBusy) return;
+    setError(null);
+    setCameraIntent("checkout");
+  };
+
+  const handleCaptureAbsencePhoto = () => {
+    if (!canAbsence || busy || isPhotoBusy) return;
+    setError(null);
+    setCameraIntent("absence");
+  };
+
+  const performCheckIn = async (shot: CapturePhotoResult) => {
+    if (!canCheckIn || busy || geo.isCapturing) return;
     setError(null);
     geo.resetError();
     setGeoIntent("check_in");
-    let shotPromise: Promise<CapturePhotoResult> | null = null;
     try {
-      setPhotoStatus("Abrindo camera...");
-      shotPromise = capturePhoto();
       const position = await geo.capture();
-      const shot = await shotPromise;
       setPhotoStatus("Enviando foto...");
       await saveApontamentoMedia({
         apontamentoId: appointment.id,
@@ -350,9 +367,6 @@ export default function AppointmentDetail() {
       setGeoIntent(null);
     } catch (actionError) {
       if (isGeoError(actionError)) {
-        if (shotPromise) {
-          void shotPromise.catch(() => null);
-        }
         setPhotoStatus(null);
         return;
       }
@@ -367,17 +381,13 @@ export default function AppointmentDetail() {
     }
   };
 
-  const handleCheckOut = async () => {
-    if (!canCheckOut || busy || geo.isCapturing || isPhotoBusy) return;
+  const performCheckOut = async (shot: CapturePhotoResult) => {
+    if (!canCheckOut || busy || geo.isCapturing) return;
     setError(null);
     geo.resetError();
     setGeoIntent("check_out");
-    let shotPromise: Promise<CapturePhotoResult> | null = null;
     try {
-      setPhotoStatus("Abrindo camera...");
-      shotPromise = capturePhoto();
       const position = await geo.capture();
-      const shot = await shotPromise;
       setPhotoStatus("Enviando foto...");
       await saveApontamentoMedia({
         apontamentoId: appointment.id,
@@ -397,9 +407,6 @@ export default function AppointmentDetail() {
       setGeoIntent(null);
     } catch (actionError) {
       if (isGeoError(actionError)) {
-        if (shotPromise) {
-          void shotPromise.catch(() => null);
-        }
         setPhotoStatus(null);
         return;
       }
@@ -414,22 +421,24 @@ export default function AppointmentDetail() {
     }
   };
 
-  const handleCaptureAbsencePhoto = async () => {
-    if (!canAbsence || busy || isPhotoBusy) return;
-    setError(null);
-    try {
-      setPhotoStatus("Abrindo camera...");
-      const shot = await capturePhoto();
+  const handleCameraConfirm = async (shot: CapturePhotoResult) => {
+    const intent = cameraIntent;
+    setCameraIntent(null);
+    if (!intent) return;
+
+    if (intent === "absence") {
       const previewUrl = URL.createObjectURL(shot.blob);
       setAbsencePhoto({ ...shot, previewUrl });
-    } catch (actionError) {
-      setError(
-        actionError instanceof Error
-          ? actionError.message
-          : "Nao foi possivel capturar a foto."
-      );
-    } finally {
-      setPhotoStatus(null);
+      return;
+    }
+
+    if (intent === "checkin") {
+      await performCheckIn(shot);
+      return;
+    }
+
+    if (intent === "checkout") {
+      await performCheckOut(shot);
     }
   };
 
@@ -487,6 +496,15 @@ export default function AppointmentDetail() {
     absenceReasonLabels[appointment.absenceReason ?? ""] ??
     appointment.absenceReason ??
     "Nenhuma";
+
+  const cameraTitle =
+    cameraIntent === "checkin"
+      ? "Foto do check-in"
+      : cameraIntent === "checkout"
+      ? "Foto do check-out"
+      : cameraIntent === "absence"
+      ? "Foto da ausencia"
+      : "Capturar foto";
 
   return (
     <AppShell
@@ -820,6 +838,14 @@ export default function AppointmentDetail() {
           </div>
         </section>
       </div>
+      <CameraCaptureModal
+        open={isCameraOpen}
+        title={cameraTitle}
+        subtitle="Alinhe a camera e capture a foto."
+        onClose={() => setCameraIntent(null)}
+        onConfirm={handleCameraConfirm}
+        onError={(message) => setError(message)}
+      />
     </AppShell>
   );
 }
