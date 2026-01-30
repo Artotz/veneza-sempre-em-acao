@@ -4,14 +4,18 @@ import { AppShell } from "../components/AppShell";
 import { AppointmentCard } from "../components/AppointmentCard";
 import { DaySelector } from "../components/DaySelector";
 import { EmptyState } from "../components/EmptyState";
+import { MonthSelector } from "../components/MonthSelector";
 import { SectionHeader } from "../components/SectionHeader";
 import { WeekSelector } from "../components/WeekSelector";
 import {
+  buildMonthOptions,
   buildMonthWeeks,
+  formatMonthParam,
   formatMonthYear,
   formatWeekRange,
   getDayIndexMonday,
   isSameDay,
+  parseMonthParam,
 } from "../lib/date";
 import { getFirstPendingId, isBlocked, isPending, sortByStart } from "../lib/schedule";
 import { useSchedule } from "../state/useSchedule";
@@ -24,14 +28,34 @@ export default function DayView() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const weeks = useMemo(() => buildMonthWeeks(new Date()), []);
-  const today = new Date();
-  const fallbackWeekIndex = Math.max(
-    0,
-    weeks.findIndex(
-      (week) => today >= week.startAt && today <= week.endAt
-    )
+  const today = useMemo(() => new Date(), []);
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const monthParam = parseMonthParam(searchParams.get("month"));
+    const baseDate = monthParam ?? today;
+    return new Date(baseDate.getFullYear(), baseDate.getMonth(), 1);
+  });
+  const monthOptions = useMemo(
+    () => buildMonthOptions(selectedMonth),
+    [selectedMonth]
   );
+  const selectedMonthIndex = useMemo(() => {
+    const selectedId = formatMonthParam(selectedMonth);
+    const index = monthOptions.findIndex((option) => option.id === selectedId);
+    return index === -1 ? 0 : index;
+  }, [monthOptions, selectedMonth]);
+  const weeks = useMemo(() => buildMonthWeeks(selectedMonth), [selectedMonth]);
+  const fallbackWeekIndex = useMemo(() => {
+    if (
+      today.getFullYear() !== selectedMonth.getFullYear() ||
+      today.getMonth() !== selectedMonth.getMonth()
+    ) {
+      return 0;
+    }
+    return Math.max(
+      0,
+      weeks.findIndex((week) => today >= week.startAt && today <= week.endAt)
+    );
+  }, [selectedMonth, today, weeks]);
 
   const [selectedWeekIndex, setSelectedWeekIndex] = useState(fallbackWeekIndex);
   const [selectedDayIndex, setSelectedDayIndex] = useState(
@@ -39,15 +63,45 @@ export default function DayView() {
   );
 
   useEffect(() => {
+    const monthParam = parseMonthParam(searchParams.get("month"));
+    if (monthParam) {
+      setSelectedMonth(monthParam);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
     const weekParam = Number(searchParams.get("week"));
     if (!Number.isNaN(weekParam)) {
       setSelectedWeekIndex(clamp(weekParam - 1, 0, weeks.length - 1));
+      return;
     }
+    setSelectedWeekIndex(fallbackWeekIndex);
+  }, [fallbackWeekIndex, searchParams, weeks.length]);
+
+  useEffect(() => {
+    setSelectedWeekIndex((current) => clamp(current, 0, weeks.length - 1));
+  }, [weeks.length]);
+
+  useEffect(() => {
     const dayParam = Number(searchParams.get("day"));
     if (!Number.isNaN(dayParam)) {
       setSelectedDayIndex(clamp(dayParam, 0, 6));
+      return;
     }
-  }, [searchParams, weeks.length]);
+    if (
+      selectedMonth.getFullYear() === today.getFullYear() &&
+      selectedMonth.getMonth() === today.getMonth() &&
+      selectedWeekIndex === fallbackWeekIndex
+    ) {
+      setSelectedDayIndex(getDayIndexMonday(today));
+    }
+  }, [
+    fallbackWeekIndex,
+    searchParams,
+    selectedMonth,
+    selectedWeekIndex,
+    today,
+  ]);
 
   const week = weeks[selectedWeekIndex] ?? weeks[0];
 
@@ -78,7 +132,7 @@ export default function DayView() {
     <AppShell
       title="Dia ativo"
       subtitle="Agendamentos do dia selecionado, ordenados por horario."
-      rightSlot={formatMonthYear(week.startAt)}
+      rightSlot={formatMonthYear(selectedMonth)}
     >
       {state.loading ? (
         <div className="space-y-4">
@@ -93,29 +147,54 @@ export default function DayView() {
         />
       ) : (
         <div className="space-y-5">
-          <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
+          <section className="space-y-4 rounded-3xl border border-border bg-white p-4 shadow-sm">
             <SectionHeader
               title={week.label}
               subtitle={formatWeekRange(week.startAt, week.endAt)}
               rightSlot={`${weekAppointments.length} ag.`}
             />
-            <WeekSelector
-              weeks={weeks}
-              selectedIndex={selectedWeekIndex}
-              onSelect={setSelectedWeekIndex}
-            />
-          </section>
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
+                  Mes
+                </div>
+                <MonthSelector
+                  months={monthOptions}
+                  selectedIndex={selectedMonthIndex}
+                  onSelect={(index) => {
+                    const nextMonth = monthOptions[index];
+                    if (nextMonth) {
+                      setSelectedMonth(nextMonth.date);
+                    }
+                  }}
+                />
+              </div>
 
-          <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
-            <SectionHeader
-              title="Selecione o dia"
-              subtitle={`Pendentes na semana: ${pendingWeekCount}`}
-            />
-            <DaySelector
-              days={week.days}
-              selectedIndex={selectedDayIndex}
-              onSelect={setSelectedDayIndex}
-            />
+              <div className="space-y-2">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
+                  Semana
+                </div>
+                <WeekSelector
+                  weeks={weeks}
+                  selectedIndex={selectedWeekIndex}
+                  onSelect={setSelectedWeekIndex}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
+                  <span>Dia</span>
+                  <span className="normal-case tracking-normal text-foreground-muted">
+                    Pendentes na semana: {pendingWeekCount}
+                  </span>
+                </div>
+                <DaySelector
+                  days={week.days}
+                  selectedIndex={selectedDayIndex}
+                  onSelect={setSelectedDayIndex}
+                />
+              </div>
+            </div>
           </section>
 
           <section className="space-y-3">

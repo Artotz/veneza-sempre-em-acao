@@ -38,6 +38,7 @@ type AppointmentRow = {
   absence_reason?: string | null;
   absence_note?: string | null;
   notes?: string | null;
+  oportunidades?: string[] | null;
   created_at?: string | null;
   updated_at?: string | null;
   appointments?: { title?: string | null } | { title?: string | null }[] | null;
@@ -47,7 +48,7 @@ export const COMPANY_SELECT =
   "id, document, name, state, lat, lng, csa, carteira_def, client_class, carteira_def2, classe_cliente, validacao, referencia, created_at";
 
 export const APPOINTMENT_SELECT =
-  "id, company_id, appointment_id, consultant_id, consultant_name, starts_at, ends_at, status, check_in_at, check_out_at, check_in_lat, check_in_lng, check_in_accuracy_m, check_out_lat, check_out_lng, check_out_accuracy_m, address_snapshot, absence_reason, absence_note, notes, created_at, updated_at";
+  "id, company_id, appointment_id, consultant_id, consultant_name, starts_at, ends_at, status, check_in_at, check_out_at, check_in_lat, check_in_lng, check_in_accuracy_m, check_out_lat, check_out_lng, check_out_accuracy_m, address_snapshot, absence_reason, absence_note, notes, oportunidades, created_at, updated_at";
 
 export const mapCompany = (row: CompanyRow): Company => ({
   id: row.id,
@@ -95,6 +96,7 @@ export const mapAppointment = (row: AppointmentRow): Appointment => ({
   absenceReason: row.absence_reason ?? null,
   absenceNote: row.absence_note ?? null,
   notes: row.notes ?? null,
+  oportunidades: row.oportunidades ?? null,
   createdAt: row.created_at ?? null,
   updatedAt: row.updated_at ?? null,
   appointmentTitle: getAppointmentTitle(row),

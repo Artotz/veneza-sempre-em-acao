@@ -1,4 +1,4 @@
-import type { MonthWeek } from "../lib/date";
+import { formatWeekRange, type MonthWeek } from "../lib/date";
 
 type WeekSelectorProps = {
   weeks: MonthWeek[];
@@ -16,13 +16,16 @@ export const WeekSelector = ({ weeks, selectedIndex, onSelect }: WeekSelectorPro
             key={week.id}
             type="button"
             onClick={() => onSelect(index)}
-            className={`shrink-0 rounded-full border px-4 py-2 text-xs font-semibold transition ${
+            className={`shrink-0 rounded-2xl border px-3 py-2 text-left text-xs font-semibold leading-tight transition ${
               isActive
                 ? "border-brand bg-brand/15 text-foreground"
                 : "border-border bg-white text-foreground-soft hover:border-brand/40"
             }`}
           >
-            {week.label}
+            <div>{week.label}</div>
+            <div className="text-[10px] text-foreground-muted">
+              {formatWeekRange(week.startAt, week.endAt)}
+            </div>
           </button>
         );
       })}

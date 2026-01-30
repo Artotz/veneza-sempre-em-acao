@@ -2,13 +2,17 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { AppShell } from "../components/AppShell";
 import { EmptyState } from "../components/EmptyState";
+import { MonthSelector } from "../components/MonthSelector";
 import { SectionHeader } from "../components/SectionHeader";
 import { WeekSelector } from "../components/WeekSelector";
 import {
+  buildMonthOptions,
   buildMonthWeeks,
+  formatMonthParam,
   formatMonthYear,
   formatWeekRange,
   isSameDay,
+  parseMonthParam,
 } from "../lib/date";
 import { sortByStart } from "../lib/schedule";
 import { useSchedule } from "../state/useSchedule";
@@ -21,21 +25,56 @@ export default function WeekView() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const weeks = useMemo(() => buildMonthWeeks(new Date()), []);
-  const today = new Date();
-  const fallbackWeekIndex = Math.max(
-    0,
-    weeks.findIndex((week) => today >= week.startAt && today <= week.endAt)
+  const today = useMemo(() => new Date(), []);
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const monthParam = parseMonthParam(searchParams.get("month"));
+    const baseDate = monthParam ?? today;
+    return new Date(baseDate.getFullYear(), baseDate.getMonth(), 1);
+  });
+  const monthOptions = useMemo(
+    () => buildMonthOptions(selectedMonth),
+    [selectedMonth]
   );
+  const selectedMonthIndex = useMemo(() => {
+    const selectedId = formatMonthParam(selectedMonth);
+    const index = monthOptions.findIndex((option) => option.id === selectedId);
+    return index === -1 ? 0 : index;
+  }, [monthOptions, selectedMonth]);
+  const weeks = useMemo(() => buildMonthWeeks(selectedMonth), [selectedMonth]);
+  const fallbackWeekIndex = useMemo(() => {
+    if (
+      today.getFullYear() !== selectedMonth.getFullYear() ||
+      today.getMonth() !== selectedMonth.getMonth()
+    ) {
+      return 0;
+    }
+    return Math.max(
+      0,
+      weeks.findIndex((week) => today >= week.startAt && today <= week.endAt)
+    );
+  }, [selectedMonth, today, weeks]);
 
   const [selectedWeekIndex, setSelectedWeekIndex] = useState(fallbackWeekIndex);
+
+  useEffect(() => {
+    const monthParam = parseMonthParam(searchParams.get("month"));
+    if (monthParam) {
+      setSelectedMonth(monthParam);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const weekParam = Number(searchParams.get("week"));
     if (!Number.isNaN(weekParam)) {
       setSelectedWeekIndex(clamp(weekParam - 1, 0, weeks.length - 1));
+      return;
     }
-  }, [searchParams, weeks.length]);
+    setSelectedWeekIndex(fallbackWeekIndex);
+  }, [fallbackWeekIndex, searchParams, weeks.length]);
+
+  useEffect(() => {
+    setSelectedWeekIndex((current) => clamp(current, 0, weeks.length - 1));
+  }, [weeks.length]);
 
   const week = weeks[selectedWeekIndex] ?? weeks[0];
 
@@ -63,7 +102,7 @@ export default function WeekView() {
     <AppShell
       title="Semana"
       subtitle="Visao simultanea dos 7 dias com cards compactos."
-      rightSlot={formatMonthYear(week.startAt)}
+      rightSlot={formatMonthYear(selectedMonth)}
     >
       {state.loading ? (
         <div className="space-y-4">
@@ -77,17 +116,40 @@ export default function WeekView() {
         />
       ) : (
         <div className="space-y-5">
-          <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
+          <section className="space-y-4 rounded-3xl border border-border bg-white p-4 shadow-sm">
             <SectionHeader
               title={week.label}
               subtitle={formatWeekRange(week.startAt, week.endAt)}
               rightSlot={`${weekAppointments.length} ag.`}
             />
-            <WeekSelector
-              weeks={weeks}
-              selectedIndex={selectedWeekIndex}
-              onSelect={setSelectedWeekIndex}
-            />
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
+                  Mes
+                </div>
+                <MonthSelector
+                  months={monthOptions}
+                  selectedIndex={selectedMonthIndex}
+                  onSelect={(index) => {
+                    const nextMonth = monthOptions[index];
+                    if (nextMonth) {
+                      setSelectedMonth(nextMonth.date);
+                    }
+                  }}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
+                  Semana
+                </div>
+                <WeekSelector
+                  weeks={weeks}
+                  selectedIndex={selectedWeekIndex}
+                  onSelect={setSelectedWeekIndex}
+                />
+              </div>
+            </div>
           </section>
 
           <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">

@@ -31,6 +31,7 @@ export type Appointment = {
   absenceReason?: string | null;
   absenceNote?: string | null;
   notes?: string | null;
+  oportunidades?: string[] | null;
   createdAt?: string | null;
   updatedAt?: string | null;
   appointmentTitle?: string | null;

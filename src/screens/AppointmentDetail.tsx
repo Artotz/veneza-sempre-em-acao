@@ -35,6 +35,25 @@ const absenceOptions = [
   { label: "Outro", value: "other" },
 ];
 
+const oportunidadeOptions = [
+  { label: "Preventiva", value: "preventiva" },
+  { label: "Garantia basica", value: "garantia_basica" },
+  { label: "Garantia estendida", value: "garantia_estendida" },
+  { label: "Reforma de componentes", value: "reforma_componentes" },
+  { label: "Lamina", value: "lamina" },
+  { label: "Dentes", value: "dentes" },
+  { label: "Rodante", value: "rodante" },
+  { label: "Disponibilidade", value: "disponibilidade" },
+  { label: "Reconexao", value: "reconexao" },
+  { label: "Transferencia AOR", value: "transferencia_aor" },
+  { label: "POPs", value: "pops" },
+  { label: "Outros", value: "outros" },
+];
+
+const oportunidadeLabels = Object.fromEntries(
+  oportunidadeOptions.map((option) => [option.value, option.label])
+) as Record<string, string>;
+
 type MediaKind = "checkin" | "checkout" | "absence";
 
 type ApontamentoMediaRow = {
@@ -98,6 +117,10 @@ export default function AppointmentDetail() {
   const [mediaError, setMediaError] = useState<string | null>(null);
   const [absencePhoto, setAbsencePhoto] = useState<PendingPhoto | null>(null);
   const [isActionsOpen, setIsActionsOpen] = useState(false);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [checkoutOpportunities, setCheckoutOpportunities] = useState<string[]>([]);
+  const [pendingCheckoutOpportunities, setPendingCheckoutOpportunities] =
+    useState<string[] | null>(null);
 
   const geo = useGeolocation();
 
@@ -296,6 +319,7 @@ export default function AppointmentDetail() {
   const isCheckOutCapturing = geo.isCapturing && geoIntent === "check_out";
   const isCameraOpen = cameraIntent !== null;
   const isPhotoBusy = Boolean(photoStatus) || isCameraOpen;
+  const isCheckoutBusy = isPhotoBusy || geo.isCapturing;
 
   const formatCoordinates = (lat?: number | null, lng?: number | null) => {
     if (lat == null || lng == null) return "Nao registrado";
@@ -333,6 +357,33 @@ export default function AppointmentDetail() {
   const handleCheckOut = () => {
     if (!canCheckOut || busy || geo.isCapturing || isPhotoBusy) return;
     setError(null);
+    setCheckoutOpportunities([]);
+    setPendingCheckoutOpportunities(null);
+    setIsCheckoutOpen(true);
+    setIsActionsOpen(false);
+  };
+
+  const handleCloseCheckout = () => {
+    if (isCheckoutBusy) return;
+    setIsCheckoutOpen(false);
+    setCheckoutOpportunities([]);
+    setPendingCheckoutOpportunities(null);
+    geo.resetError();
+    setGeoIntent(null);
+  };
+
+  const toggleCheckoutOpportunity = (value: string) => {
+    setCheckoutOpportunities((current) =>
+      current.includes(value)
+        ? current.filter((item) => item !== value)
+        : [...current, value]
+    );
+  };
+
+  const handleConfirmCheckout = () => {
+    if (!canCheckOut || busy || geo.isCapturing || isPhotoBusy) return;
+    setError(null);
+    setPendingCheckoutOpportunities([...checkoutOpportunities]);
     setCameraIntent("checkout");
   };
 
@@ -387,6 +438,7 @@ export default function AppointmentDetail() {
     setError(null);
     geo.resetError();
     setGeoIntent("check_out");
+    const oportunidades = pendingCheckoutOpportunities ?? checkoutOpportunities;
     try {
       const position = await geo.capture();
       setPhotoStatus("Enviando foto...");
@@ -402,10 +454,14 @@ export default function AppointmentDetail() {
         lat: position.lat,
         lng: position.lng,
         accuracy: position.accuracy,
+        oportunidades: oportunidades ?? [],
       });
       await loadDetail();
       await loadMedia();
       setGeoIntent(null);
+      setIsCheckoutOpen(false);
+      setCheckoutOpportunities([]);
+      setPendingCheckoutOpportunities(null);
     } catch (actionError) {
       if (isGeoError(actionError)) {
         setPhotoStatus(null);
@@ -491,6 +547,12 @@ export default function AppointmentDetail() {
     setGeoIntent(null);
   };
 
+  const handleRetryCheckoutGeo = () => {
+    if (!canCheckOut || busy || isCheckoutBusy) return;
+    geo.resetError();
+    setCameraIntent("checkout");
+  };
+
   const handleOpenActions = () => {
     setIsActionsOpen(true);
   };
@@ -505,6 +567,11 @@ export default function AppointmentDetail() {
     absenceReasonLabels[appointment.absenceReason ?? ""] ??
     appointment.absenceReason ??
     "Nenhuma";
+
+  const oportunidades = appointment.oportunidades ?? [];
+  const showOportunidades = Boolean(
+    appointment.checkOutAt || appointment.status === "done"
+  );
 
   const cameraTitle =
     cameraIntent === "checkin"
@@ -609,6 +676,26 @@ export default function AppointmentDetail() {
             ) : null}
           </div>
         </section>
+
+        {showOportunidades ? (
+          <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
+            <SectionHeader title="Oportunidades percebidas" />
+            {oportunidades.length ? (
+              <div className="flex flex-wrap gap-2">
+                {oportunidades.map((item) => (
+                  <span
+                    key={item}
+                    className="rounded-full border border-border bg-surface-muted px-3 py-1 text-[11px] font-semibold text-foreground"
+                  >
+                    {oportunidadeLabels[item] ?? item}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-foreground-muted">Nenhuma</p>
+            )}
+          </section>
+        ) : null}
 
         <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
           <SectionHeader title="Acoes" subtitle="Sincroniza com o Supabase." />
@@ -718,6 +805,146 @@ export default function AppointmentDetail() {
           </div>
         </section>
       </div>
+      {isCheckoutOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 px-4 py-6 sm:items-center"
+          onClick={handleCloseCheckout}
+        >
+          <div
+            className="w-full max-w-md overflow-hidden rounded-3xl border border-border bg-white shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="border-b border-border px-5 py-4">
+              <h3 className="text-base font-semibold text-foreground">
+                Check-out do agendamento
+              </h3>
+              <p className="mt-1 text-xs text-foreground-muted">
+                Confirme os dados antes de finalizar.
+              </p>
+            </div>
+
+            <div className="space-y-4 px-5 py-4">
+              <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-muted">
+                <p className="text-[11px] font-semibold text-foreground">
+                  Resumo do apontamento
+                </p>
+                <div className="mt-2 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span>Horario</span>
+                    <span className="font-semibold text-foreground">
+                      {dayLabel} - {formatAppointmentWindow(appointment)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Empresa</span>
+                    <span className="font-semibold text-foreground">
+                      {company?.name ?? "Empresa"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-border bg-white p-3">
+                <p className="text-xs font-semibold text-foreground">
+                  Oportunidades percebidas durante a visita
+                </p>
+                <p className="mt-1 text-[11px] text-foreground-muted">
+                  Selecione oportunidades percebidas durante a visita (opcional).
+                </p>
+                <div className="mt-3 grid gap-2">
+                  {oportunidadeOptions.map((option) => {
+                    const fieldId = `oportunidade-${option.value}`;
+                    const checked = checkoutOpportunities.includes(option.value);
+                    return (
+                      <label
+                        key={option.value}
+                        htmlFor={fieldId}
+                        className="flex items-center gap-2 rounded-2xl border border-border bg-white px-3 py-2 text-xs text-foreground"
+                      >
+                        <input
+                          id={fieldId}
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleCheckoutOpportunity(option.value)}
+                          disabled={isCheckoutBusy}
+                          className="h-4 w-4 accent-accent"
+                        />
+                        <span className="font-semibold">{option.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {geo.isCapturing && geoIntent === "check_out" ? (
+                <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
+                  Capturando localizacao. Aguarde alguns segundos...
+                </div>
+              ) : null}
+              {photoStatus ? (
+                <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
+                  {photoStatus}
+                </div>
+              ) : null}
+              {geo.error && geoIntent === "check_out" ? (
+                <div className="rounded-2xl border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-foreground-soft">
+                  <p className="font-semibold text-foreground">
+                    {geo.error.message}
+                  </p>
+                  <p className="mt-1 text-foreground-soft">
+                    {geo.error.code === "PERMISSION_DENIED"
+                      ? "Permita localizacao no navegador para concluir o registro."
+                      : "Voce pode tentar novamente ou cancelar."}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={handleRetryCheckoutGeo}
+                      className="rounded-full border border-border bg-white px-3 py-1 text-[10px] font-semibold text-foreground"
+                    >
+                      Tentar novamente
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCancelGeo}
+                      className="rounded-full border border-border bg-white px-3 py-1 text-[10px] font-semibold text-foreground-soft"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="flex items-center justify-end gap-2 border-t border-border px-5 py-4">
+              <button
+                type="button"
+                onClick={handleCloseCheckout}
+                disabled={isCheckoutBusy}
+                className={`rounded-full border border-border px-4 py-2 text-xs font-semibold ${
+                  isCheckoutBusy
+                    ? "cursor-not-allowed text-foreground-muted"
+                    : "text-foreground-soft"
+                }`}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmCheckout}
+                disabled={!canCheckOut || busy || isCheckoutBusy}
+                className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
+                  canCheckOut && !busy && !isCheckoutBusy
+                    ? "bg-info text-white"
+                    : "cursor-not-allowed bg-surface-muted text-foreground-muted"
+                }`}
+              >
+                Confirmar check-out
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       <CameraCaptureModal
         open={isCameraOpen}
         title={cameraTitle}

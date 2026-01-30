@@ -26,7 +26,13 @@ export type ScheduleContextValue = {
     ) => Promise<Appointment | null>;
     checkOut: (
       id: string,
-      payload: { at: string; lat: number; lng: number; accuracy: number }
+      payload: {
+        at: string;
+        lat: number;
+        lng: number;
+        accuracy: number;
+        oportunidades: string[];
+      }
     ) => Promise<Appointment | null>;
     justifyAbsence: (
       id: string,

@@ -38,6 +38,12 @@ const MONTHS_FULL = [
   "Dezembro",
 ];
 
+export type MonthOption = {
+  id: string;
+  date: Date;
+  label: string;
+};
+
 export type WeekDay = {
   id: (typeof WEEK_DAYS)[number]["id"];
   short: string;
@@ -89,6 +95,49 @@ export const formatDateShort = (date: Date) => {
 
 export const formatMonthYear = (date: Date) =>
   `${MONTHS_FULL[date.getMonth()]} ${date.getFullYear()}`;
+
+export const formatMonthYearLabel = (date: Date) =>
+  `${MONTHS_FULL[date.getMonth()]} - ${date.getFullYear()}`;
+
+export const formatMonthParam = (date: Date) => {
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  return `${date.getFullYear()}-${month}`;
+};
+
+export const parseMonthParam = (value: string | null) => {
+  if (!value) return null;
+  const [yearText, monthText] = value.split("-");
+  const year = Number(yearText);
+  const month = Number(monthText);
+  if (!Number.isFinite(year) || !Number.isFinite(month)) return null;
+  if (month < 1 || month > 12) return null;
+  return new Date(year, month - 1, 1);
+};
+
+export const buildMonthOptions = (
+  anchorDate: Date,
+  monthsBack = 5,
+  monthsAhead = 6
+) => {
+  const startDate = new Date(
+    anchorDate.getFullYear(),
+    anchorDate.getMonth() - monthsBack,
+    1
+  );
+  const totalMonths = monthsBack + monthsAhead + 1;
+  return Array.from({ length: totalMonths }).map((_, index) => {
+    const date = new Date(
+      startDate.getFullYear(),
+      startDate.getMonth() + index,
+      1
+    );
+    return {
+      id: formatMonthParam(date),
+      date,
+      label: formatMonthYearLabel(date),
+    };
+  });
+};
 
 export const formatTime = (date: Date) => {
   const hours = `${date.getHours()}`.padStart(2, "0");

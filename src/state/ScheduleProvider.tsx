@@ -236,7 +236,13 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
         ),
       checkOut: async (
         id: string,
-        payload: { at: string; lat: number; lng: number; accuracy: number }
+        payload: {
+          at: string;
+          lat: number;
+          lng: number;
+          accuracy: number;
+          oportunidades: string[];
+        }
       ) =>
         runUpdate(id, () =>
           updateAppointment(id, {
@@ -245,6 +251,7 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
             check_out_lng: payload.lng,
             check_out_accuracy_m: payload.accuracy,
             status: "done",
+            oportunidades: payload.oportunidades,
           })
         ),
       justifyAbsence: async (id: string, reason: string, note?: string) =>

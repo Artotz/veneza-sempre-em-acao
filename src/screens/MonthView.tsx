@@ -1,12 +1,16 @@
-import { useEffect, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { AppShell } from "../components/AppShell";
 import { EmptyState } from "../components/EmptyState";
+import { MonthSelector } from "../components/MonthSelector";
 import { SectionHeader } from "../components/SectionHeader";
 import {
+  buildMonthOptions,
   buildMonthWeeks,
   formatMonthYear,
+  formatMonthParam,
   isSameDay,
+  parseMonthParam,
   WEEK_DAYS,
 } from "../lib/date";
 import { useSchedule } from "../state/useSchedule";
@@ -16,15 +20,36 @@ const getDateKey = (date: Date) =>
 
 export default function MonthView() {
   const { state, actions } = useSchedule();
-  const referenceDate = useMemo(() => new Date(), []);
-  const weeks = useMemo(() => buildMonthWeeks(referenceDate), [referenceDate]);
-  const monthLabel = formatMonthYear(referenceDate);
+  const [searchParams] = useSearchParams();
   const today = useMemo(() => new Date(), []);
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const monthParam = parseMonthParam(searchParams.get("month"));
+    const baseDate = monthParam ?? today;
+    return new Date(baseDate.getFullYear(), baseDate.getMonth(), 1);
+  });
+  const monthOptions = useMemo(
+    () => buildMonthOptions(selectedMonth),
+    [selectedMonth]
+  );
+  const selectedMonthIndex = useMemo(() => {
+    const selectedId = formatMonthParam(selectedMonth);
+    const index = monthOptions.findIndex((option) => option.id === selectedId);
+    return index === -1 ? 0 : index;
+  }, [monthOptions, selectedMonth]);
+  const weeks = useMemo(() => buildMonthWeeks(selectedMonth), [selectedMonth]);
+  const monthLabel = formatMonthYear(selectedMonth);
   const monthRange = useMemo(() => {
     const startAt = weeks[0]?.startAt ?? new Date();
     const endAt = weeks[weeks.length - 1]?.endAt ?? new Date();
     return { startAt, endAt };
   }, [weeks]);
+
+  useEffect(() => {
+    const monthParam = parseMonthParam(searchParams.get("month"));
+    if (monthParam) {
+      setSelectedMonth(monthParam);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     actions.setRange({ startAt: monthRange.startAt, endAt: monthRange.endAt });
@@ -59,11 +84,26 @@ export default function MonthView() {
         />
       ) : (
         <div className="space-y-4">
-          <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
+          <section className="space-y-4 rounded-3xl border border-border bg-white p-4 shadow-sm">
             <SectionHeader
               title="Grade do mes"
               subtitle="Todos os dias do mes em 7 colunas."
             />
+            <div className="space-y-2">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
+                Mes
+              </div>
+              <MonthSelector
+                months={monthOptions}
+                selectedIndex={selectedMonthIndex}
+                onSelect={(index) => {
+                  const nextMonth = monthOptions[index];
+                  if (nextMonth) {
+                    setSelectedMonth(nextMonth.date);
+                  }
+                }}
+              />
+            </div>
             <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-semibold uppercase text-foreground-muted">
               {WEEK_DAYS.map((day) => (
                 <div key={day.id} className="rounded-lg bg-surface-muted py-2">
@@ -77,8 +117,8 @@ export default function MonthView() {
                   const dayKey = getDateKey(day.date);
                   const count = appointmentCounts.get(dayKey) ?? 0;
                   const isCurrentMonth =
-                    day.date.getMonth() === referenceDate.getMonth() &&
-                    day.date.getFullYear() === referenceDate.getFullYear();
+                    day.date.getMonth() === selectedMonth.getMonth() &&
+                    day.date.getFullYear() === selectedMonth.getFullYear();
                   const isToday = isSameDay(day.date, today);
                   const borderClass = isToday ? "border-accent" : "border-border";
                   const backgroundClass = isToday
@@ -92,7 +132,9 @@ export default function MonthView() {
                   return (
                     <Link
                       key={`${week.id}-${day.date.getTime()}`}
-                      to={`/cronograma/dia?week=${weekIndex + 1}&day=${day.index}`}
+                      to={`/cronograma/dia?month=${formatMonthParam(
+                        selectedMonth
+                      )}&week=${weekIndex + 1}&day=${day.index}`}
                       aria-label={`${day.label} com ${count} agendamentos`}
                       className={`group flex min-h-[76px] flex-col justify-between rounded-xl border p-2 text-left transition hover:border-accent/40 hover:bg-white ${borderClass} ${backgroundClass} ${textClass}`}
                     >
