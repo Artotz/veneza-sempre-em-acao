@@ -97,6 +97,7 @@ export default function AppointmentDetail() {
   const [mediaLoading, setMediaLoading] = useState(false);
   const [mediaError, setMediaError] = useState<string | null>(null);
   const [absencePhoto, setAbsencePhoto] = useState<PendingPhoto | null>(null);
+  const [isActionsOpen, setIsActionsOpen] = useState(false);
 
   const geo = useGeolocation();
 
@@ -490,6 +491,14 @@ export default function AppointmentDetail() {
     setGeoIntent(null);
   };
 
+  const handleOpenActions = () => {
+    setIsActionsOpen(true);
+  };
+
+  const handleCloseActions = () => {
+    setIsActionsOpen(false);
+  };
+
   const snapshotLabel = appointment.addressSnapshot ?? null;
 
   const absenceLabel =
@@ -603,142 +612,13 @@ export default function AppointmentDetail() {
 
         <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
           <SectionHeader title="Acoes" subtitle="Sincroniza com o Supabase." />
-          <div className="grid gap-2">
-            <button
-              type="button"
-              disabled={!canCheckIn || busy || geo.isCapturing || isPhotoBusy}
-              onClick={handleCheckIn}
-              className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${
-                canCheckIn && !busy && !geo.isCapturing && !isPhotoBusy
-                  ? "bg-success text-white"
-                  : "cursor-not-allowed bg-surface-muted text-foreground-muted"
-              }`}
-            >
-              {isCheckInCapturing ? "Capturando localizacao..." : "Fazer check-in"}
-            </button>
-            <button
-              type="button"
-              disabled={!canCheckOut || busy || geo.isCapturing || isPhotoBusy}
-              onClick={handleCheckOut}
-              className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${
-                canCheckOut && !busy && !geo.isCapturing && !isPhotoBusy
-                  ? "bg-info text-white"
-                  : "cursor-not-allowed bg-surface-muted text-foreground-muted"
-              }`}
-            >
-              {isCheckOutCapturing ? "Capturando localizacao..." : "Fazer check-out"}
-            </button>
-            {geo.isCapturing ? (
-              <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
-                Capturando localizacao. Aguarde alguns segundos...
-              </div>
-            ) : null}
-            {photoStatus ? (
-              <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
-                {photoStatus}
-              </div>
-            ) : null}
-            {geo.error ? (
-              <div className="rounded-2xl border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-foreground-soft">
-                <p className="font-semibold text-foreground">
-                  {geo.error.message}
-                </p>
-                <p className="mt-1 text-foreground-soft">
-                  {geo.error.code === "PERMISSION_DENIED"
-                    ? "Permita localizacao no navegador para concluir o registro."
-                    : "Voce pode tentar novamente ou cancelar."}
-                </p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={handleRetryGeo}
-                    className="rounded-full border border-border bg-white px-3 py-1 text-[10px] font-semibold text-foreground"
-                  >
-                    Tentar novamente
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleCancelGeo}
-                    className="rounded-full border border-border bg-white px-3 py-1 text-[10px] font-semibold text-foreground-soft"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              </div>
-            ) : null}
-            <div className="rounded-2xl border border-border bg-surface-muted p-3">
-              <p className="text-xs font-semibold text-foreground">
-                Justificar ausencia
-              </p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {absenceOptions.map((reason) => (
-                  <button
-                    key={reason.value}
-                    type="button"
-                    onClick={() => setAbsenceReason(reason.value)}
-                    className={`rounded-full border px-3 py-1 text-[10px] font-semibold ${
-                      absenceReason === reason.value
-                        ? "border-accent bg-white text-foreground"
-                        : "border-border bg-white text-foreground-soft"
-                    }`}
-                  >
-                    {reason.label}
-                  </button>
-                ))}
-              </div>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  disabled={!canAbsence || busy || isPhotoBusy}
-                  onClick={handleCaptureAbsencePhoto}
-                  className={`rounded-full border px-3 py-1 text-[10px] font-semibold ${
-                    canAbsence && !busy && !isPhotoBusy
-                      ? "border-border bg-white text-foreground"
-                      : "cursor-not-allowed border-border bg-white text-foreground-muted"
-                  }`}
-                >
-                  {absencePhoto ? "Trocar foto" : "Anexar foto"}
-                </button>
-                {absencePhoto ? (
-                  <button
-                    type="button"
-                    onClick={handleRemoveAbsencePhoto}
-                    className="rounded-full border border-border bg-white px-3 py-1 text-[10px] font-semibold text-foreground-soft"
-                  >
-                    Remover foto
-                  </button>
-                ) : null}
-              </div>
-              {absencePhoto ? (
-                <div className="mt-3 overflow-hidden rounded-2xl border border-border bg-white">
-                  <img
-                    src={absencePhoto.previewUrl}
-                    alt="Foto da ausencia"
-                    className="h-32 w-full object-cover"
-                  />
-                </div>
-              ) : null}
-              <textarea
-                value={absenceNote}
-                onChange={(event) => setAbsenceNote(event.target.value)}
-                placeholder="Descreva o motivo..."
-                className="mt-3 w-full resize-none rounded-2xl border border-border bg-white px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-accent/40"
-                rows={3}
-              />
-              <button
-                type="button"
-                disabled={!canAbsence || busy || isPhotoBusy}
-                onClick={handleAbsence}
-                className={`mt-3 w-full rounded-2xl px-4 py-2 text-xs font-semibold transition ${
-                  canAbsence && !busy && !isPhotoBusy
-                    ? "bg-danger text-white"
-                    : "cursor-not-allowed bg-white text-foreground-muted"
-                }`}
-              >
-                Registrar ausencia
-              </button>
-            </div>
-          </div>
+          <button
+            type="button"
+            onClick={handleOpenActions}
+            className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm font-semibold text-foreground transition hover:border-accent"
+          >
+            Acoes
+          </button>
         </section>
 
         <section className="rounded-3xl border border-border bg-white p-4 shadow-sm">
@@ -846,6 +726,179 @@ export default function AppointmentDetail() {
         onConfirm={handleCameraConfirm}
         onError={(message) => setError(message)}
       />
+      {isActionsOpen ? (
+        <div
+          className="fixed inset-0 z-40 flex items-end justify-center bg-black/50 px-4 py-6 sm:items-center"
+          onClick={handleCloseActions}
+        >
+          <div
+            className="w-full max-w-md overflow-hidden rounded-3xl border border-border bg-white shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="border-b border-border px-5 py-4">
+              <h3 className="text-base font-semibold text-foreground">
+                Acoes do agendamento
+              </h3>
+              <p className="mt-1 text-xs text-foreground-muted">
+                Sincroniza com o Supabase.
+              </p>
+            </div>
+
+            <div className="px-5 py-4">
+              <div className="grid gap-2">
+                <button
+                  type="button"
+                  disabled={!canCheckIn || busy || geo.isCapturing || isPhotoBusy}
+                  onClick={handleCheckIn}
+                  className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                    canCheckIn && !busy && !geo.isCapturing && !isPhotoBusy
+                      ? "bg-success text-white"
+                      : "cursor-not-allowed bg-surface-muted text-foreground-muted"
+                  }`}
+                >
+                  {isCheckInCapturing
+                    ? "Capturando localizacao..."
+                    : "Fazer check-in"}
+                </button>
+                <button
+                  type="button"
+                  disabled={!canCheckOut || busy || geo.isCapturing || isPhotoBusy}
+                  onClick={handleCheckOut}
+                  className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                    canCheckOut && !busy && !geo.isCapturing && !isPhotoBusy
+                      ? "bg-info text-white"
+                      : "cursor-not-allowed bg-surface-muted text-foreground-muted"
+                  }`}
+                >
+                  {isCheckOutCapturing
+                    ? "Capturando localizacao..."
+                    : "Fazer check-out"}
+                </button>
+                {geo.isCapturing ? (
+                  <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
+                    Capturando localizacao. Aguarde alguns segundos...
+                  </div>
+                ) : null}
+                {photoStatus ? (
+                  <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
+                    {photoStatus}
+                  </div>
+                ) : null}
+                {geo.error ? (
+                  <div className="rounded-2xl border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-foreground-soft">
+                    <p className="font-semibold text-foreground">
+                      {geo.error.message}
+                    </p>
+                    <p className="mt-1 text-foreground-soft">
+                      {geo.error.code === "PERMISSION_DENIED"
+                        ? "Permita localizacao no navegador para concluir o registro."
+                        : "Voce pode tentar novamente ou cancelar."}
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={handleRetryGeo}
+                        className="rounded-full border border-border bg-white px-3 py-1 text-[10px] font-semibold text-foreground"
+                      >
+                        Tentar novamente
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleCancelGeo}
+                        className="rounded-full border border-border bg-white px-3 py-1 text-[10px] font-semibold text-foreground-soft"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+                <div className="rounded-2xl border border-border bg-surface-muted p-3">
+                  <p className="text-xs font-semibold text-foreground">
+                    Justificar ausencia
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {absenceOptions.map((reason) => (
+                      <button
+                        key={reason.value}
+                        type="button"
+                        onClick={() => setAbsenceReason(reason.value)}
+                        className={`rounded-full border px-3 py-1 text-[10px] font-semibold ${
+                          absenceReason === reason.value
+                            ? "border-accent bg-white text-foreground"
+                            : "border-border bg-white text-foreground-soft"
+                        }`}
+                      >
+                        {reason.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={!canAbsence || busy || isPhotoBusy}
+                      onClick={handleCaptureAbsencePhoto}
+                      className={`rounded-full border px-3 py-1 text-[10px] font-semibold ${
+                        canAbsence && !busy && !isPhotoBusy
+                          ? "border-border bg-white text-foreground"
+                          : "cursor-not-allowed border-border bg-white text-foreground-muted"
+                      }`}
+                    >
+                      {absencePhoto ? "Trocar foto" : "Anexar foto"}
+                    </button>
+                    {absencePhoto ? (
+                      <button
+                        type="button"
+                        onClick={handleRemoveAbsencePhoto}
+                        className="rounded-full border border-border bg-white px-3 py-1 text-[10px] font-semibold text-foreground-soft"
+                      >
+                        Remover foto
+                      </button>
+                    ) : null}
+                  </div>
+                  {absencePhoto ? (
+                    <div className="mt-3 overflow-hidden rounded-2xl border border-border bg-white">
+                      <img
+                        src={absencePhoto.previewUrl}
+                        alt="Foto da ausencia"
+                        className="h-32 w-full object-cover"
+                      />
+                    </div>
+                  ) : null}
+                  <textarea
+                    value={absenceNote}
+                    onChange={(event) => setAbsenceNote(event.target.value)}
+                    placeholder="Descreva o motivo..."
+                    className="mt-3 w-full resize-none rounded-2xl border border-border bg-white px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-accent/40"
+                    rows={3}
+                  />
+                  <button
+                    type="button"
+                    disabled={!canAbsence || busy || isPhotoBusy}
+                    onClick={handleAbsence}
+                    className={`mt-3 w-full rounded-2xl px-4 py-2 text-xs font-semibold transition ${
+                      canAbsence && !busy && !isPhotoBusy
+                        ? "bg-danger text-white"
+                        : "cursor-not-allowed bg-white text-foreground-muted"
+                    }`}
+                  >
+                    Registrar ausencia
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end border-t border-border px-5 py-4">
+              <button
+                type="button"
+                onClick={handleCloseActions}
+                className="rounded-full border border-border px-4 py-2 text-xs font-semibold text-foreground-soft"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </AppShell>
   );
 }

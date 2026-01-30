@@ -88,7 +88,10 @@ export default function NewAppointment() {
     const startsAtDate = new Date(startsAt);
     const endsAtDate = new Date(endsAt);
 
-    if (Number.isNaN(startsAtDate.getTime()) || Number.isNaN(endsAtDate.getTime())) {
+    if (
+      Number.isNaN(startsAtDate.getTime()) ||
+      Number.isNaN(endsAtDate.getTime())
+    ) {
       setError("Datas invalidas.");
       return;
     }
@@ -189,9 +192,9 @@ export default function NewAppointment() {
             </div>
           ) : null}
 
-          <div className="rounded-2xl border border-border bg-surface-muted px-4 py-3 text-xs text-foreground-soft">
+          {/* <div className="rounded-2xl border border-border bg-surface-muted px-4 py-3 text-xs text-foreground-soft">
             Endereco sera registrado automaticamente com base na empresa.
-          </div>
+          </div> */}
 
           <div className="grid gap-3 md:grid-cols-2">
             <label className="space-y-2 text-sm font-semibold text-foreground">
