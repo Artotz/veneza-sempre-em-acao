@@ -1,7 +1,8 @@
-﻿import App from "./App";
+import App from "./App";
 import { createRoot } from "react-dom/client";
 import { registerSW } from "virtual:pwa-register";
 import "./index.css";
+import "leaflet/dist/leaflet.css";
 
 registerSW({ immediate: true });
 

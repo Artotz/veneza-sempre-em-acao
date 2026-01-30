@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
+import L from "leaflet";
+import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
+import markerIcon from "leaflet/dist/images/marker-icon.png";
+import markerShadow from "leaflet/dist/images/marker-shadow.png";
 import { AppShell } from "../components/AppShell";
 import { CameraCaptureModal } from "../components/CameraCaptureModal";
 import { EmptyState } from "../components/EmptyState";
@@ -85,6 +90,35 @@ const mediaKindLabels: Record<MediaKind, string> = {
   checkin: "Check-in",
   checkout: "Check-out",
   absence: "Ausencia",
+};
+
+const defaultMarkerIcon = L.icon({
+  iconRetinaUrl: markerIcon2x,
+  iconUrl: markerIcon,
+  shadowUrl: markerShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
+
+type MapPoint = {
+  id: string;
+  label: string;
+  position: [number, number];
+  kind: "company" | "checkin" | "checkout";
+};
+
+const MapFitBounds = ({ points }: { points: MapPoint[] }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!points.length) return;
+    const bounds = L.latLngBounds(points.map((point) => point.position));
+    map.fitBounds(bounds, { padding: [24, 24], maxZoom: 16 });
+  }, [map, points]);
+
+  return null;
 };
 
 export default function AppointmentDetail() {
@@ -320,6 +354,45 @@ export default function AppointmentDetail() {
   const isCameraOpen = cameraIntent !== null;
   const isPhotoBusy = Boolean(photoStatus) || isCameraOpen;
   const isCheckoutBusy = isPhotoBusy || geo.isCapturing;
+
+  const mapPoints = useMemo(() => {
+    const points: MapPoint[] = [];
+    const pushPoint = (
+      id: string,
+      label: string,
+      lat?: number | null,
+      lng?: number | null,
+      kind: MapPoint["kind"] = "company"
+    ) => {
+      if (lat == null || lng == null) return;
+      const latNumber = Number(lat);
+      const lngNumber = Number(lng);
+      if (!Number.isFinite(latNumber) || !Number.isFinite(lngNumber)) return;
+      points.push({ id, label, position: [latNumber, lngNumber], kind });
+    };
+
+    if (company) {
+      pushPoint("company", company.name ?? "Empresa", company.lat, company.lng, "company");
+    }
+    pushPoint("checkin", "Check-in", appointment.checkInLat, appointment.checkInLng, "checkin");
+    pushPoint(
+      "checkout",
+      "Check-out",
+      appointment.checkOutLat,
+      appointment.checkOutLng,
+      "checkout"
+    );
+
+    return points;
+  }, [
+    appointment.checkInLat,
+    appointment.checkInLng,
+    appointment.checkOutLat,
+    appointment.checkOutLng,
+    company?.lat,
+    company?.lng,
+    company?.name,
+  ]);
 
   const formatCoordinates = (lat?: number | null, lng?: number | null) => {
     if (lat == null || lng == null) return "Nao registrado";
@@ -706,6 +779,48 @@ export default function AppointmentDetail() {
           >
             Acoes
           </button>
+        </section>
+
+        <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
+          <SectionHeader title="Mapa" subtitle="Pinos do atendimento." />
+          {mapPoints.length ? (
+            <div className="overflow-hidden rounded-2xl border border-border">
+              <MapContainer
+                center={mapPoints[0].position}
+                zoom={13}
+                scrollWheelZoom={false}
+                className="h-64 w-full"
+              >
+                <TileLayer
+                  attribution="&copy; OpenStreetMap contributors"
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                <MapFitBounds points={mapPoints} />
+                {mapPoints.map((point) => (
+                  <Marker
+                    key={point.id}
+                    position={point.position}
+                    icon={defaultMarkerIcon}
+                  >
+                    <Popup>
+                      <div className="space-y-1 text-xs">
+                        <p className="font-semibold text-foreground">
+                          {point.label}
+                        </p>
+                        <p className="text-foreground-muted">
+                          {point.position[0].toFixed(5)}, {point.position[1].toFixed(5)}
+                        </p>
+                      </div>
+                    </Popup>
+                  </Marker>
+                ))}
+              </MapContainer>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
+              Sem coordenadas para exibir no mapa.
+            </div>
+          )}
         </section>
 
         <section className="rounded-3xl border border-border bg-white p-4 shadow-sm">
