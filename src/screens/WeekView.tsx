@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { AppShell } from "../components/AppShell";
+import { CheckInOutMap } from "../components/CheckInOutMap";
 import { EmptyState } from "../components/EmptyState";
 import { MonthSelector } from "../components/MonthSelector";
 import { SectionHeader } from "../components/SectionHeader";
@@ -60,14 +61,19 @@ export default function WeekView() {
     const monthParam = parseMonthParam(searchParams.get("month"));
     if (monthParam) {
       setSelectedMonth(monthParam);
+      return;
     }
-  }, [searchParams]);
+    setSelectedMonth(new Date(today.getFullYear(), today.getMonth(), 1));
+  }, [searchParams, today]);
 
   useEffect(() => {
-    const weekParam = Number(searchParams.get("week"));
-    if (!Number.isNaN(weekParam)) {
-      setSelectedWeekIndex(clamp(weekParam - 1, 0, weeks.length - 1));
-      return;
+    const weekParamText = searchParams.get("week");
+    if (weekParamText !== null) {
+      const weekParam = Number(weekParamText);
+      if (!Number.isNaN(weekParam)) {
+        setSelectedWeekIndex(clamp(weekParam - 1, 0, weeks.length - 1));
+        return;
+      }
     }
     setSelectedWeekIndex(fallbackWeekIndex);
   }, [fallbackWeekIndex, searchParams, weeks.length]);
@@ -97,6 +103,15 @@ export default function WeekView() {
   const handleOpenAppointment = (id: string) => {
     navigate(`/apontamentos/${id}`);
   };
+
+  const getMapLabel = useCallback(
+    (appointment: (typeof weekAppointments)[number], kind: "checkin" | "checkout") => {
+      const companyName =
+        selectors.getCompany(appointment.companyId)?.name ?? "Empresa";
+      return `${companyName} - ${kind === "checkin" ? "Check-in" : "Check-out"}`;
+    },
+    [selectors]
+  );
 
   return (
     <AppShell
@@ -199,6 +214,18 @@ export default function WeekView() {
                 );
               })}
             </div>
+          </section>
+
+          <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
+            <SectionHeader
+              title="Mapa da semana"
+              subtitle="Check-ins e check-outs registrados na semana."
+            />
+            <CheckInOutMap
+              appointments={weekAppointments}
+              getLabel={getMapLabel}
+              emptyMessage="Sem check-ins ou check-outs para exibir na semana."
+            />
           </section>
         </div>
       )}

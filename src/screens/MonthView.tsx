@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { AppShell } from "../components/AppShell";
+import { CheckInOutMap } from "../components/CheckInOutMap";
 import { EmptyState } from "../components/EmptyState";
 import { MonthSelector } from "../components/MonthSelector";
 import { SectionHeader } from "../components/SectionHeader";
@@ -19,7 +20,7 @@ const getDateKey = (date: Date) =>
   `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
 
 export default function MonthView() {
-  const { state, actions } = useSchedule();
+  const { state, actions, selectors } = useSchedule();
   const [searchParams] = useSearchParams();
   const today = useMemo(() => new Date(), []);
   const [selectedMonth, setSelectedMonth] = useState(() => {
@@ -48,8 +49,10 @@ export default function MonthView() {
     const monthParam = parseMonthParam(searchParams.get("month"));
     if (monthParam) {
       setSelectedMonth(monthParam);
+      return;
     }
-  }, [searchParams]);
+    setSelectedMonth(new Date(today.getFullYear(), today.getMonth(), 1));
+  }, [searchParams, today]);
 
   useEffect(() => {
     actions.setRange({ startAt: monthRange.startAt, endAt: monthRange.endAt });
@@ -64,6 +67,15 @@ export default function MonthView() {
     });
     return counts;
   }, [state.appointments]);
+
+  const getMapLabel = useCallback(
+    (appointment: (typeof state.appointments)[number], kind: "checkin" | "checkout") => {
+      const companyName =
+        selectors.getCompany(appointment.companyId)?.name ?? "Empresa";
+      return `${companyName} - ${kind === "checkin" ? "Check-in" : "Check-out"}`;
+    },
+    [selectors, state.appointments]
+  );
 
   return (
     <AppShell
@@ -155,6 +167,18 @@ export default function MonthView() {
                 })
               )}
             </div>
+          </section>
+
+          <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
+            <SectionHeader
+              title="Mapa do mes"
+              subtitle="Check-ins e check-outs registrados no mes."
+            />
+            <CheckInOutMap
+              appointments={state.appointments}
+              getLabel={getMapLabel}
+              emptyMessage="Sem check-ins ou check-outs para exibir no mes."
+            />
           </section>
         </div>
       )}

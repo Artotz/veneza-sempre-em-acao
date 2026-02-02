@@ -22,10 +22,7 @@ export const WeekSelector = ({ weeks, selectedIndex, onSelect }: WeekSelectorPro
                 : "border-border bg-white text-foreground-soft hover:border-brand/40"
             }`}
           >
-            <div>{week.label}</div>
-            <div className="text-[10px] text-foreground-muted">
-              {formatWeekRange(week.startAt, week.endAt)}
-            </div>
+            <div>{formatWeekRange(week.startAt, week.endAt)}</div>
           </button>
         );
       })}

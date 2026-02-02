@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { AppShell } from "../components/AppShell";
 import { AppointmentCard } from "../components/AppointmentCard";
+import { CheckInOutMap } from "../components/CheckInOutMap";
 import { DaySelector } from "../components/DaySelector";
 import { EmptyState } from "../components/EmptyState";
 import { MonthSelector } from "../components/MonthSelector";
@@ -66,14 +67,19 @@ export default function DayView() {
     const monthParam = parseMonthParam(searchParams.get("month"));
     if (monthParam) {
       setSelectedMonth(monthParam);
+      return;
     }
-  }, [searchParams]);
+    setSelectedMonth(new Date(today.getFullYear(), today.getMonth(), 1));
+  }, [searchParams, today]);
 
   useEffect(() => {
-    const weekParam = Number(searchParams.get("week"));
-    if (!Number.isNaN(weekParam)) {
-      setSelectedWeekIndex(clamp(weekParam - 1, 0, weeks.length - 1));
-      return;
+    const weekParamText = searchParams.get("week");
+    if (weekParamText !== null) {
+      const weekParam = Number(weekParamText);
+      if (!Number.isNaN(weekParam)) {
+        setSelectedWeekIndex(clamp(weekParam - 1, 0, weeks.length - 1));
+        return;
+      }
     }
     setSelectedWeekIndex(fallbackWeekIndex);
   }, [fallbackWeekIndex, searchParams, weeks.length]);
@@ -83,10 +89,13 @@ export default function DayView() {
   }, [weeks.length]);
 
   useEffect(() => {
-    const dayParam = Number(searchParams.get("day"));
-    if (!Number.isNaN(dayParam)) {
-      setSelectedDayIndex(clamp(dayParam, 0, 6));
-      return;
+    const dayParamText = searchParams.get("day");
+    if (dayParamText !== null) {
+      const dayParam = Number(dayParamText);
+      if (!Number.isNaN(dayParam)) {
+        setSelectedDayIndex(clamp(dayParam, 0, 6));
+        return;
+      }
     }
     if (
       selectedMonth.getFullYear() === today.getFullYear() &&
@@ -127,6 +136,15 @@ export default function DayView() {
   const handleOpenAppointment = (id: string) => {
     navigate(`/apontamentos/${id}`);
   };
+
+  const getMapLabel = useCallback(
+    (appointment: (typeof activeDayAppointments)[number], kind: "checkin" | "checkout") => {
+      const companyName =
+        selectors.getCompany(appointment.companyId)?.name ?? "Empresa";
+      return `${companyName} - ${kind === "checkin" ? "Check-in" : "Check-out"}`;
+    },
+    [selectors]
+  );
 
   return (
     <AppShell
@@ -245,6 +263,18 @@ export default function DayView() {
               ser acionado. Os demais ficam bloqueados ate a conclusao ou
               ausencia do anterior.
             </div>
+          </section>
+
+          <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
+            <SectionHeader
+              title="Mapa do dia"
+              subtitle="Check-ins e check-outs registrados no dia selecionado."
+            />
+            <CheckInOutMap
+              appointments={activeDayAppointments}
+              getLabel={getMapLabel}
+              emptyMessage="Sem check-ins ou check-outs para exibir no dia."
+            />
           </section>
         </div>
       )}

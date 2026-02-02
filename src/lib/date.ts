@@ -175,6 +175,7 @@ export const buildMonthWeeks = (referenceDate: Date, weeksCount?: number) => {
   return Array.from({ length: computedWeeksCount }).map((_, index) => {
     const startAt = addDays(firstWeekStart, index * 7);
     const endAt = addDays(startAt, 6);
+    endAt.setHours(23, 59, 59, 999);
     const days = WEEK_DAYS.map((day) => {
       const date = addDays(startAt, day.index);
       return {
