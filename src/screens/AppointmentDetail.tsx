@@ -92,7 +92,7 @@ const mediaKindLabels: Record<MediaKind, string> = {
   absence: "Ausencia",
 };
 
-const defaultMarkerIcon = L.icon({
+const markerIconOptions = {
   iconRetinaUrl: markerIcon2x,
   iconUrl: markerIcon,
   shadowUrl: markerShadow,
@@ -100,6 +100,18 @@ const defaultMarkerIcon = L.icon({
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],
   shadowSize: [41, 41],
+} as const;
+
+const defaultMarkerIcon = L.icon(markerIconOptions);
+
+const checkInMarkerIcon = L.icon({
+  ...markerIconOptions,
+  className: "leaflet-marker-icon--checkin",
+});
+
+const checkOutMarkerIcon = L.icon({
+  ...markerIconOptions,
+  className: "leaflet-marker-icon--checkout",
 });
 
 type MapPoint = {
@@ -107,6 +119,12 @@ type MapPoint = {
   label: string;
   position: [number, number];
   kind: "company" | "checkin" | "checkout";
+};
+
+const mapMarkerIcons: Record<MapPoint["kind"], L.Icon> = {
+  company: defaultMarkerIcon,
+  checkin: checkInMarkerIcon,
+  checkout: checkOutMarkerIcon,
 };
 
 const MapFitBounds = ({ points }: { points: MapPoint[] }) => {
@@ -155,6 +173,8 @@ export default function AppointmentDetail() {
   const [checkoutOpportunities, setCheckoutOpportunities] = useState<string[]>([]);
   const [pendingCheckoutOpportunities, setPendingCheckoutOpportunities] =
     useState<string[] | null>(null);
+  const [showCheckInMarker, setShowCheckInMarker] = useState(true);
+  const [showCheckOutMarker, setShowCheckOutMarker] = useState(true);
 
   const geo = useGeolocation();
 
@@ -393,6 +413,16 @@ export default function AppointmentDetail() {
     company?.lng,
     company?.name,
   ]);
+
+  const filteredMapPoints = useMemo(
+    () =>
+      mapPoints.filter((point) => {
+        if (point.kind === "checkin") return showCheckInMarker;
+        if (point.kind === "checkout") return showCheckOutMarker;
+        return true;
+      }),
+    [mapPoints, showCheckInMarker, showCheckOutMarker]
+  );
 
   const formatCoordinates = (lat?: number | null, lng?: number | null) => {
     if (lat == null || lng == null) return "Nao registrado";
@@ -645,6 +675,8 @@ export default function AppointmentDetail() {
   const showOportunidades = Boolean(
     appointment.checkOutAt || appointment.status === "done"
   );
+  const hasMapPoints = mapPoints.length > 0;
+  const hasFilteredMapPoints = filteredMapPoints.length > 0;
 
   const cameraTitle =
     cameraIntent === "checkin"
@@ -783,10 +815,34 @@ export default function AppointmentDetail() {
 
         <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
           <SectionHeader title="Mapa" subtitle="Pinos do atendimento." />
-          {mapPoints.length ? (
-            <div className="overflow-hidden rounded-2xl border border-border">
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setShowCheckInMarker((current) => !current)}
+              className={`rounded-full border px-3 py-1 text-[10px] font-semibold transition ${
+                showCheckInMarker
+                  ? "border-success/50 bg-success/10 text-success"
+                  : "border-border bg-white text-foreground-soft"
+              }`}
+            >
+              Check-in
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowCheckOutMarker((current) => !current)}
+              className={`rounded-full border px-3 py-1 text-[10px] font-semibold transition ${
+                showCheckOutMarker
+                  ? "border-info/50 bg-info/10 text-info"
+                  : "border-border bg-white text-foreground-soft"
+              }`}
+            >
+              Check-out
+            </button>
+          </div>
+          {hasFilteredMapPoints ? (
+            <div className="relative z-0 overflow-hidden rounded-2xl border border-border">
               <MapContainer
-                center={mapPoints[0].position}
+                center={filteredMapPoints[0].position}
                 zoom={13}
                 scrollWheelZoom={false}
                 className="h-64 w-full"
@@ -795,12 +851,12 @@ export default function AppointmentDetail() {
                   attribution="&copy; OpenStreetMap contributors"
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
-                <MapFitBounds points={mapPoints} />
-                {mapPoints.map((point) => (
+                <MapFitBounds points={filteredMapPoints} />
+                {filteredMapPoints.map((point) => (
                   <Marker
                     key={point.id}
                     position={point.position}
-                    icon={defaultMarkerIcon}
+                    icon={mapMarkerIcons[point.kind]}
                   >
                     <Popup>
                       <div className="space-y-1 text-xs">
@@ -818,7 +874,9 @@ export default function AppointmentDetail() {
             </div>
           ) : (
             <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
-              Sem coordenadas para exibir no mapa.
+              {hasMapPoints
+                ? "Nenhum pino visivel com os filtros atuais."
+                : "Sem coordenadas para exibir no mapa."}
             </div>
           )}
         </section>

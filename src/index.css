@@ -40,3 +40,15 @@ h2,
 h3 {
   @apply font-display;
 }
+
+.leaflet-container {
+  z-index: 0;
+}
+
+.leaflet-marker-icon--checkin {
+  filter: hue-rotate(110deg) saturate(1.35) brightness(0.95);
+}
+
+.leaflet-marker-icon--checkout {
+  filter: hue-rotate(20deg) saturate(1.4) brightness(1);
+}
