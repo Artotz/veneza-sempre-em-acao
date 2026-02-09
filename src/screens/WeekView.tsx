@@ -10,7 +10,6 @@ import {
   buildMonthWeeks,
   formatMonthParam,
   formatMonthYear,
-  formatWeekRange,
   isSameDay,
   parseMonthParam,
 } from "../lib/date";

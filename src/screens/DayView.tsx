@@ -11,7 +11,6 @@ import {
   buildMonthWeeks,
   formatMonthParam,
   formatMonthYear,
-  formatWeekRange,
   getDayIndexMonday,
   isSameDay,
   parseMonthParam,

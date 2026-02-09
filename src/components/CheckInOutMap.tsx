@@ -23,7 +23,7 @@ type CheckInOutMapProps = {
   emptyFilteredMessage?: string;
 };
 
-const markerIconOptions = {
+const markerIconOptions: L.IconOptions = {
   iconRetinaUrl: markerIcon2x,
   iconUrl: markerIcon,
   shadowUrl: markerShadow,
@@ -31,7 +31,7 @@ const markerIconOptions = {
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],
   shadowSize: [41, 41],
-} as const;
+};
 
 const checkInMarkerIcon = L.icon({
   ...markerIconOptions,
