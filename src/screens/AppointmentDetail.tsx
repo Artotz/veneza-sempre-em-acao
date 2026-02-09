@@ -19,6 +19,7 @@ import {
   sortByStart,
 } from "../lib/schedule";
 import { useGeolocation } from "../hooks/useGeolocation";
+import { useLockBodyScroll } from "../hooks/useLockBodyScroll";
 import { useSchedule } from "../state/useSchedule";
 import { useAuth } from "../contexts/useAuth";
 import {
@@ -177,6 +178,8 @@ export default function AppointmentDetail() {
   const [showCheckOutMarker, setShowCheckOutMarker] = useState(true);
 
   const geo = useGeolocation();
+  useLockBodyScroll(isActionsOpen || isCheckoutOpen || cameraIntent !== null);
+  const isCameraOpen = cameraIntent !== null;
 
   useEffect(() => {
     if (appointmentFromState) {
@@ -329,6 +332,60 @@ export default function AppointmentDetail() {
     [session?.user?.id, supabase]
   );
 
+  const mapPoints = useMemo(() => {
+    if (!appointment) return [];
+    const points: MapPoint[] = [];
+    const pushPoint = (
+      id: string,
+      label: string,
+      lat?: number | null,
+      lng?: number | null,
+      kind: MapPoint["kind"] = "company"
+    ) => {
+      if (lat == null || lng == null) return;
+      const latNumber = Number(lat);
+      const lngNumber = Number(lng);
+      if (!Number.isFinite(latNumber) || !Number.isFinite(lngNumber)) return;
+      points.push({ id, label, position: [latNumber, lngNumber], kind });
+    };
+
+    if (company) {
+      pushPoint(
+        "company",
+        company.name ?? "Empresa",
+        company.lat,
+        company.lng,
+        "company"
+      );
+    }
+    pushPoint(
+      "checkin",
+      "Check-in",
+      appointment.checkInLat,
+      appointment.checkInLng,
+      "checkin"
+    );
+    pushPoint(
+      "checkout",
+      "Check-out",
+      appointment.checkOutLat,
+      appointment.checkOutLng,
+      "checkout"
+    );
+
+    return points;
+  }, [appointment, company]);
+
+  const filteredMapPoints = useMemo(
+    () =>
+      mapPoints.filter((point) => {
+        if (point.kind === "checkin") return showCheckInMarker;
+        if (point.kind === "checkout") return showCheckOutMarker;
+        return true;
+      }),
+    [mapPoints, showCheckInMarker, showCheckOutMarker]
+  );
+
   if (!appointment && loading) {
     return (
       <AppShell title="Agendamento" subtitle="Carregando detalhes.">
@@ -371,58 +428,8 @@ export default function AppointmentDetail() {
     (appointment.status ?? "scheduled") !== "absent";
   const isCheckInCapturing = geo.isCapturing && geoIntent === "check_in";
   const isCheckOutCapturing = geo.isCapturing && geoIntent === "check_out";
-  const isCameraOpen = cameraIntent !== null;
   const isPhotoBusy = Boolean(photoStatus) || isCameraOpen;
   const isCheckoutBusy = isPhotoBusy || geo.isCapturing;
-
-  const mapPoints = useMemo(() => {
-    const points: MapPoint[] = [];
-    const pushPoint = (
-      id: string,
-      label: string,
-      lat?: number | null,
-      lng?: number | null,
-      kind: MapPoint["kind"] = "company"
-    ) => {
-      if (lat == null || lng == null) return;
-      const latNumber = Number(lat);
-      const lngNumber = Number(lng);
-      if (!Number.isFinite(latNumber) || !Number.isFinite(lngNumber)) return;
-      points.push({ id, label, position: [latNumber, lngNumber], kind });
-    };
-
-    if (company) {
-      pushPoint("company", company.name ?? "Empresa", company.lat, company.lng, "company");
-    }
-    pushPoint("checkin", "Check-in", appointment.checkInLat, appointment.checkInLng, "checkin");
-    pushPoint(
-      "checkout",
-      "Check-out",
-      appointment.checkOutLat,
-      appointment.checkOutLng,
-      "checkout"
-    );
-
-    return points;
-  }, [
-    appointment.checkInLat,
-    appointment.checkInLng,
-    appointment.checkOutLat,
-    appointment.checkOutLng,
-    company?.lat,
-    company?.lng,
-    company?.name,
-  ]);
-
-  const filteredMapPoints = useMemo(
-    () =>
-      mapPoints.filter((point) => {
-        if (point.kind === "checkin") return showCheckInMarker;
-        if (point.kind === "checkout") return showCheckOutMarker;
-        return true;
-      }),
-    [mapPoints, showCheckInMarker, showCheckOutMarker]
-  );
 
   const formatCoordinates = (lat?: number | null, lng?: number | null) => {
     if (lat == null || lng == null) return "Nao registrado";

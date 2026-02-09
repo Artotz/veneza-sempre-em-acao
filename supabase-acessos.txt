@@ -1,0 +1,219 @@
+SUPABASE - ACESSOS E LOGICAS
+===========================
+
+Este documento lista todos os pontos do projeto que acessam o Supabase e descreve a logica aplicada em cada chamada.
+
+1) Cliente Supabase (inicializacao)
+----------------------------------
+Arquivo: src\lib\supabaseClient.ts
+- Cria um singleton do cliente Supabase no navegador com createBrowserClient.
+- Lê credenciais de ambiente em ordem de prioridade:
+  - NEXT_PUBLIC_SUPABASE_URL ou VITE_SUPABASE_URL
+  - NEXT_PUBLIC_SUPABASE_ANON_KEY ou VITE_SUPABASE_ANON_KEY
+- Se URL/ANON KEY estiverem ausentes, lança erro (falha imediata).
+- Retorna sempre o mesmo cliente (cache em memoria).
+
+2) Autenticacao (Auth)
+----------------------
+Arquivo: src\contexts\AuthProvider.tsx
+- bootstrap:
+  - supabase.auth.getSession() para recuperar sessao existente.
+  - Atualiza estado com session e user (session?.user).
+  - Se houver access_token e a validacao ainda nao ocorreu:
+    - supabase.auth.getUser() para validar/atualizar dados do usuario.
+  - Atualiza estado (user + error) e encerra loading.
+- Listener:
+  - supabase.auth.onAuthStateChange((_event, session)) para manter estado sincronizado.
+  - Ao sair do componente, faz unsubscribe.
+
+Arquivo: src\screens\Login.tsx
+- Login com email/senha:
+  - supabase.auth.signInWithPassword({ email, password }).
+  - Em erro, exibe mensagem de falha.
+  - Em sucesso, redireciona para /empresas (ou redirect vindo na URL).
+
+3) Empresas (companies)
+-----------------------
+Arquivo: src\screens\Companies.tsx
+- Busca lista de empresas com debounce (300ms quando ha termo).
+- Query base:
+  - supabase.from("companies")
+  - select(COMPANY_SELECT)
+  - order("name", { ascending: true })
+- Se houver busca, aplica filtro OR:
+  - name.ilike.%{termo}% OU document.ilike.%{termo}%
+- Em erro, mostra mensagem e zera lista; em sucesso, mapeia via mapCompany.
+
+Arquivo: src\screens\NewAppointment.tsx
+- Carrega empresa especifica (id da rota):
+  - supabase.from("companies").select(COMPANY_SELECT).eq("id", id).single()
+- Em erro, mostra mensagem de empresa nao encontrada.
+
+Arquivo: src\state\ScheduleProvider.tsx
+- Carrega empresas em paralelo com apontamentos:
+  - supabase.from("companies").select(COMPANY_SELECT).order("name", { ascending: true })
+- Resultado mapeado via mapCompany.
+
+4) Apontamentos (apontamentos)
+------------------------------
+Arquivo: src\state\ScheduleProvider.tsx
+- Carrega apontamentos por intervalo (range):
+  - supabase.from("apontamentos").select(APPOINTMENT_SELECT)
+  - gte("starts_at", range.startAt)
+  - lte("starts_at", range.endAt)
+  - order("starts_at", { ascending: true })
+  - Se houver usuario autenticado: eq("consultant_id", user.id)
+- Em erro, dispara mensagem "Nao foi possivel carregar o cronograma.".
+- Os dados sao mapeados via mapAppointment.
+
+- Atualizacao de apontamento (updateAppointment):
+  - supabase.from("apontamentos").update(changes).eq("id", id)
+  - select(APPOINTMENT_SELECT).single()
+  - Erro gera exception; sucesso retorna mapAppointment.
+
+- Acoes que disparam update (com status e dados de geolocalizacao):
+  - checkIn:
+    - Atualiza check_in_at, check_in_lat, check_in_lng, check_in_accuracy_m, status="in_progress".
+  - checkOut:
+    - Atualiza check_out_at, check_out_lat, check_out_lng, check_out_accuracy_m,
+      status="done", oportunidades (array de strings).
+  - justifyAbsence:
+    - Atualiza absence_reason, absence_note, status="absent".
+
+Arquivo: src\screens\NewAppointment.tsx
+- Cria novo apontamento:
+  - supabase.from("apontamentos").insert({
+      company_id,
+      starts_at (ISO),
+      ends_at (ISO),
+      consultant_id (user?.id),
+      consultant_name (displayName ou email),
+      status: "scheduled",
+      address_snapshot (quando empresa possui lat/lng)
+    })
+- Em sucesso: actions.refresh() e navega para /cronograma/dia.
+
+Arquivo: src\screens\AppointmentDetail.tsx
+- Carrega detalhe do apontamento e empresa relacionada:
+  - supabase.from("apontamentos")
+    .select(`${APPOINTMENT_SELECT}, companies(${COMPANY_SELECT})`)
+    .eq("id", id)
+    .maybeSingle()
+  - Mapeia apontamento via mapAppointment.
+  - Se companies vier como array, usa o primeiro item; senao usa o objeto direto.
+- Atualiza estado local (appointment/company) e mensagens de erro.
+
+5) Midias do apontamento (apontamento_media + Storage)
+------------------------------------------------------
+Arquivo: src\services\storageUploads.ts
+- Upload de imagem para Storage (bucket "apontamentos"):
+  - Gera nome unico (UUID ou fallback).
+  - Path:
+    consultants/{consultantId}/apontamentos/{apontamentoId}/{kind}/{filename}
+  - supabase.storage.from(bucket).upload(path, blob, { contentType, upsert: false })
+  - Em erro, lança exception; em sucesso retorna bucket/path/bytes.
+
+Arquivo: src\screens\AppointmentDetail.tsx
+- Salvar midia do apontamento (apontamento_media):
+  - Após upload, insere registro:
+    supabase.from("apontamento_media").insert({
+      apontamento_id,
+      bucket,
+      path,
+      kind (checkin/checkout/absence),
+      mime_type,
+      bytes
+    })
+  - Em erro, lança exception.
+
+- Carregar midias:
+  - supabase.from("apontamento_media")
+    .select("id, bucket, path, kind, mime_type, bytes, created_at")
+    .eq("apontamento_id", id)
+    .order("created_at", { ascending: true })
+  - Para cada item, gera URL assinada:
+    supabase.storage.from(item.bucket).createSignedUrl(item.path, 60)
+    (expira em 60 segundos).
+  - Em erro na URL assinada, registra warn e retorna signedUrl = null.
+
+6) Seletores e mapeamentos (nao acessam Supabase, mas suportam queries)
+------------------------------------------------------------------------
+Arquivo: src\lib\supabase.ts
+- Define campos de select (COMPANY_SELECT e APPOINTMENT_SELECT).
+- mapeia dados vindos do Supabase para o modelo local:
+  - mapCompany
+  - mapAppointment (inclui appointmentTitle quando houver relacao appointments).
+- Tabela de rotulos para absenceReason.
+
+Resumo por tabela/servico
+-------------------------
+- companies: select (listagem, busca por ilike, consulta por id).
+- apontamentos: select (range + filtro por consultant_id), update (check-in/out/ausencia), insert (novo apontamento).
+- apontamento_media: select (por apontamento), insert (registro de foto).
+- storage (bucket "apontamentos"): upload de imagens e createSignedUrl.
+- auth: getSession, getUser, onAuthStateChange, signInWithPassword.
+
+7) Schemas relevantes (inferidos do codigo)
+-------------------------------------------
+Observacao: os campos abaixo foram inferidos a partir dos selects/inserts do codigo. Tipos e constraints exatos
+devem ser conferidos no Supabase.
+
+Tabela: companies
+- id
+- document
+- name
+- state
+- lat
+- lng
+- csa
+- carteira_def
+- client_class
+- carteira_def2
+- classe_cliente
+- validacao
+- referencia
+- created_at
+
+Tabela: apontamentos
+- id
+- company_id
+- appointment_id
+- consultant_id
+- consultant_name
+- starts_at
+- ends_at
+- status
+- check_in_at
+- check_out_at
+- check_in_lat
+- check_in_lng
+- check_in_accuracy_m
+- check_out_lat
+- check_out_lng
+- check_out_accuracy_m
+- address_snapshot
+- absence_reason
+- absence_note
+- notes
+- oportunidades
+- created_at
+- updated_at
+
+Tabela: apontamento_media
+- id
+- apontamento_id
+- bucket
+- path
+- kind
+- mime_type
+- bytes
+- created_at
+
+Storage: bucket "apontamentos"
+- Caminho de upload:
+  consultants/{consultantId}/apontamentos/{apontamentoId}/{kind}/{filename}
+- kind esperado: checkin | checkout | absence
+
+Relacionamentos utilizados no codigo
+- apontamentos -> companies (join em AppointmentDetail).
+- apontamentos -> appointments (campo title esperado quando houver join; nao aparece nas queries atuais).

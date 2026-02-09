@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CapturePhotoResult } from "../services/camera";
+import { useLockBodyScroll } from "../hooks/useLockBodyScroll";
 
 type CameraCaptureModalProps = {
   open: boolean;
@@ -68,6 +69,8 @@ export const CameraCaptureModal = ({
   onConfirm,
   onError,
 }: CameraCaptureModalProps) => {
+  useLockBodyScroll(open);
+
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const previewUrlRef = useRef<string | null>(null);
