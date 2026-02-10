@@ -63,7 +63,7 @@ Arquivo: src\state\ScheduleProvider.tsx
 ------------------------------
 Arquivo: src\state\ScheduleProvider.tsx
 - Carrega apontamentos por intervalo (range):
-  - supabase.from("apontamentos").select(APPOINTMENT_SELECT)
+  - supabase.from("apontamentos").select(`${APPOINTMENT_SELECT}, companies(name)`)
   - gte("starts_at", range.startAt)
   - lte("starts_at", range.endAt)
   - order("starts_at", { ascending: true })

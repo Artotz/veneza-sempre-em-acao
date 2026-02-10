@@ -108,7 +108,9 @@ export default function WeekView() {
       kind: "checkin" | "checkout",
     ) => {
       const companyName =
-        selectors.getCompany(appointment.companyId)?.name ?? "Empresa";
+        appointment.companyName ??
+        selectors.getCompany(appointment.companyId)?.name ??
+        "Empresa";
       return `${companyName} - ${kind === "checkin" ? "Check-in" : "Check-out"}`;
     },
     [selectors],
@@ -175,8 +177,9 @@ export default function WeekView() {
                         {dayAppointments.length ? (
                           dayAppointments.map((appointment) => {
                             const companyName =
-                              selectors.getCompany(appointment.companyId)
-                                ?.name ?? "Empresa";
+                              appointment.companyName ??
+                              selectors.getCompany(appointment.companyId)?.name ??
+                              "Empresa";
                             return (
                               <button
                                 key={appointment.id}

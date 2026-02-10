@@ -222,7 +222,8 @@ export default function AllAppointments() {
             {filteredAppointments.length ? (
               filteredAppointments.map((appointment) => {
                 const company = selectors.getCompany(appointment.companyId);
-                const companyName = company?.name ?? "Empresa";
+                const companyName =
+                  appointment.companyName ?? company?.name ?? "Empresa";
                 const appointmentDetail = getAppointmentTitle(appointment);
                 const snapshot = appointment.addressSnapshot;
                 const detailLabel = snapshot

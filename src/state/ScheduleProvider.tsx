@@ -123,7 +123,7 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
 
         let appointmentsQuery = supabase
           .from("apontamentos")
-          .select(APPOINTMENT_SELECT)
+          .select(`${APPOINTMENT_SELECT}, companies(name)`)
           .gte("starts_at", range.startAt)
           .lte("starts_at", range.endAt)
           .order("starts_at", { ascending: true });

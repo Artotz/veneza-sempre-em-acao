@@ -13,6 +13,7 @@ export type SupabaseAppointmentStatus =
 export type Appointment = {
   id: string;
   companyId: string;
+  companyName?: string | null;
   appointmentId?: string | null;
   consultantId?: string | null;
   consultant: string;

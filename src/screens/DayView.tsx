@@ -147,7 +147,9 @@ export default function DayView() {
       kind: "checkin" | "checkout",
     ) => {
       const companyName =
-        selectors.getCompany(appointment.companyId)?.name ?? "Empresa";
+        appointment.companyName ??
+        selectors.getCompany(appointment.companyId)?.name ??
+        "Empresa";
       return `${companyName} - ${kind === "checkin" ? "Check-in" : "Check-out"}`;
     },
     [selectors],
@@ -223,6 +225,7 @@ export default function DayView() {
                 {activeDayAppointments.length ? (
                   activeDayAppointments.map((appointment, index) => {
                     const company =
+                      appointment.companyName ??
                       selectors.getCompany(appointment.companyId)?.name ??
                       "Empresa";
                     const blocked = isBlocked(
