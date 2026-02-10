@@ -45,6 +45,7 @@ export type Company = {
   lat?: number | null;
   lng?: number | null;
   csa?: string | null;
+  emailCsa?: string | null;
   carteiraDef?: string | null;
   clientClass?: string | null;
   carteiraDef2?: string | null;

@@ -39,6 +39,7 @@ Arquivo: src\screens\Companies.tsx
 - Query base:
   - supabase.from("companies")
   - select(COMPANY_SELECT)
+  - eq("email_csa", user.email)
   - order("name", { ascending: true })
 - Se houver busca, aplica filtro OR:
   - name.ilike.%{termo}% OU document.ilike.%{termo}%
@@ -46,12 +47,16 @@ Arquivo: src\screens\Companies.tsx
 
 Arquivo: src\screens\NewAppointment.tsx
 - Carrega empresa especifica (id da rota):
-  - supabase.from("companies").select(COMPANY_SELECT).eq("id", id).single()
+  - supabase.from("companies").select(COMPANY_SELECT)
+    .eq("id", id).eq("email_csa", user.email).single()
 - Em erro, mostra mensagem de empresa nao encontrada.
 
 Arquivo: src\state\ScheduleProvider.tsx
 - Carrega empresas em paralelo com apontamentos:
-  - supabase.from("companies").select(COMPANY_SELECT).order("name", { ascending: true })
+  - supabase.from("companies")
+    .select(COMPANY_SELECT)
+    .eq("email_csa", user.email)
+    .order("name", { ascending: true })
 - Resultado mapeado via mapCompany.
 
 4) Apontamentos (apontamentos)
@@ -62,7 +67,7 @@ Arquivo: src\state\ScheduleProvider.tsx
   - gte("starts_at", range.startAt)
   - lte("starts_at", range.endAt)
   - order("starts_at", { ascending: true })
-  - Se houver usuario autenticado: eq("consultant_id", user.id)
+  - Se houver email autenticado: eq("consultant_name", user.email)
 - Em erro, dispara mensagem "Nao foi possivel carregar o cronograma.".
 - Os dados sao mapeados via mapAppointment.
 
@@ -87,7 +92,7 @@ Arquivo: src\screens\NewAppointment.tsx
       starts_at (ISO),
       ends_at (ISO),
       consultant_id (user?.id),
-      consultant_name (displayName ou email),
+      consultant_name (email do login),
       status: "scheduled",
       address_snapshot (quando empresa possui lat/lng)
     })
@@ -97,7 +102,7 @@ Arquivo: src\screens\AppointmentDetail.tsx
 - Carrega detalhe do apontamento e empresa relacionada:
   - supabase.from("apontamentos")
     .select(`${APPOINTMENT_SELECT}, companies(${COMPANY_SELECT})`)
-    .eq("id", id)
+    .eq("id", id).eq("consultant_name", user.email)
     .maybeSingle()
   - Mapeia apontamento via mapAppointment.
   - Se companies vier como array, usa o primeiro item; senao usa o objeto direto.
@@ -148,7 +153,7 @@ Arquivo: src\lib\supabase.ts
 Resumo por tabela/servico
 -------------------------
 - companies: select (listagem, busca por ilike, consulta por id).
-- apontamentos: select (range + filtro por consultant_id), update (check-in/out/ausencia), insert (novo apontamento).
+- apontamentos: select (range + filtro por consultant_name), update (check-in/out/ausencia), insert (novo apontamento).
 - apontamento_media: select (por apontamento), insert (registro de foto).
 - storage (bucket "apontamentos"): upload de imagens e createSignedUrl.
 - auth: getSession, getUser, onAuthStateChange, signInWithPassword.
@@ -166,6 +171,7 @@ Tabela: companies
 - lat
 - lng
 - csa
+- email_csa
 - carteira_def
 - client_class
 - carteira_def2

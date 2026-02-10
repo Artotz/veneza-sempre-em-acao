@@ -8,6 +8,7 @@ type CompanyRow = {
   lat?: number | null;
   lng?: number | null;
   csa?: string | null;
+  email_csa?: string | null;
   carteira_def?: string | null;
   client_class?: string | null;
   carteira_def2?: string | null;
@@ -45,7 +46,7 @@ type AppointmentRow = {
 };
 
 export const COMPANY_SELECT =
-  "id, document, name, state, lat, lng, csa, carteira_def, client_class, carteira_def2, classe_cliente, validacao, referencia, created_at";
+  "id, document, name, state, lat, lng, csa, email_csa, carteira_def, client_class, carteira_def2, classe_cliente, validacao, referencia, created_at";
 
 export const APPOINTMENT_SELECT =
   "id, company_id, appointment_id, consultant_id, consultant_name, starts_at, ends_at, status, check_in_at, check_out_at, check_in_lat, check_in_lng, check_in_accuracy_m, check_out_lat, check_out_lng, check_out_accuracy_m, address_snapshot, absence_reason, absence_note, notes, oportunidades, created_at, updated_at";
@@ -58,6 +59,7 @@ export const mapCompany = (row: CompanyRow): Company => ({
   lat: row.lat ?? null,
   lng: row.lng ?? null,
   csa: row.csa ?? null,
+  emailCsa: row.email_csa ?? null,
   carteiraDef: row.carteira_def ?? null,
   clientClass: row.client_class ?? null,
   carteiraDef2: row.carteira_def2 ?? null,

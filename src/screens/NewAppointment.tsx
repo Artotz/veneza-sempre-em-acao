@@ -4,7 +4,6 @@ import { AppShell } from "../components/AppShell";
 import { EmptyState } from "../components/EmptyState";
 import { SectionHeader } from "../components/SectionHeader";
 import { useAuth } from "../contexts/useAuth";
-import { getUserDisplayName } from "../lib/auth";
 import { useSchedule } from "../state/useSchedule";
 import { createSupabaseBrowserClient } from "../lib/supabaseClient";
 import { COMPANY_SELECT, mapCompany } from "../lib/supabase";
@@ -22,7 +21,7 @@ export default function NewAppointment() {
   const { id } = useParams();
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { actions } = useSchedule();
 
   const [company, setCompany] = useState<Company | null>(null);
@@ -36,6 +35,14 @@ export default function NewAppointment() {
   useEffect(() => {
     let active = true;
     const loadCompany = async () => {
+      if (authLoading) return;
+      const userEmail = user?.email?.trim();
+      if (!userEmail) {
+        setError("Usuario nao autenticado.");
+        setLoadingCompany(false);
+        return;
+      }
+
       if (!id) {
         setError("Empresa nao encontrada.");
         setLoadingCompany(false);
@@ -46,6 +53,7 @@ export default function NewAppointment() {
         .from("companies")
         .select(COMPANY_SELECT)
         .eq("id", id)
+        .eq("email_csa", userEmail)
         .single();
 
       if (!active) return;
@@ -65,7 +73,7 @@ export default function NewAppointment() {
     return () => {
       active = false;
     };
-  }, [id, supabase]);
+  }, [authLoading, id, supabase, user?.email]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -82,6 +90,12 @@ export default function NewAppointment() {
 
     if (!startsAt || !endsAt) {
       setError("Preencha inicio e fim.");
+      return;
+    }
+
+    const userEmail = user?.email?.trim();
+    if (!userEmail) {
+      setError("Email do usuario nao encontrado.");
       return;
     }
 
@@ -103,15 +117,13 @@ export default function NewAppointment() {
 
     setSaving(true);
 
-    const consultantName = getUserDisplayName(user);
-
     const addressSnapshot = buildAddressSnapshot(company);
     const { error: insertError } = await supabase.from("apontamentos").insert({
       company_id: id,
       starts_at: startsAtDate.toISOString(),
       ends_at: endsAtDate.toISOString(),
       consultant_id: user?.id ?? null,
-      consultant_name: consultantName ?? user?.email ?? null,
+      consultant_name: userEmail,
       status: "scheduled",
       address_snapshot: addressSnapshot,
     });

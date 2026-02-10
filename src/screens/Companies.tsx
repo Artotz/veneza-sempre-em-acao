@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { AppShell } from "../components/AppShell";
 import { EmptyState } from "../components/EmptyState";
 import { SectionHeader } from "../components/SectionHeader";
+import { useAuth } from "../contexts/useAuth";
 import { createSupabaseBrowserClient } from "../lib/supabaseClient";
 import { COMPANY_SELECT, mapCompany } from "../lib/supabase";
 import type { Company } from "../lib/types";
@@ -10,6 +11,7 @@ import type { Company } from "../lib/types";
 export default function Companies() {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
@@ -17,13 +19,35 @@ export default function Companies() {
 
   useEffect(() => {
     let active = true;
-    const handle = setTimeout(async () => {
+    let handle: ReturnType<typeof setTimeout> | undefined;
+
+    if (authLoading) {
+      setLoading(true);
+      return () => {
+        active = false;
+        if (handle) clearTimeout(handle);
+      };
+    }
+
+    const userEmail = user?.email?.trim();
+    if (!userEmail) {
+      setCompanies([]);
+      setError("Usuario nao autenticado.");
+      setLoading(false);
+      return () => {
+        active = false;
+        if (handle) clearTimeout(handle);
+      };
+    }
+
+    handle = setTimeout(async () => {
       setLoading(true);
       setError(null);
       const trimmed = query.trim();
       let request = supabase
         .from("companies")
         .select(COMPANY_SELECT)
+        .eq("email_csa", userEmail)
         .order("name", { ascending: true });
 
       if (trimmed.length) {
@@ -49,9 +73,9 @@ export default function Companies() {
 
     return () => {
       active = false;
-      clearTimeout(handle);
+      if (handle) clearTimeout(handle);
     };
-  }, [query, supabase]);
+  }, [authLoading, query, supabase, user?.email]);
 
   return (
     <AppShell

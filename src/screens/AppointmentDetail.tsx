@@ -143,7 +143,7 @@ const MapFitBounds = ({ points }: { points: MapPoint[] }) => {
 export default function AppointmentDetail() {
   const { id } = useParams();
   const { state, selectors, actions } = useSchedule();
-  const { session } = useAuth();
+  const { session, user, loading: authLoading } = useAuth();
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const appointmentFromState = id ? selectors.getAppointment(id) : undefined;
   const companyFromState = appointmentFromState
@@ -200,12 +200,20 @@ export default function AppointmentDetail() {
 
   const loadDetail = useCallback(async () => {
     if (!id) return;
+    if (authLoading) return;
+    const userEmail = user?.email?.trim();
+    if (!userEmail) {
+      setError("Usuario nao autenticado.");
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     const { data, error: requestError } = await supabase
       .from("apontamentos")
       .select(`${APPOINTMENT_SELECT}, companies(${COMPANY_SELECT})`)
       .eq("id", id)
+      .eq("consultant_name", userEmail)
       .maybeSingle();
 
     if (requestError) {
@@ -231,7 +239,7 @@ export default function AppointmentDetail() {
     setAbsenceReason(mappedAppointment.absenceReason ?? "");
     setAbsenceNote(mappedAppointment.absenceNote ?? "");
     setLoading(false);
-  }, [id, supabase]);
+  }, [authLoading, id, supabase, user?.email]);
 
   const loadMedia = useCallback(async () => {
     if (!id) return;

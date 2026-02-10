@@ -105,11 +105,20 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
   const loadSchedule = useCallback(
     async (range: ScheduleRange, activeRef: { active: boolean }) => {
       if (!user) return;
+      const userEmail = user.email?.trim();
+      if (!userEmail) {
+        dispatch({
+          type: "error",
+          payload: "Email do usuario nao encontrado.",
+        });
+        return;
+      }
       dispatch({ type: "set_loading" });
       try {
         const companiesPromise = supabase
           .from("companies")
           .select(COMPANY_SELECT)
+          .eq("email_csa", userEmail)
           .order("name", { ascending: true });
 
         let appointmentsQuery = supabase
@@ -119,9 +128,7 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
           .lte("starts_at", range.endAt)
           .order("starts_at", { ascending: true });
 
-        if (user?.id) {
-          appointmentsQuery = appointmentsQuery.eq("consultant_id", user.id);
-        }
+        appointmentsQuery = appointmentsQuery.eq("consultant_name", userEmail);
 
         const [companiesResult, appointmentsResult] = await Promise.all([
           companiesPromise,
@@ -217,7 +224,7 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
         });
       },
       refresh: async () => {
-        if (!state.range || !user) return;
+        if (!state.range || !user?.email) return;
         const activeRef = { active: true };
         await loadSchedule(state.range, activeRef);
       },
