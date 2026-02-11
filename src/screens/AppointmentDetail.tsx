@@ -1266,6 +1266,37 @@ export default function AppointmentDetail() {
             </div>
           </div>
 
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+            <span
+              className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-wide ${
+                isOnline
+                  ? "bg-success/15 text-success"
+                  : "bg-warning/15 text-warning"
+              }`}
+            >
+              {isOnline ? "Online" : "Offline"}
+            </span>
+            <button
+              type="button"
+              onClick={handleSyncAppointment}
+              disabled={isSyncing || pendingItemCount === 0}
+              className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
+                isSyncing || pendingItemCount === 0
+                  ? "cursor-not-allowed bg-surface-muted text-foreground-muted"
+                  : "bg-accent text-white"
+              }`}
+            >
+              {isSyncing
+                ? "Sincronizando apontamento..."
+                : `Sincronizar apontamento (${pendingItemCount} pendencias)`}
+            </button>
+          </div>
+          {syncStatus ? (
+            <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
+              {syncStatus}
+            </div>
+          ) : null}
+
           <div className="mt-3 space-y-2 text-sm text-foreground-muted">
             <div className="flex items-center justify-between">
               <span>Consultor</span>
@@ -1490,36 +1521,6 @@ export default function AppointmentDetail() {
 
         <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
           <SectionHeader title="Fotos" subtitle="Registro visual do apontamento." />
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <span
-              className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-wide ${
-                isOnline
-                  ? "bg-success/15 text-success"
-                  : "bg-warning/15 text-warning"
-              }`}
-            >
-              {isOnline ? "Online" : "Offline"}
-            </span>
-            <button
-              type="button"
-              onClick={handleSyncAppointment}
-              disabled={isSyncing || pendingItemCount === 0}
-              className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
-                isSyncing || pendingItemCount === 0
-                  ? "cursor-not-allowed bg-surface-muted text-foreground-muted"
-                  : "bg-accent text-white"
-              }`}
-            >
-              {isSyncing
-                ? "Sincronizando apontamento..."
-                : `Sincronizar apontamento (${pendingItemCount} pendencias)`}
-            </button>
-          </div>
-          {syncStatus ? (
-            <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
-              {syncStatus}
-            </div>
-          ) : null}
           {mediaLoading || pendingLoading ? (
             <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
               Carregando fotos...
