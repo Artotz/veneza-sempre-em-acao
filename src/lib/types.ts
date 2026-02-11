@@ -17,6 +17,7 @@ export type Appointment = {
   appointmentId?: string | null;
   consultantId?: string | null;
   consultant: string;
+  createdBy?: string | null;
   startAt: string;
   endAt: string;
   status?: SupabaseAppointmentStatus;

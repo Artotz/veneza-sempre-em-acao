@@ -83,10 +83,6 @@ type AppointmentMediaItem = {
   signedUrl: string | null;
 };
 
-type PendingPhoto = CapturePhotoResult & {
-  previewUrl: string;
-};
-
 const mediaKindLabels: Record<MediaKind, string> = {
   checkin: "Check-in",
   checkout: "Check-out",
@@ -164,13 +160,15 @@ export default function AppointmentDetail() {
     null
   );
   const [photoStatus, setPhotoStatus] = useState<string | null>(null);
-  const [cameraIntent, setCameraIntent] = useState<MediaKind | null>(null);
+  const [cameraIntent, setCameraIntent] = useState<
+    "checkin" | "checkout" | null
+  >(null);
   const [mediaItems, setMediaItems] = useState<AppointmentMediaItem[]>([]);
   const [mediaLoading, setMediaLoading] = useState(false);
   const [mediaError, setMediaError] = useState<string | null>(null);
-  const [absencePhoto, setAbsencePhoto] = useState<PendingPhoto | null>(null);
   const [isActionsOpen, setIsActionsOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [isAbsenceOpen, setIsAbsenceOpen] = useState(false);
   const [checkoutOpportunities, setCheckoutOpportunities] = useState<string[]>([]);
   const [pendingCheckoutOpportunities, setPendingCheckoutOpportunities] =
     useState<string[] | null>(null);
@@ -178,7 +176,9 @@ export default function AppointmentDetail() {
   const [showCheckOutMarker, setShowCheckOutMarker] = useState(true);
 
   const geo = useGeolocation();
-  useLockBodyScroll(isActionsOpen || isCheckoutOpen || cameraIntent !== null);
+  useLockBodyScroll(
+    isActionsOpen || isCheckoutOpen || isAbsenceOpen || cameraIntent !== null
+  );
   const isCameraOpen = cameraIntent !== null;
 
   useEffect(() => {
@@ -189,14 +189,6 @@ export default function AppointmentDetail() {
       setCompany(companyFromState);
     }
   }, [appointmentFromState, companyFromState]);
-
-  useEffect(() => {
-    return () => {
-      if (absencePhoto?.previewUrl) {
-        URL.revokeObjectURL(absencePhoto.previewUrl);
-      }
-    };
-  }, [absencePhoto?.previewUrl]);
 
   const loadDetail = useCallback(async () => {
     if (!id) return;
@@ -505,12 +497,6 @@ export default function AppointmentDetail() {
     setCameraIntent("checkout");
   };
 
-  const handleCaptureAbsencePhoto = () => {
-    if (!canAbsence || busy || isPhotoBusy) return;
-    setError(null);
-    setCameraIntent("absence");
-  };
-
   const performCheckIn = async (shot: CapturePhotoResult) => {
     if (!canCheckIn || busy || geo.isCapturing) return;
     setError(null);
@@ -601,12 +587,6 @@ export default function AppointmentDetail() {
     setCameraIntent(null);
     if (!intent) return;
 
-    if (intent === "absence") {
-      const previewUrl = URL.createObjectURL(shot.blob);
-      setAbsencePhoto({ ...shot, previewUrl });
-      return;
-    }
-
     if (intent === "checkin") {
       await performCheckIn(shot);
       return;
@@ -617,28 +597,16 @@ export default function AppointmentDetail() {
     }
   };
 
-  const handleRemoveAbsencePhoto = () => {
-    setAbsencePhoto(null);
-  };
-
   const handleAbsence = async () => {
     if (!canAbsence || busy || isPhotoBusy) return;
     setError(null);
     const reason = absenceReason.trim() || "other";
     try {
-      if (absencePhoto) {
-        setPhotoStatus("Enviando foto...");
-        await saveApontamentoMedia({
-          apontamentoId: appointment.id,
-          kind: "absence",
-          shot: absencePhoto,
-        });
-      }
       setPhotoStatus("Salvando apontamento...");
       await actions.justifyAbsence(appointment.id, reason, absenceNote.trim());
       await loadDetail();
       await loadMedia();
-      setAbsencePhoto(null);
+      setIsAbsenceOpen(false);
     } catch (actionError) {
       setError(
         actionError instanceof Error
@@ -679,6 +647,17 @@ export default function AppointmentDetail() {
     setIsActionsOpen(false);
   };
 
+  const handleOpenAbsence = () => {
+    if (!canAbsence || busy || isPhotoBusy) return;
+    setIsAbsenceOpen(true);
+    setIsActionsOpen(false);
+  };
+
+  const handleCloseAbsence = () => {
+    if (isPhotoBusy) return;
+    setIsAbsenceOpen(false);
+  };
+
   const snapshotLabel = appointment.addressSnapshot ?? null;
 
   const absenceLabel =
@@ -698,8 +677,6 @@ export default function AppointmentDetail() {
       ? "Foto do check-in"
       : cameraIntent === "checkout"
       ? "Foto do check-out"
-      : cameraIntent === "absence"
-      ? "Foto da ausencia"
       : "Capturar foto";
 
   return (
@@ -746,6 +723,14 @@ export default function AppointmentDetail() {
                 {appointment.consultant || "Nao informado"}
               </span>
             </div>
+            {appointment.createdBy ? (
+              <div className="flex items-center justify-between">
+                <span>Criado por</span>
+                <span className="font-semibold text-foreground">
+                  {appointment.createdBy}
+                </span>
+              </div>
+            ) : null}
             {snapshotLabel ? (
               <div className="flex items-center justify-between">
                 <span>Endereco (snapshot)</span>
@@ -1133,6 +1118,87 @@ export default function AppointmentDetail() {
           </div>
         </div>
       ) : null}
+      {isAbsenceOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 px-4 py-6 sm:items-center"
+          onClick={handleCloseAbsence}
+        >
+          <div
+            className="w-full max-w-md overflow-hidden rounded-3xl border border-border bg-white shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="border-b border-border px-5 py-4">
+              <h3 className="text-base font-semibold text-foreground">
+                Justificar ausencia
+              </h3>
+              <p className="mt-1 text-xs text-foreground-muted">
+                Selecione o motivo e confirme o registro.
+              </p>
+            </div>
+
+            <div className="space-y-4 px-5 py-4">
+              <div className="rounded-2xl border border-border bg-surface-muted p-3">
+                <p className="text-xs font-semibold text-foreground">Motivo</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {absenceOptions.map((reason) => (
+                    <button
+                      key={reason.value}
+                      type="button"
+                      onClick={() => setAbsenceReason(reason.value)}
+                      className={`rounded-full border px-3 py-1 text-[10px] font-semibold ${
+                        absenceReason === reason.value
+                          ? "border-accent bg-white text-foreground"
+                          : "border-border bg-white text-foreground-soft"
+                      }`}
+                    >
+                      {reason.label}
+                    </button>
+                  ))}
+                </div>
+                <textarea
+                  value={absenceNote}
+                  onChange={(event) => setAbsenceNote(event.target.value)}
+                  placeholder="Descreva o motivo..."
+                  className="mt-3 w-full resize-none rounded-2xl border border-border bg-white px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-accent/40"
+                  rows={3}
+                />
+              </div>
+              {photoStatus ? (
+                <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
+                  {photoStatus}
+                </div>
+              ) : null}
+            </div>
+
+            <div className="flex items-center justify-end gap-2 border-t border-border px-5 py-4">
+              <button
+                type="button"
+                onClick={handleCloseAbsence}
+                disabled={isPhotoBusy}
+                className={`rounded-full border border-border px-4 py-2 text-xs font-semibold ${
+                  isPhotoBusy
+                    ? "cursor-not-allowed text-foreground-muted"
+                    : "text-foreground-soft"
+                }`}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={!canAbsence || busy || isPhotoBusy}
+                onClick={handleAbsence}
+                className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
+                  canAbsence && !busy && !isPhotoBusy
+                    ? "bg-danger text-white"
+                    : "cursor-not-allowed bg-surface-muted text-foreground-muted"
+                }`}
+              >
+                Registrar ausencia
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       <CameraCaptureModal
         open={isCameraOpen}
         title={cameraTitle}
@@ -1189,6 +1255,18 @@ export default function AppointmentDetail() {
                     ? "Capturando localizacao..."
                     : "Fazer check-out"}
                 </button>
+                <button
+                  type="button"
+                  disabled={!canAbsence || busy || isPhotoBusy}
+                  onClick={handleOpenAbsence}
+                  className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                    canAbsence && !busy && !isPhotoBusy
+                      ? "bg-danger text-white"
+                      : "cursor-not-allowed bg-surface-muted text-foreground-muted"
+                  }`}
+                >
+                  Justificar ausencia
+                </button>
                 {geo.isCapturing ? (
                   <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
                     Capturando localizacao. Aguarde alguns segundos...
@@ -1227,78 +1305,6 @@ export default function AppointmentDetail() {
                     </div>
                   </div>
                 ) : null}
-                <div className="rounded-2xl border border-border bg-surface-muted p-3">
-                  <p className="text-xs font-semibold text-foreground">
-                    Justificar ausencia
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {absenceOptions.map((reason) => (
-                      <button
-                        key={reason.value}
-                        type="button"
-                        onClick={() => setAbsenceReason(reason.value)}
-                        className={`rounded-full border px-3 py-1 text-[10px] font-semibold ${
-                          absenceReason === reason.value
-                            ? "border-accent bg-white text-foreground"
-                            : "border-border bg-white text-foreground-soft"
-                        }`}
-                      >
-                        {reason.label}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      disabled={!canAbsence || busy || isPhotoBusy}
-                      onClick={handleCaptureAbsencePhoto}
-                      className={`rounded-full border px-3 py-1 text-[10px] font-semibold ${
-                        canAbsence && !busy && !isPhotoBusy
-                          ? "border-border bg-white text-foreground"
-                          : "cursor-not-allowed border-border bg-white text-foreground-muted"
-                      }`}
-                    >
-                      {absencePhoto ? "Trocar foto" : "Anexar foto"}
-                    </button>
-                    {absencePhoto ? (
-                      <button
-                        type="button"
-                        onClick={handleRemoveAbsencePhoto}
-                        className="rounded-full border border-border bg-white px-3 py-1 text-[10px] font-semibold text-foreground-soft"
-                      >
-                        Remover foto
-                      </button>
-                    ) : null}
-                  </div>
-                  {absencePhoto ? (
-                    <div className="mt-3 overflow-hidden rounded-2xl border border-border bg-white">
-                      <img
-                        src={absencePhoto.previewUrl}
-                        alt="Foto da ausencia"
-                        className="h-32 w-full object-cover"
-                      />
-                    </div>
-                  ) : null}
-                  <textarea
-                    value={absenceNote}
-                    onChange={(event) => setAbsenceNote(event.target.value)}
-                    placeholder="Descreva o motivo..."
-                    className="mt-3 w-full resize-none rounded-2xl border border-border bg-white px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-accent/40"
-                    rows={3}
-                  />
-                  <button
-                    type="button"
-                    disabled={!canAbsence || busy || isPhotoBusy}
-                    onClick={handleAbsence}
-                    className={`mt-3 w-full rounded-2xl px-4 py-2 text-xs font-semibold transition ${
-                      canAbsence && !busy && !isPhotoBusy
-                        ? "bg-danger text-white"
-                        : "cursor-not-allowed bg-white text-foreground-muted"
-                    }`}
-                  >
-                    Registrar ausencia
-                  </button>
-                </div>
               </div>
             </div>
 

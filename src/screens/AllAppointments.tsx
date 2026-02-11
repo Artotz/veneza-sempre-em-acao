@@ -64,7 +64,14 @@ const AppointmentListItem = ({
           <h3 className="mt-1 text-base font-semibold text-foreground">
             {companyName}
           </h3>
-          <p className="mt-1 text-sm text-foreground-muted">{detailLabel}</p>
+          <div className="mt-1 space-y-1 text-sm text-foreground-muted">
+            <p>{detailLabel}</p>
+            {appointment.createdBy ? (
+              <p className="text-xs text-foreground-soft">
+                Criado por {appointment.createdBy}
+              </p>
+            ) : null}
+          </div>
         </div>
         <StatusBadge status={status} />
       </div>
@@ -86,12 +93,9 @@ const AppointmentListItem = ({
 export default function AllAppointments() {
   const { state, selectors, actions } = useSchedule();
   const navigate = useNavigate();
-  const [statusFilters, setStatusFilters] = useState<AppointmentStatus[]>(() => [
-    "pendente",
-    "em_execucao",
-    "concluido",
-    "ausente",
-  ]);
+  const [statusFilters, setStatusFilters] = useState<AppointmentStatus[]>(
+    () => ["pendente", "em_execucao", "concluido", "ausente"],
+  );
 
   const weeks = useMemo(() => buildMonthWeeks(new Date()), []);
   const monthRange = useMemo(() => {
@@ -106,11 +110,11 @@ export default function AllAppointments() {
 
   const orderedAppointments = useMemo(
     () => [...state.appointments].sort(sortByStart),
-    [state.appointments]
+    [state.appointments],
   );
   const dayGroups = useMemo(
     () => buildDayGroups(state.appointments),
-    [state.appointments]
+    [state.appointments],
   );
 
   const summary = useMemo(() => {
@@ -125,14 +129,14 @@ export default function AllAppointments() {
         em_execucao: 0,
         concluido: 0,
         ausente: 0,
-      }
+      },
     );
   }, [state.appointments]);
 
   const filteredAppointments = useMemo(() => {
     if (statusFilters.length === 0) return [];
     return orderedAppointments.filter((appointment) =>
-      statusFilters.includes(getAppointmentStatus(appointment))
+      statusFilters.includes(getAppointmentStatus(appointment)),
     );
   }, [orderedAppointments, statusFilters]);
 
@@ -167,7 +171,7 @@ export default function AllAppointments() {
         ringClass: "ring-danger/30",
       },
     ],
-    [summary]
+    [summary],
   );
 
   const handleOpenAppointment = (id: string) => {
@@ -210,7 +214,7 @@ export default function AllAppointments() {
                       setStatusFilters((current) =>
                         current.includes(pill.status)
                           ? current.filter((status) => status !== pill.status)
-                          : [...current, pill.status]
+                          : [...current, pill.status],
                       )
                     }
                     aria-pressed={isActive}
@@ -263,11 +267,11 @@ export default function AllAppointments() {
             )}
           </section>
 
-          <div className="rounded-2xl border border-border bg-surface-muted p-3 text-xs text-foreground-muted">
+          {/* <div className="rounded-2xl border border-border bg-surface-muted p-3 text-xs text-foreground-muted">
             Regra ativa: somente o primeiro agendamento pendente do dia pode
             ser acionado. Os demais ficam bloqueados ate a conclusao ou
             ausencia do anterior.
-          </div>
+          </div> */}
         </div>
       )}
     </AppShell>

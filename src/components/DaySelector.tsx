@@ -23,7 +23,9 @@ export const DaySelector = ({ days, selectedIndex, onSelect }: DaySelectorProps)
             }`}
           >
             <div>{day.short}</div>
-            <div className="text-[10px] text-foreground-muted">{day.label}</div>
+            <div className="text-[10px] text-foreground-muted">
+              {day.date.getDate()}
+            </div>
           </button>
         );
       })}

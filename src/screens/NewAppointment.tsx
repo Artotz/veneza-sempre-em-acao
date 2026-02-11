@@ -124,6 +124,7 @@ export default function NewAppointment() {
       ends_at: endsAtDate.toISOString(),
       consultant_id: user?.id ?? null,
       consultant_name: userEmail,
+      created_by: userEmail,
       status: "scheduled",
       address_snapshot: addressSnapshot,
     });

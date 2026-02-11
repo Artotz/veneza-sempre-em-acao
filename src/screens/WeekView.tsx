@@ -160,7 +160,7 @@ export default function WeekView() {
             <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
               <SectionHeader
                 title="Agenda da semana"
-                subtitle="Dias lado a lado, ordenados por horario."
+                // subtitle="Dias lado a lado, ordenados por horario."
               />
               <div className="grid grid-cols-7 gap-1">
                 {week.days.map((day, dayIndex) => {
@@ -170,15 +170,17 @@ export default function WeekView() {
                       key={day.id}
                       className="flex min-w-0 flex-col gap-1 rounded-xl border border-border bg-surface-muted p-1"
                     >
-                      <div className="rounded-lg bg-white px-1 py-1 text-center text-[9px] font-semibold text-foreground">
-                        {day.short} {day.label}
+                      <div className="rounded-lg bg-white px-1 py-1 text-center text-[9px] font-semibold text-foreground leading-tight">
+                        <span className="block">{day.short.toLowerCase()}</span>
+                        <span className="block">{day.date.getDate()}</span>
                       </div>
                       <div className="flex min-w-0 flex-col gap-1">
                         {dayAppointments.length ? (
                           dayAppointments.map((appointment) => {
                             const companyName =
                               appointment.companyName ??
-                              selectors.getCompany(appointment.companyId)?.name ??
+                              selectors.getCompany(appointment.companyId)
+                                ?.name ??
                               "Empresa";
                             return (
                               <button
@@ -189,7 +191,14 @@ export default function WeekView() {
                                 }
                                 className="min-w-0 rounded-md border border-border bg-white px-1 py-1 text-[9px] font-semibold text-foreground transition hover:border-accent/40"
                               >
-                                <span className="block truncate">
+                                <span
+                                  className="block overflow-hidden break-all text-center leading-tight"
+                                  style={{
+                                    display: "-webkit-box",
+                                    WebkitLineClamp: 2,
+                                    WebkitBoxOrient: "vertical",
+                                  }}
+                                >
                                   {companyName}
                                 </span>
                               </button>

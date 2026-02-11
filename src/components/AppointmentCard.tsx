@@ -42,6 +42,11 @@ export const AppointmentCard = ({
           <p className="mt-1 text-sm text-foreground-muted">
             {getAppointmentTitle(appointment)}
           </p>
+          {appointment.createdBy ? (
+            <p className="mt-1 text-xs text-foreground-soft">
+              Criado por {appointment.createdBy}
+            </p>
+          ) : null}
         </div>
         <StatusBadge status={status} />
       </div>

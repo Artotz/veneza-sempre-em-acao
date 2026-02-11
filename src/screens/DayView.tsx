@@ -135,7 +135,7 @@ export default function DayView() {
   ).length;
   const activeDayAppointments = dayGroups[selectedDayIndex] ?? [];
   const activeDay = week.days[selectedDayIndex] ?? week.days[0];
-  const firstPendingId = getFirstPendingId(activeDayAppointments);
+  // const firstPendingId = getFirstPendingId(activeDayAppointments);
 
   const handleOpenAppointment = (id: string) => {
     navigate(`/apontamentos/${id}`);
@@ -214,11 +214,11 @@ export default function DayView() {
                     agendamentos
                   </p>
                 </div>
-                {firstPendingId ? (
+                {/* {firstPendingId ? (
                   <span className="rounded-full bg-surface-muted px-3 py-1 text-[10px] font-semibold text-foreground-muted">
                     1o pendente liberado
                   </span>
-                ) : null}
+                ) : null} */}
               </div>
 
               <div className="space-y-3">
@@ -251,11 +251,11 @@ export default function DayView() {
                 )}
               </div>
 
-              <div className="rounded-2xl border border-border bg-surface-muted p-3 text-xs text-foreground-muted">
+              {/* <div className="rounded-2xl border border-border bg-surface-muted p-3 text-xs text-foreground-muted">
                 Regra ativa: somente o primeiro agendamento pendente do dia pode
                 ser acionado. Os demais ficam bloqueados ate a conclusao ou
                 ausencia do anterior.
-              </div>
+              </div> */}
             </section>
 
             <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">

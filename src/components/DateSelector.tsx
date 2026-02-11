@@ -65,11 +65,11 @@ export const DateSelector = (props: DateSelectorProps) => {
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
             <span>Dia</span>
-            {props.dayRightSlot ? (
+            {/* {props.dayRightSlot ? (
               <span className="normal-case tracking-normal text-foreground-muted">
                 {props.dayRightSlot}
               </span>
-            ) : null}
+            ) : null} */}
           </div>
           <DaySelector
             days={props.days}

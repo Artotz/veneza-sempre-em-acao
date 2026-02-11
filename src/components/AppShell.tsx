@@ -1,5 +1,6 @@
 import { type ReactNode } from "react";
 import { BottomNav } from "./BottomNav";
+import { useAuth } from "../contexts/useAuth";
 
 type AppShellProps = {
   title: string;
@@ -8,7 +9,16 @@ type AppShellProps = {
   rightSlot?: ReactNode;
 };
 
-export const AppShell = ({ title, subtitle, children, rightSlot }: AppShellProps) => {
+export const AppShell = ({
+  title,
+  subtitle,
+  children,
+  rightSlot,
+}: AppShellProps) => {
+  const { user } = useAuth();
+  const userEmail = user?.email?.trim();
+  const headerRightSlot = userEmail || rightSlot;
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="relative overflow-hidden bg-gradient-to-br from-surface via-surface-muted to-surface-strong">
@@ -23,15 +33,15 @@ export const AppShell = ({ title, subtitle, children, rightSlot }: AppShellProps
               <h1 className="mt-1 text-2xl font-display font-semibold text-foreground">
                 {title}
               </h1>
-              {subtitle ? (
+              {/* {subtitle ? (
                 <p className="mt-2 max-w-[20rem] text-sm text-foreground-muted">
                   {subtitle}
                 </p>
-              ) : null}
+              ) : null} */}
             </div>
-            {rightSlot ? (
+            {headerRightSlot ? (
               <div className="shrink-0 rounded-2xl border border-border bg-white/70 px-3 py-2 text-xs font-semibold text-foreground-soft shadow-sm">
-                {rightSlot}
+                {headerRightSlot}
               </div>
             ) : null}
           </div>

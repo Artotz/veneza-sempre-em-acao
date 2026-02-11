@@ -24,6 +24,7 @@ type AppointmentRow = {
   appointment_id?: string | null;
   consultant_id?: string | null;
   consultant_name?: string | null;
+  created_by?: string | null;
   starts_at: string;
   ends_at: string;
   status?: SupabaseAppointmentStatus | null;
@@ -50,7 +51,7 @@ export const COMPANY_SELECT =
   "id, document, name, state, lat, lng, csa, email_csa, carteira_def, client_class, carteira_def2, classe_cliente, validacao, referencia, created_at";
 
 export const APPOINTMENT_SELECT =
-  "id, company_id, appointment_id, consultant_id, consultant_name, starts_at, ends_at, status, check_in_at, check_out_at, check_in_lat, check_in_lng, check_in_accuracy_m, check_out_lat, check_out_lng, check_out_accuracy_m, address_snapshot, absence_reason, absence_note, notes, oportunidades, created_at, updated_at";
+  "id, company_id, appointment_id, consultant_id, consultant_name, created_by, starts_at, ends_at, status, check_in_at, check_out_at, check_in_lat, check_in_lng, check_in_accuracy_m, check_out_lat, check_out_lng, check_out_accuracy_m, address_snapshot, absence_reason, absence_note, notes, oportunidades, created_at, updated_at";
 
 export const mapCompany = (row: CompanyRow): Company => ({
   id: row.id,
@@ -95,6 +96,7 @@ export const mapAppointment = (row: AppointmentRow): Appointment => {
     appointmentId: row.appointment_id ?? null,
     consultantId: row.consultant_id ?? null,
     consultant: row.consultant_name ?? "",
+    createdBy: row.created_by ?? null,
     startAt: row.starts_at,
     endAt: row.ends_at,
     status: row.status ?? "scheduled",
