@@ -32,13 +32,18 @@ import {
 import { createSupabaseBrowserClient } from "../lib/supabaseClient";
 import type { Appointment, Company } from "../lib/types";
 import type { CapturePhotoResult } from "../services/camera";
+import { uploadApontamentoImage } from "../services/storageUploads";
 import type { OfflinePhotoMeta } from "../storage/offlinePhotos";
 import {
   getPhotoBlob,
   listPendingPhotos,
   saveOfflinePhoto,
 } from "../storage/offlinePhotos";
-import { listPendingActions } from "../storage/offlineSchedule";
+import {
+  listPendingActions,
+  removePendingAction,
+  savePendingAction,
+} from "../storage/offlineSchedule";
 import { syncAppointment } from "../sync/appointmentSync";
 
 const absenceOptions = [
@@ -148,7 +153,7 @@ const MapFitBounds = ({ points }: { points: MapPoint[] }) => {
   useEffect(() => {
     if (!points.length) return;
     const bounds = L.latLngBounds(points.map((point) => point.position));
-    map.fitBounds(bounds, { padding: [24, 24], maxZoom: 16 });
+    map.fitBounds(bounds, { padding: [24, 24], maxZoom: 16, animate: false });
   }, [map, points]);
 
   return null;
@@ -213,6 +218,8 @@ export default function AppointmentDetail() {
   useEffect(() => {
     if (appointmentFromState) {
       setAppointment(appointmentFromState);
+      setAbsenceReason(appointmentFromState.absenceReason ?? "");
+      setAbsenceNote(appointmentFromState.absenceNote ?? "");
     }
     if (companyFromState) {
       setCompany(companyFromState);
@@ -222,14 +229,20 @@ export default function AppointmentDetail() {
   const loadDetail = useCallback(async () => {
     if (!id) return;
     if (authLoading) return;
-    if (!isOnline) {
+    if (appointmentFromState) {
       setError(null);
-      if (appointmentFromState) {
-        setAppointment(appointmentFromState);
-      }
+      setAppointment(appointmentFromState);
       if (companyFromState) {
         setCompany(companyFromState);
       }
+      setLoading(false);
+      return;
+    }
+    if (state.loading) {
+      return;
+    }
+    if (!isOnline) {
+      setError(null);
       setLoading(false);
       return;
     }
@@ -277,6 +290,7 @@ export default function AppointmentDetail() {
     companyFromState,
     id,
     isOnline,
+    state.loading,
     supabase,
     user?.email,
   ]);
@@ -375,7 +389,6 @@ export default function AppointmentDetail() {
       );
       pendingPreviewUrlsRef.current = {};
       setPendingPhotos([]);
-      setPendingCount(0);
       return;
     }
     setPendingLoading(true);
@@ -383,7 +396,9 @@ export default function AppointmentDetail() {
     try {
       const allPending = await listPendingPhotos();
       const scoped = allPending.filter(
-        (item) => item.entityRef === appointment.id
+        (item) =>
+          item.entityRef === appointment.id ||
+          item.apontamentoId === appointment.id
       );
 
       Object.values(pendingPreviewUrlsRef.current).forEach((url) =>
@@ -406,7 +421,6 @@ export default function AppointmentDetail() {
       setPendingPhotos(withPreview);
     } catch (pendingLoadError) {
       setPendingPhotos([]);
-      setPendingCount(0);
       setPendingError(
         pendingLoadError instanceof Error
           ? pendingLoadError.message
@@ -465,6 +479,354 @@ export default function AppointmentDetail() {
       return photoId;
     },
     [appointment, loadPendingPhotos, session?.user?.id]
+  );
+
+  const buildCheckInRemoteChanges = useCallback(
+    (payload: { at: string; lat?: number | null; lng?: number | null; accuracy?: number | null }) => {
+      const changes: Record<string, unknown> = {
+        check_in_at: payload.at,
+        status: "in_progress",
+      };
+      if (payload.lat != null && payload.lng != null) {
+        changes.check_in_lat = payload.lat;
+        changes.check_in_lng = payload.lng;
+        if (payload.accuracy != null) {
+          changes.check_in_accuracy_m = payload.accuracy;
+        }
+      }
+      return changes;
+    },
+    []
+  );
+
+  const buildCheckOutRemoteChanges = useCallback(
+    (payload: {
+      at: string;
+      lat?: number | null;
+      lng?: number | null;
+      accuracy?: number | null;
+      oportunidades: string[];
+    }) => {
+      const changes: Record<string, unknown> = {
+        check_out_at: payload.at,
+        status: "done",
+        oportunidades: payload.oportunidades,
+      };
+      if (payload.lat != null && payload.lng != null) {
+        changes.check_out_lat = payload.lat;
+        changes.check_out_lng = payload.lng;
+        if (payload.accuracy != null) {
+          changes.check_out_accuracy_m = payload.accuracy;
+        }
+      }
+      return changes;
+    },
+    []
+  );
+
+  const buildAbsenceRemoteChanges = useCallback(
+    (payload: { reason: string; note?: string }) => ({
+      absence_reason: payload.reason,
+      absence_note: payload.note ?? null,
+      status: "absent",
+    }),
+    []
+  );
+
+  const updateAppointmentRemote = useCallback(
+    async (changes: Record<string, unknown>) => {
+      if (!appointment) {
+        throw new Error("Agendamento nao encontrado.");
+      }
+      const { error: updateError } = await supabase
+        .from("apontamentos")
+        .update(changes)
+        .eq("id", appointment.id)
+        .select("id")
+        .single();
+
+      if (updateError) {
+        throw new Error(updateError.message);
+      }
+    },
+    [appointment, supabase]
+  );
+
+  const uploadPhotoRemote = useCallback(
+    async (kind: MediaKind, shot: CapturePhotoResult) => {
+      if (!appointment) {
+        throw new Error("Agendamento nao encontrado.");
+      }
+      const consultantId = session?.user?.id;
+      if (!consultantId) {
+        throw new Error("Usuario nao autenticado.");
+      }
+
+      const upload = await uploadApontamentoImage({
+        apontamentoId: appointment.id,
+        consultantId,
+        kind,
+        blob: shot.blob,
+        mimeType: shot.mimeType,
+      });
+
+      const { error: insertError } = await supabase
+        .from("apontamento_media")
+        .insert({
+          apontamento_id: appointment.id,
+          bucket: upload.bucket,
+          path: upload.path,
+          kind,
+          mime_type: shot.mimeType,
+          bytes: upload.bytes,
+        });
+
+      if (insertError) {
+        throw new Error(insertError.message);
+      }
+    },
+    [appointment, session?.user?.id, supabase]
+  );
+
+  const queuePendingActionOnly = useCallback(
+    async (params: {
+      actionType: "checkIn" | "checkOut" | "absence";
+      changes: Record<string, unknown>;
+    }) => {
+      if (!appointment) {
+        throw new Error("Agendamento nao encontrado.");
+      }
+      const userEmail = user?.email?.trim();
+      if (!userEmail) {
+        throw new Error("Usuario nao autenticado.");
+      }
+      await savePendingAction({
+        userEmail,
+        appointmentId: appointment.id,
+        actionType: params.actionType,
+        changes: params.changes,
+      });
+      actions.setPendingSync(appointment.id, true);
+      await loadPendingActions();
+    },
+    [actions, appointment, loadPendingActions, user?.email]
+  );
+
+  const queuePendingActionWithPhoto = useCallback(
+    async (params: {
+      actionType: "checkIn" | "checkOut" | "absence";
+      changes: Record<string, unknown>;
+      kind: MediaKind;
+      shot: CapturePhotoResult;
+    }) => {
+      if (!appointment) {
+        throw new Error("Agendamento nao encontrado.");
+      }
+      const userEmail = user?.email?.trim();
+      if (!userEmail) {
+        throw new Error("Usuario nao autenticado.");
+      }
+      const pendingAction = await savePendingAction({
+        userEmail,
+        appointmentId: appointment.id,
+        actionType: params.actionType,
+        changes: params.changes,
+      });
+
+      try {
+        const consultantId = session?.user?.id;
+        if (!consultantId) {
+          throw new Error("Usuario nao autenticado.");
+        }
+        const photoId = generatePhotoId();
+        await saveOfflinePhoto(photoId, params.shot.blob, {
+          entityRef: appointment.id,
+          apontamentoId: appointment.id,
+          kind: params.kind,
+          consultantId,
+        });
+      } catch (error) {
+        await removePendingAction(pendingAction.id);
+        throw error;
+      }
+
+      actions.setPendingSync(appointment.id, true);
+      await loadPendingActions();
+      await loadPendingPhotos();
+    },
+    [
+      actions,
+      appointment,
+      loadPendingActions,
+      loadPendingPhotos,
+      session?.user?.id,
+      user?.email,
+    ]
+  );
+
+  const queuePendingPhotoOnly = useCallback(
+    async (params: { kind: MediaKind; shot: CapturePhotoResult }) => {
+      await storeOfflinePhoto(params.kind, params.shot);
+      if (appointment) {
+        actions.setPendingSync(appointment.id, true);
+      }
+    },
+    [actions, appointment, storeOfflinePhoto]
+  );
+
+  const syncCheckIn = useCallback(
+    async (params: {
+      shot: CapturePhotoResult;
+      at: string;
+      position: { lat: number; lng: number; accuracy: number } | null;
+    }) => {
+      try {
+        const changes = buildCheckInRemoteChanges({
+          at: params.at,
+          lat: params.position?.lat ?? null,
+          lng: params.position?.lng ?? null,
+          accuracy: params.position?.accuracy ?? null,
+        });
+
+        if (typeof navigator !== "undefined" && !navigator.onLine) {
+          await queuePendingActionWithPhoto({
+            actionType: "checkIn",
+            changes,
+            kind: "checkin",
+            shot: params.shot,
+          });
+          return;
+        }
+
+        try {
+          await updateAppointmentRemote(changes);
+        } catch (error) {
+          await queuePendingActionWithPhoto({
+            actionType: "checkIn",
+            changes,
+            kind: "checkin",
+            shot: params.shot,
+          });
+          return;
+        }
+
+        try {
+          await uploadPhotoRemote("checkin", params.shot);
+          await loadMedia();
+        } catch (error) {
+          await queuePendingPhotoOnly({ kind: "checkin", shot: params.shot });
+        }
+      } catch (error) {
+        setSyncStatus(
+          error instanceof Error
+            ? error.message
+            : "Nao foi possivel sincronizar o check-in."
+        );
+      }
+    },
+    [
+      buildCheckInRemoteChanges,
+      loadMedia,
+      queuePendingActionWithPhoto,
+      queuePendingPhotoOnly,
+      updateAppointmentRemote,
+      uploadPhotoRemote,
+    ]
+  );
+
+  const syncCheckOut = useCallback(
+    async (params: {
+      shot: CapturePhotoResult;
+      at: string;
+      position: { lat: number; lng: number; accuracy: number } | null;
+      oportunidades: string[];
+    }) => {
+      try {
+        const changes = buildCheckOutRemoteChanges({
+          at: params.at,
+          lat: params.position?.lat ?? null,
+          lng: params.position?.lng ?? null,
+          accuracy: params.position?.accuracy ?? null,
+          oportunidades: params.oportunidades,
+        });
+
+        if (typeof navigator !== "undefined" && !navigator.onLine) {
+          await queuePendingActionWithPhoto({
+            actionType: "checkOut",
+            changes,
+            kind: "checkout",
+            shot: params.shot,
+          });
+          return;
+        }
+
+        try {
+          await updateAppointmentRemote(changes);
+        } catch (error) {
+          await queuePendingActionWithPhoto({
+            actionType: "checkOut",
+            changes,
+            kind: "checkout",
+            shot: params.shot,
+          });
+          return;
+        }
+
+        try {
+          await uploadPhotoRemote("checkout", params.shot);
+          await loadMedia();
+        } catch (error) {
+          await queuePendingPhotoOnly({ kind: "checkout", shot: params.shot });
+        }
+      } catch (error) {
+        setSyncStatus(
+          error instanceof Error
+            ? error.message
+            : "Nao foi possivel sincronizar o check-out."
+        );
+      }
+    },
+    [
+      buildCheckOutRemoteChanges,
+      loadMedia,
+      queuePendingActionWithPhoto,
+      queuePendingPhotoOnly,
+      updateAppointmentRemote,
+      uploadPhotoRemote,
+    ]
+  );
+
+  const syncAbsence = useCallback(
+    async (params: { reason: string; note?: string }) => {
+      try {
+        const changes = buildAbsenceRemoteChanges({
+          reason: params.reason,
+          note: params.note,
+        });
+
+        if (typeof navigator !== "undefined" && !navigator.onLine) {
+          await queuePendingActionOnly({ actionType: "absence", changes });
+          return;
+        }
+
+        try {
+          await updateAppointmentRemote(changes);
+        } catch (error) {
+          await queuePendingActionOnly({ actionType: "absence", changes });
+        }
+      } catch (error) {
+        setSyncStatus(
+          error instanceof Error
+            ? error.message
+            : "Nao foi possivel sincronizar a ausencia."
+        );
+      }
+    },
+    [
+      buildAbsenceRemoteChanges,
+      queuePendingActionOnly,
+      updateAppointmentRemote,
+    ]
   );
 
   const mapPoints = useMemo(() => {
@@ -673,6 +1035,7 @@ export default function AppointmentDetail() {
   const performCheckIn = async (shot: CapturePhotoResult) => {
     if (!canCheckIn || busy || geo.isCapturing) return;
     setError(null);
+    setSyncStatus(null);
     geo.resetError();
     setGeoIntent("check_in");
     try {
@@ -687,9 +1050,6 @@ export default function AppointmentDetail() {
           throw geoError;
         }
       }
-      setPhotoStatus("Salvando foto offline...");
-      await storeOfflinePhoto("checkin", shot);
-      setPhotoStatus("Salvando apontamento...");
       const now = new Date().toISOString();
       await actions.checkIn(appointment.id, {
         at: now,
@@ -697,9 +1057,9 @@ export default function AppointmentDetail() {
         lng: position?.lng ?? null,
         accuracy: position?.accuracy ?? null,
       });
-      await loadDetail();
-      await loadMedia();
       setGeoIntent(null);
+      setPhotoStatus(null);
+      void syncCheckIn({ shot, at: now, position });
     } catch (actionError) {
       setError(
         actionError instanceof Error
@@ -715,6 +1075,7 @@ export default function AppointmentDetail() {
   const performCheckOut = async (shot: CapturePhotoResult) => {
     if (!canCheckOut || busy || geo.isCapturing) return;
     setError(null);
+    setSyncStatus(null);
     geo.resetError();
     setGeoIntent("check_out");
     const oportunidades = pendingCheckoutOpportunities ?? checkoutOpportunities;
@@ -730,9 +1091,6 @@ export default function AppointmentDetail() {
           throw geoError;
         }
       }
-      setPhotoStatus("Salvando foto offline...");
-      await storeOfflinePhoto("checkout", shot);
-      setPhotoStatus("Salvando apontamento...");
       const now = new Date().toISOString();
       await actions.checkOut(appointment.id, {
         at: now,
@@ -741,12 +1099,17 @@ export default function AppointmentDetail() {
         accuracy: position?.accuracy ?? null,
         oportunidades: oportunidades ?? [],
       });
-      await loadDetail();
-      await loadMedia();
       setGeoIntent(null);
       setIsCheckoutOpen(false);
       setCheckoutOpportunities([]);
       setPendingCheckoutOpportunities(null);
+      setPhotoStatus(null);
+      void syncCheckOut({
+        shot,
+        at: now,
+        position,
+        oportunidades: oportunidades ?? [],
+      });
     } catch (actionError) {
       setError(
         actionError instanceof Error
@@ -777,13 +1140,12 @@ export default function AppointmentDetail() {
   const handleAbsence = async () => {
     if (!canAbsence || busy || isPhotoBusy) return;
     setError(null);
+    setSyncStatus(null);
     const reason = absenceReason.trim() || "other";
     try {
-      setPhotoStatus("Salvando apontamento...");
       await actions.justifyAbsence(appointment.id, reason, absenceNote.trim());
-      await loadDetail();
-      await loadMedia();
       setIsAbsenceOpen(false);
+      void syncAbsence({ reason, note: absenceNote.trim() });
     } catch (actionError) {
       setError(
         actionError instanceof Error
@@ -849,10 +1211,9 @@ export default function AppointmentDetail() {
   const hasMapPoints = mapPoints.length > 0;
   const hasFilteredMapPoints = filteredMapPoints.length > 0;
   const companyDisplayName = company?.name ?? appointment.companyName ?? "Empresa";
+  const pendingItemBase = pendingPhotos.length + pendingActionCount;
   const pendingItemCount =
-    pendingPhotos.length +
-    pendingActionCount +
-    (appointment.pendingSync ? 1 : 0);
+    pendingItemBase + (appointment.pendingSync && pendingItemBase === 0 ? 1 : 0);
 
   const cameraTitle =
     cameraIntent === "checkin"
@@ -1034,6 +1395,8 @@ export default function AppointmentDetail() {
                 center={filteredMapPoints[0].position}
                 zoom={13}
                 scrollWheelZoom={false}
+                zoomAnimation={false}
+                fadeAnimation={false}
                 className="h-64 w-full"
               >
                 <TileLayer

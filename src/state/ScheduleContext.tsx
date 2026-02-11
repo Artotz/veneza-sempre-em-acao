@@ -44,6 +44,7 @@ export type ScheduleContextValue = {
       reason: string,
       note?: string
     ) => Promise<Appointment | null>;
+    setPendingSync: (id: string, pending: boolean) => void;
   };
   selectors: {
     getCompany: (companyId: string) => Company | undefined;

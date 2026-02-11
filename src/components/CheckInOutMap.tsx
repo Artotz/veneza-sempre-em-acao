@@ -54,7 +54,7 @@ const MapFitBounds = ({ points }: { points: MapPoint[] }) => {
   useEffect(() => {
     if (!points.length) return;
     const bounds = L.latLngBounds(points.map((point) => point.position));
-    map.fitBounds(bounds, { padding: [24, 24], maxZoom: 16 });
+    map.fitBounds(bounds, { padding: [24, 24], maxZoom: 16, animate: false });
   }, [map, points]);
 
   return null;
@@ -154,6 +154,8 @@ export const CheckInOutMap = ({
             center={filteredMapPoints[0].position}
             zoom={13}
             scrollWheelZoom={false}
+            zoomAnimation={false}
+            fadeAnimation={false}
             className={`${heightClass} w-full`}
           >
             <TileLayer
