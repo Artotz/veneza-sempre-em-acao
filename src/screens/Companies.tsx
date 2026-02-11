@@ -7,6 +7,10 @@ import { useAuth } from "../contexts/useAuth";
 import { createSupabaseBrowserClient } from "../lib/supabaseClient";
 import { COMPANY_SELECT, mapCompany } from "../lib/supabase";
 import type { Company } from "../lib/types";
+import {
+  getCompaniesSnapshot,
+  saveCompaniesSnapshot,
+} from "../storage/offlineSchedule";
 
 export default function Companies() {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
@@ -16,6 +20,16 @@ export default function Companies() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const filterCompanies = (items: Company[], term: string) => {
+    const trimmed = term.trim().toLowerCase();
+    if (!trimmed) return items;
+    return items.filter((company) => {
+      const name = company.name?.toLowerCase() ?? "";
+      const document = company.document?.toLowerCase() ?? "";
+      return name.includes(trimmed) || document.includes(trimmed);
+    });
+  };
 
   useEffect(() => {
     let active = true;
@@ -44,6 +58,22 @@ export default function Companies() {
       setLoading(true);
       setError(null);
       const trimmed = query.trim();
+      const isOffline =
+        typeof navigator !== "undefined" && !navigator.onLine;
+
+      if (isOffline) {
+        const cached = await getCompaniesSnapshot(userEmail);
+        if (!active) return;
+        if (!cached) {
+          setCompanies([]);
+          setError("Sem conexao e sem cache local.");
+          setLoading(false);
+          return;
+        }
+        setCompanies(filterCompanies(cached.companies, trimmed));
+        setLoading(false);
+        return;
+      }
       let request = supabase
         .from("companies")
         .select(COMPANY_SELECT)
@@ -61,13 +91,22 @@ export default function Companies() {
       if (!active) return;
 
       if (requestError) {
+        const cached = await getCompaniesSnapshot(userEmail);
+        if (!active) return;
+        if (cached) {
+          setCompanies(filterCompanies(cached.companies, trimmed));
+          setLoading(false);
+          return;
+        }
         setError(requestError.message);
         setCompanies([]);
         setLoading(false);
         return;
       }
 
-      setCompanies((data ?? []).map(mapCompany));
+      const mapped = (data ?? []).map(mapCompany);
+      setCompanies(filterCompanies(mapped, trimmed));
+      await saveCompaniesSnapshot(userEmail, mapped);
       setLoading(false);
     }, query.trim().length ? 300 : 0);
 

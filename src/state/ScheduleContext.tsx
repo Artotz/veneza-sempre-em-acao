@@ -22,15 +22,20 @@ export type ScheduleContextValue = {
     refresh: () => Promise<void>;
     checkIn: (
       id: string,
-      payload: { at: string; lat: number; lng: number; accuracy: number }
+      payload: {
+        at: string;
+        lat?: number | null;
+        lng?: number | null;
+        accuracy?: number | null;
+      }
     ) => Promise<Appointment | null>;
     checkOut: (
       id: string,
       payload: {
         at: string;
-        lat: number;
-        lng: number;
-        accuracy: number;
+        lat?: number | null;
+        lng?: number | null;
+        accuracy?: number | null;
         oportunidades: string[];
       }
     ) => Promise<Appointment | null>;

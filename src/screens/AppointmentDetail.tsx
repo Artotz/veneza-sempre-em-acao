@@ -220,6 +220,17 @@ export default function AppointmentDetail() {
   const loadDetail = useCallback(async () => {
     if (!id) return;
     if (authLoading) return;
+    if (!isOnline) {
+      setError(null);
+      if (appointmentFromState) {
+        setAppointment(appointmentFromState);
+      }
+      if (companyFromState) {
+        setCompany(companyFromState);
+      }
+      setLoading(false);
+      return;
+    }
     const userEmail = user?.email?.trim();
     if (!userEmail) {
       setError("Usuario nao autenticado.");
@@ -258,10 +269,23 @@ export default function AppointmentDetail() {
     setAbsenceReason(mappedAppointment.absenceReason ?? "");
     setAbsenceNote(mappedAppointment.absenceNote ?? "");
     setLoading(false);
-  }, [authLoading, id, supabase, user?.email]);
+  }, [
+    appointmentFromState,
+    authLoading,
+    companyFromState,
+    id,
+    isOnline,
+    supabase,
+    user?.email,
+  ]);
 
   const loadMedia = useCallback(async () => {
     if (!id) return;
+    if (!isOnline) {
+      setMediaLoading(false);
+      setMediaError(null);
+      return;
+    }
     setMediaLoading(true);
     setMediaError(null);
 
@@ -303,7 +327,7 @@ export default function AppointmentDetail() {
 
     setMediaItems(signedItems);
     setMediaLoading(false);
-  }, [id, supabase]);
+  }, [id, isOnline, supabase]);
 
   useEffect(() => {
     void loadDetail();
@@ -615,25 +639,31 @@ export default function AppointmentDetail() {
     geo.resetError();
     setGeoIntent("check_in");
     try {
-      const position = await geo.capture();
+      let position: { lat: number; lng: number; accuracy: number } | null = null;
+      try {
+        position = await geo.capture();
+      } catch (geoError) {
+        if (isGeoError(geoError)) {
+          geo.resetError();
+          setPhotoStatus("Localizacao indisponivel, salvando sem localizacao...");
+        } else {
+          throw geoError;
+        }
+      }
       setPhotoStatus("Salvando foto offline...");
       await storeOfflinePhoto("checkin", shot);
       setPhotoStatus("Salvando apontamento...");
       const now = new Date().toISOString();
       await actions.checkIn(appointment.id, {
         at: now,
-        lat: position.lat,
-        lng: position.lng,
-        accuracy: position.accuracy,
+        lat: position?.lat ?? null,
+        lng: position?.lng ?? null,
+        accuracy: position?.accuracy ?? null,
       });
       await loadDetail();
       await loadMedia();
       setGeoIntent(null);
     } catch (actionError) {
-      if (isGeoError(actionError)) {
-        setPhotoStatus(null);
-        return;
-      }
       setError(
         actionError instanceof Error
           ? actionError.message
@@ -652,16 +682,26 @@ export default function AppointmentDetail() {
     setGeoIntent("check_out");
     const oportunidades = pendingCheckoutOpportunities ?? checkoutOpportunities;
     try {
-      const position = await geo.capture();
+      let position: { lat: number; lng: number; accuracy: number } | null = null;
+      try {
+        position = await geo.capture();
+      } catch (geoError) {
+        if (isGeoError(geoError)) {
+          geo.resetError();
+          setPhotoStatus("Localizacao indisponivel, salvando sem localizacao...");
+        } else {
+          throw geoError;
+        }
+      }
       setPhotoStatus("Salvando foto offline...");
       await storeOfflinePhoto("checkout", shot);
       setPhotoStatus("Salvando apontamento...");
       const now = new Date().toISOString();
       await actions.checkOut(appointment.id, {
         at: now,
-        lat: position.lat,
-        lng: position.lng,
-        accuracy: position.accuracy,
+        lat: position?.lat ?? null,
+        lng: position?.lng ?? null,
+        accuracy: position?.accuracy ?? null,
         oportunidades: oportunidades ?? [],
       });
       await loadDetail();
@@ -671,10 +711,6 @@ export default function AppointmentDetail() {
       setCheckoutOpportunities([]);
       setPendingCheckoutOpportunities(null);
     } catch (actionError) {
-      if (isGeoError(actionError)) {
-        setPhotoStatus(null);
-        return;
-      }
       setError(
         actionError instanceof Error
           ? actionError.message

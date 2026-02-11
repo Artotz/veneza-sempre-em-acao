@@ -20,6 +20,15 @@ import {
   type ScheduleState,
   type ScheduleContextValue,
 } from "./ScheduleContext";
+import {
+  getScheduleSnapshot,
+  listPendingActions,
+  removePendingAction,
+  savePendingAction,
+  saveCompaniesSnapshot,
+  saveScheduleSnapshot,
+  type PendingScheduleAction,
+} from "../storage/offlineSchedule";
 
 type ScheduleAction =
   | {
@@ -97,15 +106,91 @@ const scheduleReducer = (
   }
 };
 
+const hasCoords = (lat?: number | null, lng?: number | null) =>
+  lat != null && lng != null;
+
+const buildCheckInChanges = (payload: {
+  at: string;
+  lat?: number | null;
+  lng?: number | null;
+  accuracy?: number | null;
+}) => {
+  const remoteChanges: Record<string, unknown> = {
+    check_in_at: payload.at,
+    status: "in_progress",
+  };
+  const localChanges: Partial<Appointment> = {
+    checkInAt: payload.at,
+    status: "in_progress",
+  };
+
+  if (hasCoords(payload.lat, payload.lng)) {
+    remoteChanges.check_in_lat = payload.lat as number;
+    remoteChanges.check_in_lng = payload.lng as number;
+    localChanges.checkInLat = payload.lat as number;
+    localChanges.checkInLng = payload.lng as number;
+    if (payload.accuracy != null) {
+      remoteChanges.check_in_accuracy_m = payload.accuracy;
+      localChanges.checkInAccuracyM = payload.accuracy;
+    }
+  }
+
+  return { remoteChanges, localChanges };
+};
+
+const buildCheckOutChanges = (payload: {
+  at: string;
+  lat?: number | null;
+  lng?: number | null;
+  accuracy?: number | null;
+  oportunidades: string[];
+}) => {
+  const remoteChanges: Record<string, unknown> = {
+    check_out_at: payload.at,
+    status: "done",
+    oportunidades: payload.oportunidades,
+  };
+  const localChanges: Partial<Appointment> = {
+    checkOutAt: payload.at,
+    status: "done",
+    oportunidades: payload.oportunidades,
+  };
+
+  if (hasCoords(payload.lat, payload.lng)) {
+    remoteChanges.check_out_lat = payload.lat as number;
+    remoteChanges.check_out_lng = payload.lng as number;
+    localChanges.checkOutLat = payload.lat as number;
+    localChanges.checkOutLng = payload.lng as number;
+    if (payload.accuracy != null) {
+      remoteChanges.check_out_accuracy_m = payload.accuracy;
+      localChanges.checkOutAccuracyM = payload.accuracy;
+    }
+  }
+
+  return { remoteChanges, localChanges };
+};
+
+const buildAbsenceChanges = (reason: string, note?: string) => ({
+  remoteChanges: {
+    absence_reason: reason,
+    absence_note: note ?? null,
+    status: "absent",
+  } as Record<string, unknown>,
+  localChanges: {
+    absenceReason: reason,
+    absenceNote: note ?? null,
+    status: "absent",
+  } as Partial<Appointment>,
+});
+
 export function ScheduleProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(scheduleReducer, initialState);
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const { user, loading: authLoading } = useAuth();
+  const userEmail = user?.email?.trim() ?? null;
 
   const loadSchedule = useCallback(
     async (range: ScheduleRange, activeRef: { active: boolean }) => {
-      if (!user) return;
-      const userEmail = user.email?.trim();
       if (!userEmail) {
         dispatch({
           type: "error",
@@ -114,6 +199,25 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
         return;
       }
       dispatch({ type: "set_loading" });
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        const cached = await getScheduleSnapshot(userEmail, range);
+        if (!activeRef.active) return;
+        if (cached) {
+          dispatch({
+            type: "init",
+            payload: {
+              appointments: cached.appointments,
+              companies: cached.companies,
+            },
+          });
+        } else {
+          dispatch({
+            type: "error",
+            payload: "Sem conexao e sem cache local.",
+          });
+        }
+        return;
+      }
       try {
         const companiesPromise = supabase
           .from("companies")
@@ -148,6 +252,8 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
         const appointments = (appointmentsResult.data ?? []).map(mapAppointment);
 
         dispatch({ type: "init", payload: { appointments, companies } });
+        await saveScheduleSnapshot(userEmail, range, appointments, companies);
+        await saveCompaniesSnapshot(userEmail, companies);
       } catch (error) {
         console.error(error);
         if (!activeRef.active) return;
@@ -157,7 +263,7 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
         });
       }
     },
-    [supabase, user]
+    [supabase, userEmail]
   );
 
   useEffect(() => {
@@ -196,17 +302,122 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
     async (id: string, updatePromise: () => Promise<Appointment | null>) => {
       dispatch({ type: "set_busy", payload: { id, busy: true } });
       try {
-        const updated = await updatePromise();
-        if (updated) {
-          dispatch({ type: "update", payload: { id, changes: updated } });
-        }
-        return updated;
+        return await updatePromise();
       } finally {
         dispatch({ type: "set_busy", payload: { id, busy: false } });
       }
     },
     []
   );
+
+  const persistSnapshot = useCallback(
+    (appointments: Appointment[], companies: ScheduleState["companies"]) => {
+      if (!userEmail || !state.range) return;
+      void saveScheduleSnapshot(userEmail, state.range, appointments, companies);
+    },
+    [state.range, userEmail]
+  );
+
+  const applyLocalUpdate = useCallback(
+    (id: string, changes: Partial<Appointment>) => {
+      const nextAppointments = state.appointments.map((appointment) =>
+        appointment.id === id ? { ...appointment, ...changes } : appointment
+      );
+      dispatch({ type: "update", payload: { id, changes } });
+      persistSnapshot(nextAppointments, state.companies);
+      return nextAppointments;
+    },
+    [persistSnapshot, state.appointments, state.companies]
+  );
+
+  const applyRemoteUpdate = useCallback(
+    (updated: Appointment) => {
+      const nextAppointments = state.appointments.map((appointment) =>
+        appointment.id === updated.id ? { ...appointment, ...updated } : appointment
+      );
+      dispatch({ type: "update", payload: { id: updated.id, changes: updated } });
+      persistSnapshot(nextAppointments, state.companies);
+      return nextAppointments;
+    },
+    [persistSnapshot, state.appointments, state.companies]
+  );
+
+  const queuePending = useCallback(
+    async (params: {
+      appointmentId: string;
+      actionType: PendingScheduleAction["actionType"];
+      changes: Record<string, unknown>;
+    }) => {
+      if (!userEmail) return;
+      await savePendingAction({
+        userEmail,
+        appointmentId: params.appointmentId,
+        actionType: params.actionType,
+        changes: params.changes,
+      });
+    },
+    [userEmail]
+  );
+
+  const flushPending = useCallback(async () => {
+    if (!userEmail || !state.range) return;
+    if (typeof navigator !== "undefined" && !navigator.onLine) return;
+
+    const pending = await listPendingActions(userEmail);
+    if (!pending.length) return;
+
+    let nextAppointments = state.appointments;
+
+    for (const item of pending) {
+      try {
+        const updated = await updateAppointment(item.appointmentId, item.changes);
+        if (updated) {
+          nextAppointments = nextAppointments.map((appointment) =>
+            appointment.id === updated.id ? { ...appointment, ...updated } : appointment
+          );
+          dispatch({
+            type: "update",
+            payload: { id: updated.id, changes: updated },
+          });
+        }
+        await removePendingAction(item.id);
+      } catch (error) {
+        console.warn("Falha ao sincronizar pendencia de apontamento", error);
+        if (typeof navigator !== "undefined" && !navigator.onLine) {
+          break;
+        }
+      }
+    }
+
+    persistSnapshot(nextAppointments, state.companies);
+  }, [
+    persistSnapshot,
+    listPendingActions,
+    removePendingAction,
+    state.appointments,
+    state.companies,
+    state.range,
+    updateAppointment,
+    userEmail,
+  ]);
+
+  useEffect(() => {
+    if (!userEmail || !state.range) return;
+    if (typeof navigator !== "undefined" && navigator.onLine) {
+      void flushPending();
+    }
+  }, [flushPending, state.range, userEmail]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handleOnline = () => {
+      void flushPending();
+    };
+    window.addEventListener("online", handleOnline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+    };
+  }, [flushPending]);
 
   const actions = useMemo<ScheduleContextValue["actions"]>(
     () => ({
@@ -224,53 +435,127 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
         });
       },
       refresh: async () => {
-        if (!state.range || !user?.email) return;
+        if (!state.range || !userEmail) return;
         const activeRef = { active: true };
         await loadSchedule(state.range, activeRef);
       },
       checkIn: async (
         id: string,
-        payload: { at: string; lat: number; lng: number; accuracy: number }
+        payload: { at: string; lat?: number | null; lng?: number | null; accuracy?: number | null }
       ) =>
-        runUpdate(id, () =>
-          updateAppointment(id, {
-            check_in_at: payload.at,
-            check_in_lat: payload.lat,
-            check_in_lng: payload.lng,
-            check_in_accuracy_m: payload.accuracy,
-            status: "in_progress",
-          })
-        ),
+        runUpdate(id, async () => {
+          const base =
+            state.appointments.find((appointment) => appointment.id === id) ?? null;
+          const { remoteChanges, localChanges } = buildCheckInChanges(payload);
+          const isOffline =
+            typeof navigator !== "undefined" && !navigator.onLine;
+
+          if (!isOffline) {
+            try {
+              const updated = await updateAppointment(id, remoteChanges);
+              if (updated) {
+                applyRemoteUpdate(updated);
+              }
+              return updated;
+            } catch (error) {
+              if (!(typeof navigator !== "undefined" && !navigator.onLine)) {
+                throw error;
+              }
+            }
+          }
+
+          const updatedLocal = base ? { ...base, ...localChanges } : null;
+          applyLocalUpdate(id, localChanges);
+          await queuePending({
+            appointmentId: id,
+            actionType: "checkIn",
+            changes: remoteChanges,
+          });
+          return updatedLocal;
+        }),
       checkOut: async (
         id: string,
         payload: {
           at: string;
-          lat: number;
-          lng: number;
-          accuracy: number;
+          lat?: number | null;
+          lng?: number | null;
+          accuracy?: number | null;
           oportunidades: string[];
         }
       ) =>
-        runUpdate(id, () =>
-          updateAppointment(id, {
-            check_out_at: payload.at,
-            check_out_lat: payload.lat,
-            check_out_lng: payload.lng,
-            check_out_accuracy_m: payload.accuracy,
-            status: "done",
-            oportunidades: payload.oportunidades,
-          })
-        ),
+        runUpdate(id, async () => {
+          const base =
+            state.appointments.find((appointment) => appointment.id === id) ?? null;
+          const { remoteChanges, localChanges } = buildCheckOutChanges(payload);
+          const isOffline =
+            typeof navigator !== "undefined" && !navigator.onLine;
+
+          if (!isOffline) {
+            try {
+              const updated = await updateAppointment(id, remoteChanges);
+              if (updated) {
+                applyRemoteUpdate(updated);
+              }
+              return updated;
+            } catch (error) {
+              if (!(typeof navigator !== "undefined" && !navigator.onLine)) {
+                throw error;
+              }
+            }
+          }
+
+          const updatedLocal = base ? { ...base, ...localChanges } : null;
+          applyLocalUpdate(id, localChanges);
+          await queuePending({
+            appointmentId: id,
+            actionType: "checkOut",
+            changes: remoteChanges,
+          });
+          return updatedLocal;
+        }),
       justifyAbsence: async (id: string, reason: string, note?: string) =>
-        runUpdate(id, () =>
-          updateAppointment(id, {
-            absence_reason: reason,
-            absence_note: note ?? null,
-            status: "absent",
-          })
-        ),
+        runUpdate(id, async () => {
+          const base =
+            state.appointments.find((appointment) => appointment.id === id) ?? null;
+          const { remoteChanges, localChanges } = buildAbsenceChanges(reason, note);
+          const isOffline =
+            typeof navigator !== "undefined" && !navigator.onLine;
+
+          if (!isOffline) {
+            try {
+              const updated = await updateAppointment(id, remoteChanges);
+              if (updated) {
+                applyRemoteUpdate(updated);
+              }
+              return updated;
+            } catch (error) {
+              if (!(typeof navigator !== "undefined" && !navigator.onLine)) {
+                throw error;
+              }
+            }
+          }
+
+          const updatedLocal = base ? { ...base, ...localChanges } : null;
+          applyLocalUpdate(id, localChanges);
+          await queuePending({
+            appointmentId: id,
+            actionType: "absence",
+            changes: remoteChanges,
+          });
+          return updatedLocal;
+        }),
     }),
-    [loadSchedule, runUpdate, state.range, updateAppointment, user]
+    [
+      applyLocalUpdate,
+      applyRemoteUpdate,
+      loadSchedule,
+      queuePending,
+      runUpdate,
+      state.appointments,
+      state.range,
+      updateAppointment,
+      userEmail,
+    ]
   );
 
   const selectors = useMemo<ScheduleContextValue["selectors"]>(
