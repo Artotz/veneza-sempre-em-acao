@@ -2,11 +2,11 @@ import { NavLink } from "react-router-dom";
 import { useOnlineStatus } from "../hooks/useOnlineStatus";
 
 const navItems = [
-  { to: "/empresas", label: "Empresas" },
   { to: "/cronograma/dia", label: "Dia" },
   { to: "/cronograma/semana", label: "Semana" },
   { to: "/cronograma/mes", label: "Mes" },
   { to: "/cronograma/lista", label: "Lista" },
+  { to: "/empresas", label: "Empresas" },
 ];
 
 export const BottomNav = () => {

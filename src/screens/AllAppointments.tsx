@@ -86,9 +86,12 @@ const AppointmentListItem = ({
 export default function AllAppointments() {
   const { state, selectors, actions } = useSchedule();
   const navigate = useNavigate();
-  const [statusFilter, setStatusFilter] = useState<AppointmentStatus | null>(
-    null
-  );
+  const [statusFilters, setStatusFilters] = useState<AppointmentStatus[]>(() => [
+    "pendente",
+    "em_execucao",
+    "concluido",
+    "ausente",
+  ]);
 
   const weeks = useMemo(() => buildMonthWeeks(new Date()), []);
   const monthRange = useMemo(() => {
@@ -127,11 +130,11 @@ export default function AllAppointments() {
   }, [state.appointments]);
 
   const filteredAppointments = useMemo(() => {
-    if (!statusFilter) return orderedAppointments;
-    return orderedAppointments.filter(
-      (appointment) => getAppointmentStatus(appointment) === statusFilter
+    if (statusFilters.length === 0) return [];
+    return orderedAppointments.filter((appointment) =>
+      statusFilters.includes(getAppointmentStatus(appointment))
     );
-  }, [orderedAppointments, statusFilter]);
+  }, [orderedAppointments, statusFilters]);
 
   const pillOptions = useMemo(
     () => [
@@ -198,13 +201,17 @@ export default function AllAppointments() {
             />
             <div className="flex flex-wrap gap-2 text-[11px] font-semibold">
               {pillOptions.map((pill) => {
-                const isActive = statusFilter === pill.status;
+                const isActive = statusFilters.includes(pill.status);
                 return (
                   <button
                     key={pill.status}
                     type="button"
                     onClick={() =>
-                      setStatusFilter(isActive ? null : pill.status)
+                      setStatusFilters((current) =>
+                        current.includes(pill.status)
+                          ? current.filter((status) => status !== pill.status)
+                          : [...current, pill.status]
+                      )
                     }
                     aria-pressed={isActive}
                     className={`rounded-full px-3 py-1 transition ${
@@ -248,9 +255,9 @@ export default function AllAppointments() {
               <EmptyState
                 title="Sem agendamentos"
                 description={
-                  statusFilter
-                    ? "Nenhum agendamento encontrado para este filtro."
-                    : "Nenhum agendamento cadastrado nesta janela."
+                  statusFilters.length === 0
+                    ? "Nenhum filtro ativo. Ligue ao menos um status acima."
+                    : "Nenhum agendamento encontrado para os filtros ativos."
                 }
               />
             )}

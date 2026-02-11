@@ -18,7 +18,10 @@ export default function App() {
       <ScheduleProvider>
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Navigate to="/empresas" replace />} />
+            <Route
+              path="/"
+              element={<Navigate to="/cronograma/dia" replace />}
+            />
             <Route path="/login" element={<Login />} />
             <Route
               path="/empresas"
