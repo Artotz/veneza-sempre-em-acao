@@ -108,6 +108,29 @@ export const removePhotoBlob = async (id: string) => {
   await db.delete(BLOB_STORE, id);
 };
 
+export const rebindOfflinePhotos = async (
+  oldAppointmentId: string,
+  newAppointmentId: string
+) => {
+  const db = await getDb();
+  const items = await db.getAll(PHOTO_STORE);
+  const toUpdate = items.filter(
+    (item) =>
+      item.entityRef === oldAppointmentId || item.apontamentoId === oldAppointmentId
+  );
+  if (!toUpdate.length) return;
+
+  const tx = db.transaction(PHOTO_STORE, "readwrite");
+  for (const item of toUpdate) {
+    await tx.store.put({
+      ...item,
+      entityRef: newAppointmentId,
+      apontamentoId: newAppointmentId,
+    });
+  }
+  await tx.done;
+};
+
 export const pruneStorage = async (params?: {
   maxItems?: number;
   maxBytes?: number;

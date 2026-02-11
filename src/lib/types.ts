@@ -37,6 +37,8 @@ export type Appointment = {
   createdAt?: string | null;
   updatedAt?: string | null;
   appointmentTitle?: string | null;
+  pendingSync?: boolean;
+  localCreatedAt?: number | null;
 };
 
 export type Company = {

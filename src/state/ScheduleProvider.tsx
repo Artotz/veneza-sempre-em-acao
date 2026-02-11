@@ -6,6 +6,7 @@ import {
   type ReactNode,
 } from "react";
 import type { Appointment } from "../lib/types";
+import { isSameDay } from "../lib/date";
 import { createSupabaseBrowserClient } from "../lib/supabaseClient";
 import {
   APPOINTMENT_SELECT,
@@ -21,12 +22,13 @@ import {
   type ScheduleContextValue,
 } from "./ScheduleContext";
 import {
-  getScheduleSnapshot,
-  listPendingActions,
-  removePendingAction,
+  getCompaniesSnapshot,
+  getTodayAppointments,
+  listPendingAppointments,
   savePendingAction,
   saveCompaniesSnapshot,
   saveScheduleSnapshot,
+  saveTodayAppointments,
   type PendingScheduleAction,
 } from "../storage/offlineSchedule";
 
@@ -183,6 +185,41 @@ const buildAbsenceChanges = (reason: string, note?: string) => ({
   } as Partial<Appointment>,
 });
 
+const isRangeContainingDate = (range: ScheduleRange, date: Date) => {
+  const start = new Date(range.startAt);
+  const end = new Date(range.endAt);
+  return date >= start && date <= end;
+};
+
+const filterAppointmentsForDate = (appointments: Appointment[], date: Date) =>
+  appointments.filter((appointment) => isSameDay(new Date(appointment.startAt), date));
+
+const filterAppointmentsByRange = (
+  appointments: Appointment[],
+  range: ScheduleRange
+) => {
+  const start = new Date(range.startAt);
+  const end = new Date(range.endAt);
+  return appointments.filter((appointment) => {
+    const when = new Date(appointment.startAt);
+    return when >= start && when <= end;
+  });
+};
+
+const mergeAppointments = (
+  base: Appointment[],
+  extras: Appointment[]
+) => {
+  const map = new Map<string, Appointment>();
+  base.forEach((appointment) => map.set(appointment.id, appointment));
+  extras.forEach((appointment) => {
+    if (!map.has(appointment.id)) {
+      map.set(appointment.id, appointment);
+    }
+  });
+  return Array.from(map.values());
+};
+
 export function ScheduleProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(scheduleReducer, initialState);
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
@@ -200,22 +237,39 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
       }
       dispatch({ type: "set_loading" });
       if (typeof navigator !== "undefined" && !navigator.onLine) {
-        const cached = await getScheduleSnapshot(userEmail, range);
+        const [todayCache, companiesCache, pendingAppointments] =
+          await Promise.all([
+            getTodayAppointments(userEmail),
+            getCompaniesSnapshot(userEmail),
+            listPendingAppointments(userEmail),
+          ]);
         if (!activeRef.active) return;
-        if (cached) {
-          dispatch({
-            type: "init",
-            payload: {
-              appointments: cached.appointments,
-              companies: cached.companies,
-            },
-          });
-        } else {
+
+        const today = new Date();
+        const pendingToday = filterAppointmentsForDate(
+          pendingAppointments,
+          today
+        );
+        const mergedAppointments = mergeAppointments(
+          todayCache?.appointments ?? [],
+          pendingToday
+        );
+
+        if (!mergedAppointments.length && !companiesCache?.companies?.length) {
           dispatch({
             type: "error",
             payload: "Sem conexao e sem cache local.",
           });
+          return;
         }
+
+        dispatch({
+          type: "init",
+          payload: {
+            appointments: mergedAppointments,
+            companies: companiesCache?.companies ?? [],
+          },
+        });
         return;
       }
       try {
@@ -250,10 +304,28 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
 
         const companies = (companiesResult.data ?? []).map(mapCompany);
         const appointments = (appointmentsResult.data ?? []).map(mapAppointment);
+        const pendingAppointments = await listPendingAppointments(userEmail);
+        const pendingInRange = filterAppointmentsByRange(
+          pendingAppointments,
+          range
+        );
+        const mergedAppointments = mergeAppointments(
+          appointments,
+          pendingInRange
+        );
 
-        dispatch({ type: "init", payload: { appointments, companies } });
-        await saveScheduleSnapshot(userEmail, range, appointments, companies);
+        dispatch({
+          type: "init",
+          payload: { appointments: mergedAppointments, companies },
+        });
+        await saveScheduleSnapshot(userEmail, range, mergedAppointments, companies);
         await saveCompaniesSnapshot(userEmail, companies);
+
+        const today = new Date();
+        if (isRangeContainingDate(range, today)) {
+          const todayAppointments = filterAppointmentsForDate(appointments, today);
+          await saveTodayAppointments(userEmail, todayAppointments);
+        }
       } catch (error) {
         console.error(error);
         if (!activeRef.active) return;
@@ -314,6 +386,12 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
     (appointments: Appointment[], companies: ScheduleState["companies"]) => {
       if (!userEmail || !state.range) return;
       void saveScheduleSnapshot(userEmail, state.range, appointments, companies);
+      void saveCompaniesSnapshot(userEmail, companies);
+      const today = new Date();
+      if (isRangeContainingDate(state.range, today)) {
+        const todayAppointments = filterAppointmentsForDate(appointments, today);
+        void saveTodayAppointments(userEmail, todayAppointments);
+      }
     },
     [state.range, userEmail]
   );
@@ -358,66 +436,6 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
     },
     [userEmail]
   );
-
-  const flushPending = useCallback(async () => {
-    if (!userEmail || !state.range) return;
-    if (typeof navigator !== "undefined" && !navigator.onLine) return;
-
-    const pending = await listPendingActions(userEmail);
-    if (!pending.length) return;
-
-    let nextAppointments = state.appointments;
-
-    for (const item of pending) {
-      try {
-        const updated = await updateAppointment(item.appointmentId, item.changes);
-        if (updated) {
-          nextAppointments = nextAppointments.map((appointment) =>
-            appointment.id === updated.id ? { ...appointment, ...updated } : appointment
-          );
-          dispatch({
-            type: "update",
-            payload: { id: updated.id, changes: updated },
-          });
-        }
-        await removePendingAction(item.id);
-      } catch (error) {
-        console.warn("Falha ao sincronizar pendencia de apontamento", error);
-        if (typeof navigator !== "undefined" && !navigator.onLine) {
-          break;
-        }
-      }
-    }
-
-    persistSnapshot(nextAppointments, state.companies);
-  }, [
-    persistSnapshot,
-    listPendingActions,
-    removePendingAction,
-    state.appointments,
-    state.companies,
-    state.range,
-    updateAppointment,
-    userEmail,
-  ]);
-
-  useEffect(() => {
-    if (!userEmail || !state.range) return;
-    if (typeof navigator !== "undefined" && navigator.onLine) {
-      void flushPending();
-    }
-  }, [flushPending, state.range, userEmail]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const handleOnline = () => {
-      void flushPending();
-    };
-    window.addEventListener("online", handleOnline);
-    return () => {
-      window.removeEventListener("online", handleOnline);
-    };
-  }, [flushPending]);
 
   const actions = useMemo<ScheduleContextValue["actions"]>(
     () => ({

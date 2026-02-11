@@ -73,7 +73,14 @@ const AppointmentListItem = ({
             ) : null}
           </div>
         </div>
-        <StatusBadge status={status} />
+        <div className="flex items-center gap-2">
+          {appointment.pendingSync ? (
+            <span className="rounded-full bg-warning/15 px-2 py-1 text-[10px] font-semibold text-warning">
+              Nao enviado
+            </span>
+          ) : null}
+          <StatusBadge status={status} />
+        </div>
       </div>
       <div className="mt-3 flex items-center justify-end text-xs text-foreground-soft">
         <span

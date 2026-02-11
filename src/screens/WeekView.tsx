@@ -165,14 +165,30 @@ export default function WeekView() {
               <div className="grid grid-cols-7 gap-1">
                 {week.days.map((day, dayIndex) => {
                   const dayAppointments = dayGroups[dayIndex] ?? [];
+                  const isToday = isSameDay(day.date, today);
                   return (
                     <div
                       key={day.id}
-                      className="flex min-w-0 flex-col gap-1 rounded-xl border border-border bg-surface-muted p-1"
+                      className={`flex min-w-0 flex-col gap-1 rounded-xl border p-1 ${
+                        isToday
+                          ? "border-accent bg-white ring-1 ring-accent/20"
+                          : "border-border bg-surface-muted"
+                      }`}
                     >
-                      <div className="rounded-lg bg-white px-1 py-1 text-center text-[9px] font-semibold text-foreground leading-tight">
+                      <div
+                        className={`rounded-lg px-1 py-1 text-center text-[9px] font-semibold leading-tight ${
+                          isToday
+                            ? "bg-accent/15 text-foreground"
+                            : "bg-white text-foreground"
+                        }`}
+                      >
                         <span className="block">{day.short.toLowerCase()}</span>
                         <span className="block">{day.date.getDate()}</span>
+                        {/* {isToday ? (
+                          <span className="mt-0.5 block rounded-full bg-accent/25 px-1 py-0.5 text-[8px] font-semibold uppercase tracking-wide text-foreground">
+                            Hoje
+                          </span>
+                        ) : null} */}
                       </div>
                       <div className="flex min-w-0 flex-col gap-1">
                         {dayAppointments.length ? (

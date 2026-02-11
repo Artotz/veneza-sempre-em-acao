@@ -135,6 +135,7 @@ export default function DayView() {
   ).length;
   const activeDayAppointments = dayGroups[selectedDayIndex] ?? [];
   const activeDay = week.days[selectedDayIndex] ?? week.days[0];
+  const isActiveDayToday = isSameDay(activeDay.date, today);
   // const firstPendingId = getFirstPendingId(activeDayAppointments);
 
   const handleOpenAppointment = (id: string) => {
@@ -187,6 +188,7 @@ export default function DayView() {
             dayRightSlot={
               state.loading ? null : `Pendentes na semana: ${pendingWeekCount}`
             }
+            today={today}
           />
         </section>
 
@@ -206,9 +208,16 @@ export default function DayView() {
             <section className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-foreground">
-                    {activeDay.full}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold text-foreground">
+                      {activeDay.full}
+                    </p>
+                    {isActiveDayToday ? (
+                      <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-semibold text-foreground">
+                        Hoje
+                      </span>
+                    ) : null}
+                  </div>
                   <p className="text-xs text-foreground-muted">
                     {activeDay.label} - {activeDayAppointments.length}{" "}
                     agendamentos

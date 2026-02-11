@@ -8,6 +8,10 @@ import { useSchedule } from "../state/useSchedule";
 import { createSupabaseBrowserClient } from "../lib/supabaseClient";
 import { COMPANY_SELECT, mapCompany } from "../lib/supabase";
 import type { Company } from "../lib/types";
+import {
+  getCompaniesSnapshot,
+  savePendingAppointment,
+} from "../storage/offlineSchedule";
 
 const buildAddressSnapshot = (company: Company): string | null => {
   if (company.lat == null || company.lng == null) return null;
@@ -15,6 +19,13 @@ const buildAddressSnapshot = (company: Company): string | null => {
   const lng = Number(company.lng);
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
   return `Empresa georreferenciada (lat: ${lat.toFixed(5)}, lng: ${lng.toFixed(5)})`;
+};
+
+const generateLocalAppointmentId = () => {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `local-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
 
 export default function NewAppointment() {
@@ -45,6 +56,24 @@ export default function NewAppointment() {
 
       if (!id) {
         setError("Empresa nao encontrada.");
+        setLoadingCompany(false);
+        return;
+      }
+
+      const isOffline =
+        typeof navigator !== "undefined" && !navigator.onLine;
+
+      if (isOffline) {
+        const cached = await getCompaniesSnapshot(userEmail);
+        if (!active) return;
+        const found =
+          cached?.companies.find((item) => item.id === id) ?? null;
+        if (!found) {
+          setError("Empresa nao encontrada no cache offline.");
+          setLoadingCompany(false);
+          return;
+        }
+        setCompany(found);
         setLoadingCompany(false);
         return;
       }
@@ -118,6 +147,34 @@ export default function NewAppointment() {
     setSaving(true);
 
     const addressSnapshot = buildAddressSnapshot(company);
+    const isOffline =
+      typeof navigator !== "undefined" && !navigator.onLine;
+
+    if (isOffline) {
+      const nowIso = new Date().toISOString();
+      await savePendingAppointment(userEmail, {
+        id: generateLocalAppointmentId(),
+        companyId: id,
+        companyName: company.name ?? null,
+        appointmentId: null,
+        consultantId: user?.id ?? null,
+        consultant: userEmail,
+        createdBy: userEmail,
+        startAt: startsAtDate.toISOString(),
+        endAt: endsAtDate.toISOString(),
+        status: "scheduled",
+        addressSnapshot,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+        pendingSync: true,
+        localCreatedAt: Date.now(),
+      });
+      setSaving(false);
+      await actions.refresh();
+      navigate("/cronograma/dia", { replace: true });
+      return;
+    }
+
     const { error: insertError } = await supabase.from("apontamentos").insert({
       company_id: id,
       starts_at: startsAtDate.toISOString(),

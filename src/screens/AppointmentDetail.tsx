@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
@@ -38,7 +38,8 @@ import {
   listPendingPhotos,
   saveOfflinePhoto,
 } from "../storage/offlinePhotos";
-import { flushUploads } from "../sync/photoSync";
+import { listPendingActions } from "../storage/offlineSchedule";
+import { syncAppointment } from "../sync/appointmentSync";
 
 const absenceOptions = [
   { label: "Cliente solicitou remarcacao", value: "client_requested_reschedule" },
@@ -158,6 +159,7 @@ export default function AppointmentDetail() {
   const { state, selectors, actions } = useSchedule();
   const { session, user, loading: authLoading } = useAuth();
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
+  const navigate = useNavigate();
   const appointmentFromState = id ? selectors.getAppointment(id) : undefined;
   const companyFromState = appointmentFromState
     ? selectors.getCompany(appointmentFromState.companyId)
@@ -184,9 +186,9 @@ export default function AppointmentDetail() {
   const [mediaLoading, setMediaLoading] = useState(false);
   const [mediaError, setMediaError] = useState<string | null>(null);
   const [pendingPhotos, setPendingPhotos] = useState<OfflinePhotoPreview[]>([]);
-  const [pendingCount, setPendingCount] = useState(0);
   const [pendingLoading, setPendingLoading] = useState(false);
   const [pendingError, setPendingError] = useState<string | null>(null);
+  const [pendingActionCount, setPendingActionCount] = useState(0);
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isOnline, setIsOnline] = useState(
@@ -380,7 +382,6 @@ export default function AppointmentDetail() {
     setPendingError(null);
     try {
       const allPending = await listPendingPhotos();
-      setPendingCount(allPending.length);
       const scoped = allPending.filter(
         (item) => item.entityRef === appointment.id
       );
@@ -419,6 +420,28 @@ export default function AppointmentDetail() {
   useEffect(() => {
     void loadPendingPhotos();
   }, [loadPendingPhotos]);
+
+  const loadPendingActions = useCallback(async () => {
+    if (!appointment || !user?.email) {
+      setPendingActionCount(0);
+      return;
+    }
+
+    try {
+      const pending = await listPendingActions(user.email);
+      const scoped = pending.filter(
+        (item) => item.appointmentId === appointment.id
+      );
+      setPendingActionCount(scoped.length);
+    } catch (error) {
+      console.warn("Falha ao carregar pendencias de apontamento", error);
+      setPendingActionCount(0);
+    }
+  }, [appointment, user?.email]);
+
+  useEffect(() => {
+    void loadPendingActions();
+  }, [loadPendingActions]);
 
   const storeOfflinePhoto = useCallback(
     async (kind: MediaKind, shot: CapturePhotoResult) => {
@@ -609,24 +632,38 @@ export default function AppointmentDetail() {
     setCameraIntent("checkout");
   };
 
-  const handleSyncPhotos = async () => {
-    if (isSyncing) return;
+  const handleSyncAppointment = async () => {
+    if (isSyncing || !appointment) return;
     if (!isOnline) {
       setSyncStatus("Sem internet.");
       return;
     }
-    setSyncStatus("Sincronizando fotos...");
+    const userEmail = user?.email?.trim();
+    if (!userEmail) {
+      setSyncStatus("Usuario nao autenticado.");
+      return;
+    }
+    setSyncStatus("Sincronizando apontamento...");
     setIsSyncing(true);
     try {
-      await flushUploads();
+      const result = await syncAppointment({
+        appointmentId: appointment.id,
+        userEmail,
+        consultantId: session?.user?.id ?? null,
+      });
+      if (result.appointmentId !== appointment.id) {
+        navigate(`/apontamentos/${result.appointmentId}`, { replace: true });
+      }
+      await actions.refresh();
       await loadMedia();
       await loadPendingPhotos();
+      await loadPendingActions();
       setSyncStatus("Sincronizacao concluida.");
     } catch (syncError) {
       setSyncStatus(
         syncError instanceof Error
           ? syncError.message
-          : "Nao foi possivel sincronizar as fotos."
+          : "Nao foi possivel sincronizar o apontamento."
       );
     } finally {
       setIsSyncing(false);
@@ -811,6 +848,11 @@ export default function AppointmentDetail() {
   );
   const hasMapPoints = mapPoints.length > 0;
   const hasFilteredMapPoints = filteredMapPoints.length > 0;
+  const companyDisplayName = company?.name ?? appointment.companyName ?? "Empresa";
+  const pendingItemCount =
+    pendingPhotos.length +
+    pendingActionCount +
+    (appointment.pendingSync ? 1 : 0);
 
   const cameraTitle =
     cameraIntent === "checkin"
@@ -845,7 +887,7 @@ export default function AppointmentDetail() {
                 {dayLabel} - {formatAppointmentWindow(appointment)}
               </p>
               <h2 className="mt-2 text-lg font-semibold text-foreground">
-                {company?.name ?? "Empresa"}
+                {companyDisplayName}
               </h2>
               {company?.document ? (
                 <p className="mt-1 text-sm text-foreground-muted">
@@ -853,7 +895,14 @@ export default function AppointmentDetail() {
                 </p>
               ) : null}
             </div>
-            <StatusBadge status={status} />
+            <div className="flex items-center gap-2">
+              {appointment.pendingSync ? (
+                <span className="rounded-full bg-warning/15 px-2 py-1 text-[10px] font-semibold text-warning">
+                  Nao enviado
+                </span>
+              ) : null}
+              <StatusBadge status={status} />
+            </div>
           </div>
 
           <div className="mt-3 space-y-2 text-sm text-foreground-muted">
@@ -1090,17 +1139,17 @@ export default function AppointmentDetail() {
             </span>
             <button
               type="button"
-              onClick={handleSyncPhotos}
-              disabled={isSyncing || pendingCount === 0}
+              onClick={handleSyncAppointment}
+              disabled={isSyncing || pendingItemCount === 0}
               className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
-                isSyncing || pendingCount === 0
+                isSyncing || pendingItemCount === 0
                   ? "cursor-not-allowed bg-surface-muted text-foreground-muted"
                   : "bg-accent text-white"
               }`}
             >
               {isSyncing
-                ? "Sincronizando fotos..."
-                : `Sincronizar fotos (${pendingCount} pendentes)`}
+                ? "Sincronizando apontamento..."
+                : `Sincronizar apontamento (${pendingItemCount} pendencias)`}
             </button>
           </div>
           {syncStatus ? (
@@ -1218,7 +1267,7 @@ export default function AppointmentDetail() {
                   <div className="flex items-center justify-between">
                     <span>Empresa</span>
                     <span className="font-semibold text-foreground">
-                      {company?.name ?? "Empresa"}
+                    {companyDisplayName}
                     </span>
                   </div>
                 </div>

@@ -30,6 +30,7 @@ type DayWeekMonthProps = BaseProps & {
   selectedDayIndex: number;
   onSelectDay: (index: number) => void;
   dayRightSlot?: ReactNode;
+  today?: Date;
 };
 
 type DateSelectorProps = MonthOnlyProps | WeekMonthProps | DayWeekMonthProps;
@@ -75,6 +76,7 @@ export const DateSelector = (props: DateSelectorProps) => {
             days={props.days}
             selectedIndex={props.selectedDayIndex}
             onSelect={props.onSelectDay}
+            today={props.today}
           />
         </div>
       ) : null}
