@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
@@ -32,7 +32,13 @@ import {
 import { createSupabaseBrowserClient } from "../lib/supabaseClient";
 import type { Appointment, Company } from "../lib/types";
 import type { CapturePhotoResult } from "../services/camera";
-import { uploadApontamentoImage } from "../services/storageUploads";
+import type { OfflinePhotoMeta } from "../storage/offlinePhotos";
+import {
+  getPhotoBlob,
+  listPendingPhotos,
+  saveOfflinePhoto,
+} from "../storage/offlinePhotos";
+import { flushUploads } from "../sync/photoSync";
 
 const absenceOptions = [
   { label: "Cliente solicitou remarcacao", value: "client_requested_reschedule" },
@@ -83,6 +89,10 @@ type AppointmentMediaItem = {
   signedUrl: string | null;
 };
 
+type OfflinePhotoPreview = OfflinePhotoMeta & {
+  previewUrl: string | null;
+};
+
 const mediaKindLabels: Record<MediaKind, string> = {
   checkin: "Check-in",
   checkout: "Check-out",
@@ -122,6 +132,13 @@ const mapMarkerIcons: Record<MapPoint["kind"], L.Icon> = {
   company: defaultMarkerIcon,
   checkin: checkInMarkerIcon,
   checkout: checkOutMarkerIcon,
+};
+
+const generatePhotoId = () => {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
 
 const MapFitBounds = ({ points }: { points: MapPoint[] }) => {
@@ -166,6 +183,16 @@ export default function AppointmentDetail() {
   const [mediaItems, setMediaItems] = useState<AppointmentMediaItem[]>([]);
   const [mediaLoading, setMediaLoading] = useState(false);
   const [mediaError, setMediaError] = useState<string | null>(null);
+  const [pendingPhotos, setPendingPhotos] = useState<OfflinePhotoPreview[]>([]);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [pendingLoading, setPendingLoading] = useState(false);
+  const [pendingError, setPendingError] = useState<string | null>(null);
+  const [syncStatus, setSyncStatus] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [isOnline, setIsOnline] = useState(
+    typeof navigator === "undefined" ? true : navigator.onLine
+  );
+  const pendingPreviewUrlsRef = useRef<Record<string, string>>({});
   const [isActionsOpen, setIsActionsOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isAbsenceOpen, setIsAbsenceOpen] = useState(false);
@@ -286,6 +313,27 @@ export default function AppointmentDetail() {
     void loadMedia();
   }, [loadMedia]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const updateStatus = () => setIsOnline(navigator.onLine);
+    updateStatus();
+    window.addEventListener("online", updateStatus);
+    window.addEventListener("offline", updateStatus);
+    return () => {
+      window.removeEventListener("online", updateStatus);
+      window.removeEventListener("offline", updateStatus);
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      Object.values(pendingPreviewUrlsRef.current).forEach((url) =>
+        URL.revokeObjectURL(url)
+      );
+      pendingPreviewUrlsRef.current = {};
+    };
+  }, []);
+
   const dayAppointments = useMemo(() => {
     if (!appointment) return [];
     const target = new Date(appointment.startAt);
@@ -294,42 +342,82 @@ export default function AppointmentDetail() {
       .sort(sortByStart);
   }, [appointment, state.appointments]);
 
-  const saveApontamentoMedia = useCallback(
-    async (params: {
-      apontamentoId: string;
-      kind: MediaKind;
-      shot: CapturePhotoResult;
-    }) => {
+  const loadPendingPhotos = useCallback(async () => {
+    if (!appointment) {
+      Object.values(pendingPreviewUrlsRef.current).forEach((url) =>
+        URL.revokeObjectURL(url)
+      );
+      pendingPreviewUrlsRef.current = {};
+      setPendingPhotos([]);
+      setPendingCount(0);
+      return;
+    }
+    setPendingLoading(true);
+    setPendingError(null);
+    try {
+      const allPending = await listPendingPhotos();
+      setPendingCount(allPending.length);
+      const scoped = allPending.filter(
+        (item) => item.entityRef === appointment.id
+      );
+
+      Object.values(pendingPreviewUrlsRef.current).forEach((url) =>
+        URL.revokeObjectURL(url)
+      );
+      pendingPreviewUrlsRef.current = {};
+
+      const withPreview = await Promise.all(
+        scoped.map(async (item) => {
+          const blob = await getPhotoBlob(item.id);
+          let previewUrl: string | null = null;
+          if (blob) {
+            previewUrl = URL.createObjectURL(blob);
+            pendingPreviewUrlsRef.current[item.id] = previewUrl;
+          }
+          return { ...item, previewUrl };
+        })
+      );
+
+      setPendingPhotos(withPreview);
+    } catch (pendingLoadError) {
+      setPendingPhotos([]);
+      setPendingCount(0);
+      setPendingError(
+        pendingLoadError instanceof Error
+          ? pendingLoadError.message
+          : "Nao foi possivel carregar as fotos pendentes."
+      );
+    } finally {
+      setPendingLoading(false);
+    }
+  }, [appointment]);
+
+  useEffect(() => {
+    void loadPendingPhotos();
+  }, [loadPendingPhotos]);
+
+  const storeOfflinePhoto = useCallback(
+    async (kind: MediaKind, shot: CapturePhotoResult) => {
+      if (!appointment) {
+        throw new Error("Agendamento nao encontrado.");
+      }
       const consultantId = session?.user?.id;
       if (!consultantId) {
         throw new Error("Usuario nao autenticado.");
       }
-      const upload = await uploadApontamentoImage({
-        apontamentoId: params.apontamentoId,
+
+      const photoId = generatePhotoId();
+      await saveOfflinePhoto(photoId, shot.blob, {
+        entityRef: appointment.id,
+        apontamentoId: appointment.id,
+        kind,
         consultantId,
-        kind: params.kind,
-        blob: params.shot.blob,
-        mimeType: params.shot.mimeType,
       });
 
-      const { error: insertError } = await supabase
-        .from("apontamento_media")
-        .insert({
-          apontamento_id: params.apontamentoId,
-          bucket: upload.bucket,
-          path: upload.path,
-          kind: params.kind,
-          mime_type: params.shot.mimeType,
-          bytes: upload.bytes,
-        });
-
-      if (insertError) {
-        throw new Error(insertError.message);
-      }
-
-      return upload;
+      await loadPendingPhotos();
+      return photoId;
     },
-    [session?.user?.id, supabase]
+    [appointment, loadPendingPhotos, session?.user?.id]
   );
 
   const mapPoints = useMemo(() => {
@@ -497,6 +585,30 @@ export default function AppointmentDetail() {
     setCameraIntent("checkout");
   };
 
+  const handleSyncPhotos = async () => {
+    if (isSyncing) return;
+    if (!isOnline) {
+      setSyncStatus("Sem internet.");
+      return;
+    }
+    setSyncStatus("Sincronizando fotos...");
+    setIsSyncing(true);
+    try {
+      await flushUploads();
+      await loadMedia();
+      await loadPendingPhotos();
+      setSyncStatus("Sincronizacao concluida.");
+    } catch (syncError) {
+      setSyncStatus(
+        syncError instanceof Error
+          ? syncError.message
+          : "Nao foi possivel sincronizar as fotos."
+      );
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const performCheckIn = async (shot: CapturePhotoResult) => {
     if (!canCheckIn || busy || geo.isCapturing) return;
     setError(null);
@@ -504,12 +616,8 @@ export default function AppointmentDetail() {
     setGeoIntent("check_in");
     try {
       const position = await geo.capture();
-      setPhotoStatus("Enviando foto...");
-      await saveApontamentoMedia({
-        apontamentoId: appointment.id,
-        kind: "checkin",
-        shot,
-      });
+      setPhotoStatus("Salvando foto offline...");
+      await storeOfflinePhoto("checkin", shot);
       setPhotoStatus("Salvando apontamento...");
       const now = new Date().toISOString();
       await actions.checkIn(appointment.id, {
@@ -545,12 +653,8 @@ export default function AppointmentDetail() {
     const oportunidades = pendingCheckoutOpportunities ?? checkoutOpportunities;
     try {
       const position = await geo.capture();
-      setPhotoStatus("Enviando foto...");
-      await saveApontamentoMedia({
-        apontamentoId: appointment.id,
-        kind: "checkout",
-        shot,
-      });
+      setPhotoStatus("Salvando foto offline...");
+      await storeOfflinePhoto("checkout", shot);
       setPhotoStatus("Salvando apontamento...");
       const now = new Date().toISOString();
       await actions.checkOut(appointment.id, {
@@ -938,9 +1042,44 @@ export default function AppointmentDetail() {
 
         <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
           <SectionHeader title="Fotos" subtitle="Registro visual do apontamento." />
-          {mediaLoading ? (
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span
+              className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-wide ${
+                isOnline
+                  ? "bg-success/15 text-success"
+                  : "bg-warning/15 text-warning"
+              }`}
+            >
+              {isOnline ? "Online" : "Offline"}
+            </span>
+            <button
+              type="button"
+              onClick={handleSyncPhotos}
+              disabled={isSyncing || pendingCount === 0}
+              className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
+                isSyncing || pendingCount === 0
+                  ? "cursor-not-allowed bg-surface-muted text-foreground-muted"
+                  : "bg-accent text-white"
+              }`}
+            >
+              {isSyncing
+                ? "Sincronizando fotos..."
+                : `Sincronizar fotos (${pendingCount} pendentes)`}
+            </button>
+          </div>
+          {syncStatus ? (
+            <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
+              {syncStatus}
+            </div>
+          ) : null}
+          {mediaLoading || pendingLoading ? (
             <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
               Carregando fotos...
+            </div>
+          ) : null}
+          {pendingError ? (
+            <div className="rounded-2xl border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-foreground-soft">
+              {pendingError}
             </div>
           ) : null}
           {mediaError ? (
@@ -948,12 +1087,43 @@ export default function AppointmentDetail() {
               {mediaError}
             </div>
           ) : null}
-          {!mediaLoading && mediaItems.length === 0 ? (
+          {!mediaLoading &&
+          !pendingLoading &&
+          mediaItems.length === 0 &&
+          pendingPhotos.length === 0 ? (
             <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
               Nenhuma foto registrada ainda.
             </div>
           ) : null}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {pendingPhotos.map((item) => {
+              const kindLabel =
+                (item.kind &&
+                  (mediaKindLabels as Record<string, string>)[item.kind]) ||
+                "Foto";
+              return (
+                <div
+                  key={item.id}
+                  className="overflow-hidden rounded-2xl border border-border bg-white"
+                >
+                  {item.previewUrl ? (
+                    <img
+                      src={item.previewUrl}
+                      alt={`Foto pendente ${kindLabel}`}
+                      className="h-28 w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-28 items-center justify-center text-[10px] text-foreground-soft">
+                      Sem preview
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between px-2 py-1 text-[10px] font-semibold text-foreground">
+                    <span>{kindLabel}</span>
+                    <span className="text-warning">Pendente</span>
+                  </div>
+                </div>
+              );
+            })}
             {mediaItems.map((item) => (
               <div
                 key={item.path}
@@ -970,8 +1140,9 @@ export default function AppointmentDetail() {
                     URL expirada
                   </div>
                 )}
-                <div className="px-2 py-1 text-[10px] font-semibold text-foreground">
-                  {mediaKindLabels[item.kind]}
+                <div className="flex items-center justify-between px-2 py-1 text-[10px] font-semibold text-foreground">
+                  <span>{mediaKindLabels[item.kind]}</span>
+                  <span className="text-success">Enviado</span>
                 </div>
               </div>
             ))}

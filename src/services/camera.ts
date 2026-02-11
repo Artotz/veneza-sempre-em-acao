@@ -1,4 +1,6 @@
-﻿export type CapturePhotoResult = {
+import { compressImage } from "../utils/photoCompress";
+
+export type CapturePhotoResult = {
   blob: Blob;
   mimeType: string;
   extension: string;
@@ -6,6 +8,12 @@
 
 const jpegMimeType = "image/jpeg";
 const jpegExtension = "jpg";
+
+const mimeToExtension = (mimeType: string) => {
+  if (mimeType === "image/webp") return "webp";
+  if (mimeType === "image/jpeg" || mimeType === "image/jpg") return "jpg";
+  return jpegExtension;
+};
 
 const ensureBrowser = () => {
   if (typeof window === "undefined" || typeof document === "undefined") {
@@ -182,9 +190,13 @@ export const capturePhoto = async (): Promise<CapturePhotoResult> => {
   ensureBrowser();
   const streamBlob = await captureWithStream();
   const jpegBlob = await ensureJpeg(streamBlob);
+  const compressedBlob = await compressImage(jpegBlob);
+  const mimeType = compressedBlob.type || jpegMimeType;
   return {
-    blob: jpegBlob,
-    mimeType: jpegMimeType,
-    extension: jpegExtension,
+    blob: compressedBlob,
+    mimeType,
+    extension: mimeToExtension(mimeType),
   };
 };
+
+

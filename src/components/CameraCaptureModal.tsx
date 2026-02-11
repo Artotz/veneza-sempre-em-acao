@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CapturePhotoResult } from "../services/camera";
 import { useLockBodyScroll } from "../hooks/useLockBodyScroll";
+import { compressImage } from "../utils/photoCompress";
 
 type CameraCaptureModalProps = {
   open: boolean;
@@ -11,8 +12,11 @@ type CameraCaptureModalProps = {
   onError?: (message: string) => void;
 };
 
-const jpegMimeType = "image/jpeg";
-const jpegExtension = "jpg";
+const mimeToExtension = (mimeType: string) => {
+  if (mimeType === "image/webp") return "webp";
+  if (mimeType === "image/jpeg" || mimeType === "image/jpg") return "jpg";
+  return "jpg";
+};
 
 const waitForVideoReady = (video: HTMLVideoElement) =>
   new Promise<void>((resolve, reject) => {
@@ -56,8 +60,8 @@ const canvasToBlob = (canvas: HTMLCanvasElement) =>
         }
         resolve(blob);
       },
-      jpegMimeType,
-      0.9
+      "image/jpeg",
+      0.92
     );
   });
 
@@ -183,12 +187,14 @@ export const CameraCaptureModal = ({
 
       context.drawImage(video, 0, 0, width, height);
       const blob = await canvasToBlob(canvas);
+      const compressedBlob = await compressImage(blob);
+      const mimeType = compressedBlob.type || "image/jpeg";
       const nextShot: CapturePhotoResult = {
-        blob,
-        mimeType: jpegMimeType,
-        extension: jpegExtension,
+        blob: compressedBlob,
+        mimeType,
+        extension: mimeToExtension(mimeType),
       };
-      const url = URL.createObjectURL(blob);
+      const url = URL.createObjectURL(compressedBlob);
       previewUrlRef.current = url;
       setShot(nextShot);
       setPreviewUrl(url);

@@ -23,12 +23,18 @@ const generateUuid = () => {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
 
+const extensionForMime = (mimeType: string) => {
+  if (mimeType === "image/webp") return "webp";
+  if (mimeType === "image/jpeg" || mimeType === "image/jpg") return "jpg";
+  return "jpg";
+};
+
 export const uploadApontamentoImage = async (
   args: UploadArgs
 ): Promise<UploadResult> => {
   const supabase = createSupabaseBrowserClient();
   const bucket = "apontamentos";
-  const filename = `${generateUuid()}.jpg`;
+  const filename = `${generateUuid()}.${extensionForMime(args.mimeType)}`;
   const path = `consultants/${args.consultantId}/apontamentos/${args.apontamentoId}/${args.kind}/${filename}`;
 
   const { error } = await supabase.storage
