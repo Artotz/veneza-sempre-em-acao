@@ -4,6 +4,7 @@ import { AppShell } from "../components/AppShell";
 import { AppointmentCard } from "../components/AppointmentCard";
 import { CheckInOutMap } from "../components/CheckInOutMap";
 import { DateSelector } from "../components/DateSelector";
+import { DetailsMapTabs } from "../components/DetailsMapTabs";
 import { EmptyState } from "../components/EmptyState";
 import { SectionHeader } from "../components/SectionHeader";
 import {
@@ -65,6 +66,7 @@ export default function DayView() {
   const [selectedDayIndex, setSelectedDayIndex] = useState(
     getDayIndexMonday(today),
   );
+  const [activeTab, setActiveTab] = useState<"details" | "map">("details");
 
   useEffect(() => {
     const monthParam = parseMonthParam(searchParams.get("month"));
@@ -191,6 +193,7 @@ export default function DayView() {
             }
             today={today}
           />
+          <DetailsMapTabs value={activeTab} onChange={setActiveTab} />
         </section>
 
         {state.loading ? (
@@ -206,87 +209,89 @@ export default function DayView() {
           />
         ) : (
           <>
-            <section className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold text-foreground">
-                      {activeDay.full}
+            {activeTab === "details" ? (
+              <section className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-foreground">
+                        {activeDay.full}
+                      </p>
+                      {isActiveDayToday ? (
+                        <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-semibold text-foreground">
+                          Hoje
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="text-xs text-foreground-muted">
+                      {activeDay.label} - {activeDayAppointments.length}{" "}
+                      agendamentos
                     </p>
-                    {isActiveDayToday ? (
-                      <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-semibold text-foreground">
-                        Hoje
-                      </span>
-                    ) : null}
                   </div>
-                  <p className="text-xs text-foreground-muted">
-                    {activeDay.label} - {activeDayAppointments.length}{" "}
-                    agendamentos
-                  </p>
+                  {/* {firstPendingId ? (
+                    <span className="rounded-full bg-surface-muted px-3 py-1 text-[10px] font-semibold text-foreground-muted">
+                      1o pendente liberado
+                    </span>
+                  ) : null} */}
                 </div>
-                {/* {firstPendingId ? (
-                  <span className="rounded-full bg-surface-muted px-3 py-1 text-[10px] font-semibold text-foreground-muted">
-                    1o pendente liberado
-                  </span>
-                ) : null} */}
-              </div>
 
-              <div className="space-y-3">
-                {activeDayAppointments.length ? (
-                  activeDayAppointments.map((appointment, index) => {
-                    const company =
-                      appointment.companyName ??
-                      selectors.getCompany(appointment.companyId)?.name ??
-                      "Empresa";
-                    const appointmentDetail = getAppointmentTitle(appointment);
-                    const snapshot = appointment.addressSnapshot;
-                    const detailLabel = snapshot
-                      ? `${appointmentDetail} - ${snapshot}`
-                      : appointmentDetail;
-                    const blocked = isBlocked(
-                      appointment,
-                      activeDayAppointments,
-                    );
-                    return (
-                      <AppointmentCard
-                        key={appointment.id}
-                        appointment={appointment}
-                        companyName={company}
-                        blocked={blocked}
-                        headerLabel={`#${index + 1} - ${formatAppointmentWindow(
-                          appointment,
-                        )}`}
-                        detailLabel={detailLabel}
-                        onClick={() => handleOpenAppointment(appointment.id)}
-                      />
-                    );
-                  })
-                ) : (
-                  <EmptyState
-                    title="Sem agendamentos"
-                    description="Selecione outro dia para ver a agenda."
-                  />
-                )}
-              </div>
+                <div className="space-y-3">
+                  {activeDayAppointments.length ? (
+                    activeDayAppointments.map((appointment, index) => {
+                      const company =
+                        appointment.companyName ??
+                        selectors.getCompany(appointment.companyId)?.name ??
+                        "Empresa";
+                      const appointmentDetail = getAppointmentTitle(appointment);
+                      const snapshot = appointment.addressSnapshot;
+                      const detailLabel = snapshot
+                        ? `${appointmentDetail} - ${snapshot}`
+                        : appointmentDetail;
+                      const blocked = isBlocked(
+                        appointment,
+                        activeDayAppointments,
+                      );
+                      return (
+                        <AppointmentCard
+                          key={appointment.id}
+                          appointment={appointment}
+                          companyName={company}
+                          blocked={blocked}
+                          headerLabel={`#${index + 1} - ${formatAppointmentWindow(
+                            appointment,
+                          )}`}
+                          detailLabel={detailLabel}
+                          onClick={() => handleOpenAppointment(appointment.id)}
+                        />
+                      );
+                    })
+                  ) : (
+                    <EmptyState
+                      title="Sem agendamentos"
+                      description="Selecione outro dia para ver a agenda."
+                    />
+                  )}
+                </div>
 
-              {/* <div className="rounded-2xl border border-border bg-surface-muted p-3 text-xs text-foreground-muted">
-                Regra ativa: somente o primeiro agendamento pendente do dia pode
-                ser acionado. Os demais ficam bloqueados ate a conclusao ou
-                ausencia do anterior.
-              </div> */}
-            </section>
-
-            <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
-              <SectionHeader
-                title="Mapa do dia"
-                subtitle="Check-ins e check-outs registrados no dia selecionado."
-              />
-              <CheckInOutMap
-                appointments={activeDayAppointments}
-                getLabel={getMapLabel}
-                emptyMessage="Sem check-ins ou check-outs para exibir no dia."
-              />
-            </section>
+                {/* <div className="rounded-2xl border border-border bg-surface-muted p-3 text-xs text-foreground-muted">
+                  Regra ativa: somente o primeiro agendamento pendente do dia pode
+                  ser acionado. Os demais ficam bloqueados ate a conclusao ou
+                  ausencia do anterior.
+                </div> */}
+              </section>
+            ) : (
+              <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
+                <SectionHeader
+                  title="Mapa do dia"
+                  subtitle="Check-ins e check-outs registrados no dia selecionado."
+                />
+                <CheckInOutMap
+                  appointments={activeDayAppointments}
+                  getLabel={getMapLabel}
+                  emptyMessage="Sem check-ins ou check-outs para exibir no dia."
+                />
+              </section>
+            )}
           </>
         )}
       </div>

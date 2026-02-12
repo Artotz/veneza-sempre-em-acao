@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { AppShell } from "../components/AppShell";
 import { CheckInOutMap } from "../components/CheckInOutMap";
 import { DateSelector } from "../components/DateSelector";
+import { DetailsMapTabs } from "../components/DetailsMapTabs";
 import { EmptyState } from "../components/EmptyState";
 import { SectionHeader } from "../components/SectionHeader";
 import {
@@ -28,6 +29,7 @@ export default function MonthView() {
     const baseDate = monthParam ?? today;
     return new Date(baseDate.getFullYear(), baseDate.getMonth(), 1);
   });
+  const [activeTab, setActiveTab] = useState<"details" | "map">("details");
   const monthOptions = useMemo(
     () => buildMonthOptions(selectedMonth),
     [selectedMonth],
@@ -105,6 +107,7 @@ export default function MonthView() {
               }
             }}
           />
+          <DetailsMapTabs value={activeTab} onChange={setActiveTab} />
         </section>
 
         {state.loading ? (
@@ -120,80 +123,84 @@ export default function MonthView() {
           />
         ) : (
           <>
-            <section className="space-y-4 rounded-3xl border border-border bg-white p-4 shadow-sm">
-              <SectionHeader
-                title="Grade do mes"
-                subtitle="Todos os dias do mes em 7 colunas."
-              />
-              <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-semibold uppercase text-foreground-muted">
-                {WEEK_DAYS.map((day) => (
-                  <div
-                    key={day.id}
-                    className="rounded-lg bg-surface-muted py-2"
-                  >
-                    {day.short}
-                  </div>
-                ))}
-              </div>
-              <div className="grid grid-cols-7 gap-1">
-                {weeks.flatMap((week, weekIndex) =>
-                  week.days.map((day) => {
-                    const dayKey = getDateKey(day.date);
-                    const count = appointmentCounts.get(dayKey) ?? 0;
-                    const isCurrentMonth =
-                      day.date.getMonth() === selectedMonth.getMonth() &&
-                      day.date.getFullYear() === selectedMonth.getFullYear();
-                    const isToday = isSameDay(day.date, today);
-                    const borderClass = isToday
-                      ? "border-accent"
-                      : "border-border";
-                    const backgroundClass = isToday
-                      ? "bg-white"
-                      : isCurrentMonth
-                        ? "bg-surface-muted"
-                        : "bg-surface-strong";
-                    const textClass = isCurrentMonth
-                      ? "text-foreground"
-                      : "text-foreground-muted";
-                    return (
-                      <Link
-                        key={`${week.id}-${day.date.getTime()}`}
-                        to={`/cronograma/dia?month=${formatMonthParam(
-                          selectedMonth,
-                        )}&week=${weekIndex + 1}&day=${day.index}`}
-                        aria-label={`${day.label} com ${count} agendamentos`}
-                        className={`group flex min-h-[76px] flex-col justify-between rounded-xl border p-2 text-left transition hover:border-accent/40 hover:bg-white ${borderClass} ${backgroundClass} ${textClass}`}
-                      >
-                        <span className={`text-xs font-semibold ${textClass}`}>
-                          {day.date.getDate()}
-                        </span>
-                        <span
-                          className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                            count
-                              ? "bg-white text-foreground"
-                              : "bg-surface-muted text-foreground-muted"
-                          }`}
+            {activeTab === "details" ? (
+              <section className="space-y-4 rounded-3xl border border-border bg-white p-4 shadow-sm">
+                <SectionHeader
+                  title="Grade do mes"
+                  subtitle="Todos os dias do mes em 7 colunas."
+                />
+                <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-semibold uppercase text-foreground-muted">
+                  {WEEK_DAYS.map((day) => (
+                    <div
+                      key={day.id}
+                      className="rounded-lg bg-surface-muted py-2"
+                    >
+                      {day.short}
+                    </div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-7 gap-1">
+                  {weeks.flatMap((week, weekIndex) =>
+                    week.days.map((day) => {
+                      const dayKey = getDateKey(day.date);
+                      const count = appointmentCounts.get(dayKey) ?? 0;
+                      const isCurrentMonth =
+                        day.date.getMonth() === selectedMonth.getMonth() &&
+                        day.date.getFullYear() === selectedMonth.getFullYear();
+                      const isToday = isSameDay(day.date, today);
+                      const borderClass = isToday
+                        ? "border-accent"
+                        : "border-border";
+                      const backgroundClass = isToday
+                        ? "bg-white"
+                        : isCurrentMonth
+                          ? "bg-surface-muted"
+                          : "bg-surface-strong";
+                      const textClass = isCurrentMonth
+                        ? "text-foreground"
+                        : "text-foreground-muted";
+                      return (
+                        <Link
+                          key={`${week.id}-${day.date.getTime()}`}
+                          to={`/cronograma/dia?month=${formatMonthParam(
+                            selectedMonth,
+                          )}&week=${weekIndex + 1}&day=${day.index}`}
+                          aria-label={`${day.label} com ${count} agendamentos`}
+                          className={`group flex min-h-[76px] flex-col justify-between rounded-xl border p-2 text-left transition hover:border-accent/40 hover:bg-white ${borderClass} ${backgroundClass} ${textClass}`}
                         >
-                          {count}
-                        </span>
-                      </Link>
-                    );
-                  }),
-                )}
-              </div>
-            </section>
-
-            <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
-              <SectionHeader
-                title="Mapa do mes"
-                subtitle="Check-ins e check-outs registrados no mes."
-              />
-              <CheckInOutMap
-                appointments={state.appointments}
-                getLabel={getMapLabel}
-                emptyMessage="Sem check-ins ou check-outs para exibir no mes."
-              />
-            </section>
+                          <span
+                            className={`text-xs font-semibold ${textClass}`}
+                          >
+                            {day.date.getDate()}
+                          </span>
+                          <span
+                            className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                              count
+                                ? "bg-white text-foreground"
+                                : "bg-surface-muted text-foreground-muted"
+                            }`}
+                          >
+                            {count}
+                          </span>
+                        </Link>
+                      );
+                    }),
+                  )}
+                </div>
+              </section>
+            ) : (
+              <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
+                <SectionHeader
+                  title="Mapa do mes"
+                  subtitle="Check-ins e check-outs registrados no mes."
+                />
+                <CheckInOutMap
+                  appointments={state.appointments}
+                  getLabel={getMapLabel}
+                  emptyMessage="Sem check-ins ou check-outs para exibir no mes."
+                />
+              </section>
+            )}
           </>
         )}
       </div>

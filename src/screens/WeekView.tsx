@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { AppShell } from "../components/AppShell";
 import { CheckInOutMap } from "../components/CheckInOutMap";
 import { DateSelector } from "../components/DateSelector";
+import { DetailsMapTabs } from "../components/DetailsMapTabs";
 import { EmptyState } from "../components/EmptyState";
 import { SectionHeader } from "../components/SectionHeader";
 import {
@@ -62,6 +63,7 @@ export default function WeekView() {
   }, [selectedMonth, today, weeks]);
 
   const [selectedWeekIndex, setSelectedWeekIndex] = useState(fallbackWeekIndex);
+  const [activeTab, setActiveTab] = useState<"details" | "map">("details");
 
   useEffect(() => {
     const monthParam = parseMonthParam(searchParams.get("month"));
@@ -151,6 +153,7 @@ export default function WeekView() {
             selectedWeekIndex={selectedWeekIndex}
             onSelectWeek={setSelectedWeekIndex}
           />
+          <DetailsMapTabs value={activeTab} onChange={setActiveTab} />
         </section>
 
         {state.loading ? (
@@ -165,93 +168,97 @@ export default function WeekView() {
           />
         ) : (
           <>
-            <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
-              <SectionHeader
-                title="Agenda da semana"
-                // subtitle="Dias lado a lado, ordenados por horario."
-              />
-              <div className="grid grid-cols-7 gap-1">
-                {week.days.map((day, dayIndex) => {
-                  const dayAppointments = dayGroups[dayIndex] ?? [];
-                  const isToday = isSameDay(day.date, today);
-                  return (
-                    <div
-                      key={day.id}
-                      className={`flex min-w-0 flex-col gap-1 rounded-xl border p-1 ${
-                        isToday
-                          ? "border-accent bg-white ring-1 ring-accent/20"
-                          : "border-border bg-surface-muted"
-                      }`}
-                    >
+            {activeTab === "details" ? (
+              <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
+                <SectionHeader
+                  title="Agenda da semana"
+                  // subtitle="Dias lado a lado, ordenados por horario."
+                />
+                <div className="grid grid-cols-7 gap-1">
+                  {week.days.map((day, dayIndex) => {
+                    const dayAppointments = dayGroups[dayIndex] ?? [];
+                    const isToday = isSameDay(day.date, today);
+                    return (
                       <div
-                        className={`rounded-lg px-1 py-1 text-center text-[9px] font-semibold leading-tight ${
+                        key={day.id}
+                        className={`flex min-w-0 flex-col gap-1 rounded-xl border p-1 ${
                           isToday
-                            ? "bg-accent/15 text-foreground"
-                            : "bg-white text-foreground"
+                            ? "border-accent bg-white ring-1 ring-accent/20"
+                            : "border-border bg-surface-muted"
                         }`}
                       >
-                        <span className="block">{day.short.toLowerCase()}</span>
-                        <span className="block">{day.date.getDate()}</span>
-                        {/* {isToday ? (
-                          <span className="mt-0.5 block rounded-full bg-accent/25 px-1 py-0.5 text-[8px] font-semibold uppercase tracking-wide text-foreground">
-                            Hoje
+                        <div
+                          className={`rounded-lg px-1 py-1 text-center text-[9px] font-semibold leading-tight ${
+                            isToday
+                              ? "bg-accent/15 text-foreground"
+                              : "bg-white text-foreground"
+                          }`}
+                        >
+                          <span className="block">
+                            {day.short.toLowerCase()}
                           </span>
-                        ) : null} */}
-                      </div>
-                      <div className="flex min-w-0 flex-col gap-1">
-                        {dayAppointments.length ? (
-                          dayAppointments.map((appointment) => {
-                            const companyName =
-                              appointment.companyName ??
-                              selectors.getCompany(appointment.companyId)
-                                ?.name ??
-                              "Empresa";
-                            const status = getAppointmentStatus(appointment);
-                            return (
-                              <button
-                                key={appointment.id}
-                                type="button"
-                                onClick={() =>
-                                  handleOpenAppointment(appointment.id)
-                                }
-                                className={`min-w-0 rounded-md border px-1 py-1 text-[9px] font-semibold transition hover:shadow-sm ${statusCardStyle[status]}`}
-                              >
-                                <span
-                                  className="block overflow-hidden break-all text-center leading-tight"
-                                  style={{
-                                    display: "-webkit-box",
-                                    WebkitLineClamp: 2,
-                                    WebkitBoxOrient: "vertical",
-                                  }}
+                          <span className="block">{day.date.getDate()}</span>
+                          {/* {isToday ? (
+                            <span className="mt-0.5 block rounded-full bg-accent/25 px-1 py-0.5 text-[8px] font-semibold uppercase tracking-wide text-foreground">
+                              Hoje
+                            </span>
+                          ) : null} */}
+                        </div>
+                        <div className="flex min-w-0 flex-col gap-1">
+                          {dayAppointments.length ? (
+                            dayAppointments.map((appointment) => {
+                              const companyName =
+                                appointment.companyName ??
+                                selectors.getCompany(appointment.companyId)
+                                  ?.name ??
+                                "Empresa";
+                              const status = getAppointmentStatus(appointment);
+                              return (
+                                <button
+                                  key={appointment.id}
+                                  type="button"
+                                  onClick={() =>
+                                    handleOpenAppointment(appointment.id)
+                                  }
+                                  className={`min-w-0 rounded-md border px-1 py-1 text-[9px] font-semibold transition hover:shadow-sm ${statusCardStyle[status]}`}
                                 >
-                                  {companyName}
-                                </span>
-                              </button>
-                            );
-                          })
-                        ) : (
-                          <div className="rounded-md border border-dashed border-border px-1 py-1 text-center text-[9px] text-foreground-muted">
-                            Sem
-                          </div>
-                        )}
+                                  <span
+                                    className="block overflow-hidden break-all text-center leading-tight"
+                                    style={{
+                                      display: "-webkit-box",
+                                      WebkitLineClamp: 2,
+                                      WebkitBoxOrient: "vertical",
+                                    }}
+                                  >
+                                    {companyName}
+                                  </span>
+                                </button>
+                              );
+                            })
+                          ) : (
+                            <div className="rounded-md border border-dashed border-border px-1 py-1 text-center text-[9px] text-foreground-muted">
+                              Sem
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-
-            <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
-              <SectionHeader
-                title="Mapa da semana"
-                subtitle="Check-ins e check-outs registrados na semana."
-              />
-              <CheckInOutMap
-                appointments={weekAppointments}
-                getLabel={getMapLabel}
-                emptyMessage="Sem check-ins ou check-outs para exibir na semana."
-              />
-            </section>
+                    );
+                  })}
+                </div>
+              </section>
+            ) : (
+              <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
+                <SectionHeader
+                  title="Mapa da semana"
+                  subtitle="Check-ins e check-outs registrados na semana."
+                />
+                <CheckInOutMap
+                  appointments={weekAppointments}
+                  getLabel={getMapLabel}
+                  emptyMessage="Sem check-ins ou check-outs para exibir na semana."
+                />
+              </section>
+            )}
           </>
         )}
       </div>
