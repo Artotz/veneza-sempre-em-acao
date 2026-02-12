@@ -19,7 +19,7 @@ export const BottomNav = () => {
           <div className="mx-auto w-full max-w-xl px-4 pb-2">
             <div className="flex items-center justify-center gap-2 rounded-2xl border border-red-700 bg-red-600 px-3 py-2 text-xs font-semibold text-white shadow-sm">
               <span className="h-2 w-2 rounded-full bg-white" />
-              Sem internet. Algumas funções podem ficar indisponíveis.
+              Sem internet.
             </div>
           </div>
         </div>

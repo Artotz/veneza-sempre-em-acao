@@ -47,7 +47,10 @@ import {
 import { syncAppointment } from "../sync/appointmentSync";
 
 const absenceOptions = [
-  { label: "Cliente solicitou remarcacao", value: "client_requested_reschedule" },
+  {
+    label: "Cliente solicitou remarcacao",
+    value: "client_requested_reschedule",
+  },
   { label: "Endereco fechado", value: "address_closed" },
   { label: "Equipamento indisponivel", value: "equipment_unavailable" },
   { label: "Outro", value: "other" },
@@ -69,7 +72,7 @@ const oportunidadeOptions = [
 ];
 
 const oportunidadeLabels = Object.fromEntries(
-  oportunidadeOptions.map((option) => [option.value, option.label])
+  oportunidadeOptions.map((option) => [option.value, option.label]),
 ) as Record<string, string>;
 
 type MediaKind = "checkin" | "checkout" | "absence";
@@ -171,17 +174,17 @@ export default function AppointmentDetail() {
     : undefined;
 
   const [appointment, setAppointment] = useState<Appointment | null>(
-    appointmentFromState ?? null
+    appointmentFromState ?? null,
   );
   const [company, setCompany] = useState<Company | null>(
-    companyFromState ?? null
+    companyFromState ?? null,
   );
   const [loading, setLoading] = useState(!appointmentFromState);
   const [error, setError] = useState<string | null>(null);
   const [absenceReason, setAbsenceReason] = useState("");
   const [absenceNote, setAbsenceNote] = useState("");
   const [geoIntent, setGeoIntent] = useState<"check_in" | "check_out" | null>(
-    null
+    null,
   );
   const [photoStatus, setPhotoStatus] = useState<string | null>(null);
   const [cameraIntent, setCameraIntent] = useState<
@@ -197,13 +200,15 @@ export default function AppointmentDetail() {
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isOnline, setIsOnline] = useState(
-    typeof navigator === "undefined" ? true : navigator.onLine
+    typeof navigator === "undefined" ? true : navigator.onLine,
   );
   const pendingPreviewUrlsRef = useRef<Record<string, string>>({});
   const [isActionsOpen, setIsActionsOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isAbsenceOpen, setIsAbsenceOpen] = useState(false);
-  const [checkoutOpportunities, setCheckoutOpportunities] = useState<string[]>([]);
+  const [checkoutOpportunities, setCheckoutOpportunities] = useState<string[]>(
+    [],
+  );
   const [pendingCheckoutOpportunities, setPendingCheckoutOpportunities] =
     useState<string[] | null>(null);
   const [showCheckInMarker, setShowCheckInMarker] = useState(true);
@@ -211,7 +216,7 @@ export default function AppointmentDetail() {
 
   const geo = useGeolocation();
   useLockBodyScroll(
-    isActionsOpen || isCheckoutOpen || isAbsenceOpen || cameraIntent !== null
+    isActionsOpen || isCheckoutOpen || isAbsenceOpen || cameraIntent !== null,
   );
   const isCameraOpen = cameraIntent !== null;
 
@@ -336,9 +341,9 @@ export default function AppointmentDetail() {
           mimeType: item.mime_type ?? null,
           bytes: item.bytes ?? 0,
           createdAt: item.created_at ?? null,
-          signedUrl: signedError ? null : signedData?.signedUrl ?? null,
+          signedUrl: signedError ? null : (signedData?.signedUrl ?? null),
         } as AppointmentMediaItem;
-      })
+      }),
     );
 
     setMediaItems(signedItems);
@@ -368,7 +373,7 @@ export default function AppointmentDetail() {
   useEffect(() => {
     return () => {
       Object.values(pendingPreviewUrlsRef.current).forEach((url) =>
-        URL.revokeObjectURL(url)
+        URL.revokeObjectURL(url),
       );
       pendingPreviewUrlsRef.current = {};
     };
@@ -385,7 +390,7 @@ export default function AppointmentDetail() {
   const loadPendingPhotos = useCallback(async () => {
     if (!appointment) {
       Object.values(pendingPreviewUrlsRef.current).forEach((url) =>
-        URL.revokeObjectURL(url)
+        URL.revokeObjectURL(url),
       );
       pendingPreviewUrlsRef.current = {};
       setPendingPhotos([]);
@@ -398,11 +403,11 @@ export default function AppointmentDetail() {
       const scoped = allPending.filter(
         (item) =>
           item.entityRef === appointment.id ||
-          item.apontamentoId === appointment.id
+          item.apontamentoId === appointment.id,
       );
 
       Object.values(pendingPreviewUrlsRef.current).forEach((url) =>
-        URL.revokeObjectURL(url)
+        URL.revokeObjectURL(url),
       );
       pendingPreviewUrlsRef.current = {};
 
@@ -415,7 +420,7 @@ export default function AppointmentDetail() {
             pendingPreviewUrlsRef.current[item.id] = previewUrl;
           }
           return { ...item, previewUrl };
-        })
+        }),
       );
 
       setPendingPhotos(withPreview);
@@ -424,7 +429,7 @@ export default function AppointmentDetail() {
       setPendingError(
         pendingLoadError instanceof Error
           ? pendingLoadError.message
-          : "Nao foi possivel carregar as fotos pendentes."
+          : "Nao foi possivel carregar as fotos pendentes.",
       );
     } finally {
       setPendingLoading(false);
@@ -444,7 +449,7 @@ export default function AppointmentDetail() {
     try {
       const pending = await listPendingActions(user.email);
       const scoped = pending.filter(
-        (item) => item.appointmentId === appointment.id
+        (item) => item.appointmentId === appointment.id,
       );
       setPendingActionCount(scoped.length);
     } catch (error) {
@@ -478,11 +483,16 @@ export default function AppointmentDetail() {
       await loadPendingPhotos();
       return photoId;
     },
-    [appointment, loadPendingPhotos, session?.user?.id]
+    [appointment, loadPendingPhotos, session?.user?.id],
   );
 
   const buildCheckInRemoteChanges = useCallback(
-    (payload: { at: string; lat?: number | null; lng?: number | null; accuracy?: number | null }) => {
+    (payload: {
+      at: string;
+      lat?: number | null;
+      lng?: number | null;
+      accuracy?: number | null;
+    }) => {
       const changes: Record<string, unknown> = {
         check_in_at: payload.at,
         status: "in_progress",
@@ -496,7 +506,7 @@ export default function AppointmentDetail() {
       }
       return changes;
     },
-    []
+    [],
   );
 
   const buildCheckOutRemoteChanges = useCallback(
@@ -521,7 +531,7 @@ export default function AppointmentDetail() {
       }
       return changes;
     },
-    []
+    [],
   );
 
   const buildAbsenceRemoteChanges = useCallback(
@@ -530,7 +540,7 @@ export default function AppointmentDetail() {
       absence_note: payload.note ?? null,
       status: "absent",
     }),
-    []
+    [],
   );
 
   const updateAppointmentRemote = useCallback(
@@ -549,7 +559,7 @@ export default function AppointmentDetail() {
         throw new Error(updateError.message);
       }
     },
-    [appointment, supabase]
+    [appointment, supabase],
   );
 
   const uploadPhotoRemote = useCallback(
@@ -585,7 +595,7 @@ export default function AppointmentDetail() {
         throw new Error(insertError.message);
       }
     },
-    [appointment, session?.user?.id, supabase]
+    [appointment, session?.user?.id, supabase],
   );
 
   const queuePendingActionOnly = useCallback(
@@ -609,7 +619,7 @@ export default function AppointmentDetail() {
       actions.setPendingSync(appointment.id, true);
       await loadPendingActions();
     },
-    [actions, appointment, loadPendingActions, user?.email]
+    [actions, appointment, loadPendingActions, user?.email],
   );
 
   const queuePendingActionWithPhoto = useCallback(
@@ -661,7 +671,7 @@ export default function AppointmentDetail() {
       loadPendingPhotos,
       session?.user?.id,
       user?.email,
-    ]
+    ],
   );
 
   const queuePendingPhotoOnly = useCallback(
@@ -671,7 +681,7 @@ export default function AppointmentDetail() {
         actions.setPendingSync(appointment.id, true);
       }
     },
-    [actions, appointment, storeOfflinePhoto]
+    [actions, appointment, storeOfflinePhoto],
   );
 
   const syncCheckIn = useCallback(
@@ -720,7 +730,7 @@ export default function AppointmentDetail() {
         setSyncStatus(
           error instanceof Error
             ? error.message
-            : "Nao foi possivel sincronizar o check-in."
+            : "Nao foi possivel sincronizar o check-in.",
         );
       }
     },
@@ -731,7 +741,7 @@ export default function AppointmentDetail() {
       queuePendingPhotoOnly,
       updateAppointmentRemote,
       uploadPhotoRemote,
-    ]
+    ],
   );
 
   const syncCheckOut = useCallback(
@@ -782,7 +792,7 @@ export default function AppointmentDetail() {
         setSyncStatus(
           error instanceof Error
             ? error.message
-            : "Nao foi possivel sincronizar o check-out."
+            : "Nao foi possivel sincronizar o check-out.",
         );
       }
     },
@@ -793,7 +803,7 @@ export default function AppointmentDetail() {
       queuePendingPhotoOnly,
       updateAppointmentRemote,
       uploadPhotoRemote,
-    ]
+    ],
   );
 
   const syncAbsence = useCallback(
@@ -818,7 +828,7 @@ export default function AppointmentDetail() {
         setSyncStatus(
           error instanceof Error
             ? error.message
-            : "Nao foi possivel sincronizar a ausencia."
+            : "Nao foi possivel sincronizar a ausencia.",
         );
       }
     },
@@ -826,7 +836,7 @@ export default function AppointmentDetail() {
       buildAbsenceRemoteChanges,
       queuePendingActionOnly,
       updateAppointmentRemote,
-    ]
+    ],
   );
 
   const mapPoints = useMemo(() => {
@@ -837,7 +847,7 @@ export default function AppointmentDetail() {
       label: string,
       lat?: number | null,
       lng?: number | null,
-      kind: MapPoint["kind"] = "company"
+      kind: MapPoint["kind"] = "company",
     ) => {
       if (lat == null || lng == null) return;
       const latNumber = Number(lat);
@@ -852,7 +862,7 @@ export default function AppointmentDetail() {
         company.name ?? "Empresa",
         company.lat,
         company.lng,
-        "company"
+        "company",
       );
     }
     pushPoint(
@@ -860,14 +870,14 @@ export default function AppointmentDetail() {
       "Check-in",
       appointment.checkInLat,
       appointment.checkInLng,
-      "checkin"
+      "checkin",
     );
     pushPoint(
       "checkout",
       "Check-out",
       appointment.checkOutLat,
       appointment.checkOutLng,
-      "checkout"
+      "checkout",
     );
 
     return points;
@@ -880,7 +890,7 @@ export default function AppointmentDetail() {
         if (point.kind === "checkout") return showCheckOutMarker;
         return true;
       }),
-    [mapPoints, showCheckInMarker, showCheckOutMarker]
+    [mapPoints, showCheckInMarker, showCheckOutMarker],
   );
 
   if (!appointment && loading) {
@@ -901,12 +911,12 @@ export default function AppointmentDetail() {
           title="Agendamento nao encontrado"
           description={error ?? "Volte para o dia e selecione outro horario."}
         />
-        <Link
+        {/* <Link
           to="/cronograma/dia"
           className="mt-4 inline-flex items-center justify-center rounded-full border border-border px-4 py-2 text-xs font-semibold text-foreground-soft"
         >
           Voltar para o dia
-        </Link>
+        </Link> */}
       </AppShell>
     );
   }
@@ -983,7 +993,7 @@ export default function AppointmentDetail() {
     setCheckoutOpportunities((current) =>
       current.includes(value)
         ? current.filter((item) => item !== value)
-        : [...current, value]
+        : [...current, value],
     );
   };
 
@@ -1025,7 +1035,7 @@ export default function AppointmentDetail() {
       setSyncStatus(
         syncError instanceof Error
           ? syncError.message
-          : "Nao foi possivel sincronizar o apontamento."
+          : "Nao foi possivel sincronizar o apontamento.",
       );
     } finally {
       setIsSyncing(false);
@@ -1039,13 +1049,16 @@ export default function AppointmentDetail() {
     geo.resetError();
     setGeoIntent("check_in");
     try {
-      let position: { lat: number; lng: number; accuracy: number } | null = null;
+      let position: { lat: number; lng: number; accuracy: number } | null =
+        null;
       try {
         position = await geo.capture();
       } catch (geoError) {
         if (isGeoError(geoError)) {
           geo.resetError();
-          setPhotoStatus("Localizacao indisponivel, salvando sem localizacao...");
+          setPhotoStatus(
+            "Localizacao indisponivel, salvando sem localizacao...",
+          );
         } else {
           throw geoError;
         }
@@ -1064,7 +1077,7 @@ export default function AppointmentDetail() {
       setError(
         actionError instanceof Error
           ? actionError.message
-          : "Nao foi possivel registrar o check-in."
+          : "Nao foi possivel registrar o check-in.",
       );
       setGeoIntent(null);
     } finally {
@@ -1080,13 +1093,16 @@ export default function AppointmentDetail() {
     setGeoIntent("check_out");
     const oportunidades = pendingCheckoutOpportunities ?? checkoutOpportunities;
     try {
-      let position: { lat: number; lng: number; accuracy: number } | null = null;
+      let position: { lat: number; lng: number; accuracy: number } | null =
+        null;
       try {
         position = await geo.capture();
       } catch (geoError) {
         if (isGeoError(geoError)) {
           geo.resetError();
-          setPhotoStatus("Localizacao indisponivel, salvando sem localizacao...");
+          setPhotoStatus(
+            "Localizacao indisponivel, salvando sem localizacao...",
+          );
         } else {
           throw geoError;
         }
@@ -1114,7 +1130,7 @@ export default function AppointmentDetail() {
       setError(
         actionError instanceof Error
           ? actionError.message
-          : "Nao foi possivel registrar o check-out."
+          : "Nao foi possivel registrar o check-out.",
       );
       setGeoIntent(null);
     } finally {
@@ -1150,7 +1166,7 @@ export default function AppointmentDetail() {
       setError(
         actionError instanceof Error
           ? actionError.message
-          : "Nao foi possivel registrar a ausencia."
+          : "Nao foi possivel registrar a ausencia.",
       );
     } finally {
       setPhotoStatus(null);
@@ -1206,21 +1222,23 @@ export default function AppointmentDetail() {
 
   const oportunidades = appointment.oportunidades ?? [];
   const showOportunidades = Boolean(
-    appointment.checkOutAt || appointment.status === "done"
+    appointment.checkOutAt || appointment.status === "done",
   );
   const hasMapPoints = mapPoints.length > 0;
   const hasFilteredMapPoints = filteredMapPoints.length > 0;
-  const companyDisplayName = company?.name ?? appointment.companyName ?? "Empresa";
+  const companyDisplayName =
+    company?.name ?? appointment.companyName ?? "Empresa";
   const pendingItemBase = pendingPhotos.length + pendingActionCount;
   const pendingItemCount =
-    pendingItemBase + (appointment.pendingSync && pendingItemBase === 0 ? 1 : 0);
+    pendingItemBase +
+    (appointment.pendingSync && pendingItemBase === 0 ? 1 : 0);
 
   const cameraTitle =
     cameraIntent === "checkin"
       ? "Foto do check-in"
       : cameraIntent === "checkout"
-      ? "Foto do check-out"
-      : "Capturar foto";
+        ? "Foto do check-out"
+        : "Capturar foto";
 
   return (
     <AppShell
@@ -1228,12 +1246,44 @@ export default function AppointmentDetail() {
       subtitle={getAppointmentTitle(appointment)}
     >
       <div className="space-y-4">
-        <Link
-          to="/cronograma/dia"
-          className="inline-flex items-center gap-2 text-xs font-semibold text-foreground-soft"
-        >
-          Voltar para o dia
-        </Link>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <Link
+            to="/cronograma/dia"
+            className="inline-flex items-center gap-2 text-xs font-semibold text-foreground-soft"
+          >
+            Voltar para o dia
+          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-wide ${
+                isOnline
+                  ? "bg-success/15 text-success"
+                  : "bg-warning/15 text-warning"
+              }`}
+            >
+              {isOnline ? "Online" : "Offline"}
+            </span>
+            <button
+              type="button"
+              onClick={handleSyncAppointment}
+              disabled={isSyncing || pendingItemCount === 0}
+              className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
+                isSyncing || pendingItemCount === 0
+                  ? "cursor-not-allowed bg-surface-muted text-foreground-muted"
+                  : "bg-accent text-white"
+              }`}
+            >
+              {isSyncing
+                ? "Sincronizando apontamento..."
+                : `Sincronizar apontamento (${pendingItemCount} pendencias)`}
+            </button>
+          </div>
+        </div>
+        {syncStatus ? (
+          <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
+            {syncStatus}
+          </div>
+        ) : null}
 
         {error ? (
           <div className="rounded-2xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -1265,37 +1315,6 @@ export default function AppointmentDetail() {
               <StatusBadge status={status} />
             </div>
           </div>
-
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-            <span
-              className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-wide ${
-                isOnline
-                  ? "bg-success/15 text-success"
-                  : "bg-warning/15 text-warning"
-              }`}
-            >
-              {isOnline ? "Online" : "Offline"}
-            </span>
-            <button
-              type="button"
-              onClick={handleSyncAppointment}
-              disabled={isSyncing || pendingItemCount === 0}
-              className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
-                isSyncing || pendingItemCount === 0
-                  ? "cursor-not-allowed bg-surface-muted text-foreground-muted"
-                  : "bg-accent text-white"
-              }`}
-            >
-              {isSyncing
-                ? "Sincronizando apontamento..."
-                : `Sincronizar apontamento (${pendingItemCount} pendencias)`}
-            </button>
-          </div>
-          {syncStatus ? (
-            <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
-              {syncStatus}
-            </div>
-          ) : null}
 
           <div className="mt-3 space-y-2 text-sm text-foreground-muted">
             <div className="flex items-center justify-between">
@@ -1447,7 +1466,8 @@ export default function AppointmentDetail() {
                           {point.label}
                         </p>
                         <p className="text-foreground-muted">
-                          {point.position[0].toFixed(5)}, {point.position[1].toFixed(5)}
+                          {point.position[0].toFixed(5)},{" "}
+                          {point.position[1].toFixed(5)}
                         </p>
                       </div>
                     </Popup>
@@ -1465,15 +1485,23 @@ export default function AppointmentDetail() {
         </section>
 
         <section className="rounded-3xl border border-border bg-white p-4 shadow-sm">
-          <SectionHeader title="Recursos" subtitle="Geolocalizacao registrada." />
+          <SectionHeader
+            title="Recursos"
+            subtitle="Geolocalizacao registrada."
+          />
           <div className="mt-3 space-y-3 text-xs text-foreground-muted">
             <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2">
-              <p className="text-[11px] font-semibold text-foreground">Check-in</p>
+              <p className="text-[11px] font-semibold text-foreground">
+                Check-in
+              </p>
               <div className="mt-2 space-y-1">
                 <div className="flex items-center justify-between">
                   <span>Geo</span>
                   <span className="font-semibold text-foreground">
-                    {formatCoordinates(appointment.checkInLat, appointment.checkInLng)}
+                    {formatCoordinates(
+                      appointment.checkInLat,
+                      appointment.checkInLng,
+                    )}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
@@ -1491,14 +1519,16 @@ export default function AppointmentDetail() {
               </div>
             </div>
             <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2">
-              <p className="text-[11px] font-semibold text-foreground">Check-out</p>
+              <p className="text-[11px] font-semibold text-foreground">
+                Check-out
+              </p>
               <div className="mt-2 space-y-1">
                 <div className="flex items-center justify-between">
                   <span>Geo</span>
                   <span className="font-semibold text-foreground">
                     {formatCoordinates(
                       appointment.checkOutLat,
-                      appointment.checkOutLng
+                      appointment.checkOutLng,
                     )}
                   </span>
                 </div>
@@ -1520,7 +1550,10 @@ export default function AppointmentDetail() {
         </section>
 
         <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
-          <SectionHeader title="Fotos" subtitle="Registro visual do apontamento." />
+          <SectionHeader
+            title="Fotos"
+            subtitle="Registro visual do apontamento."
+          />
           {mediaLoading || pendingLoading ? (
             <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
               Carregando fotos...
@@ -1631,7 +1664,7 @@ export default function AppointmentDetail() {
                   <div className="flex items-center justify-between">
                     <span>Empresa</span>
                     <span className="font-semibold text-foreground">
-                    {companyDisplayName}
+                      {companyDisplayName}
                     </span>
                   </div>
                 </div>
@@ -1642,12 +1675,15 @@ export default function AppointmentDetail() {
                   Oportunidades percebidas durante a visita
                 </p>
                 <p className="mt-1 text-[11px] text-foreground-muted">
-                  Selecione oportunidades percebidas durante a visita (opcional).
+                  Selecione oportunidades percebidas durante a visita
+                  (opcional).
                 </p>
                 <div className="mt-3 grid gap-2">
                   {oportunidadeOptions.map((option) => {
                     const fieldId = `oportunidade-${option.value}`;
-                    const checked = checkoutOpportunities.includes(option.value);
+                    const checked = checkoutOpportunities.includes(
+                      option.value,
+                    );
                     return (
                       <label
                         key={option.value}
@@ -1658,7 +1694,9 @@ export default function AppointmentDetail() {
                           id={fieldId}
                           type="checkbox"
                           checked={checked}
-                          onChange={() => toggleCheckoutOpportunity(option.value)}
+                          onChange={() =>
+                            toggleCheckoutOpportunity(option.value)
+                          }
                           disabled={isCheckoutBusy}
                           className="h-4 w-4 accent-accent"
                         />
@@ -1849,7 +1887,9 @@ export default function AppointmentDetail() {
               <div className="grid gap-2">
                 <button
                   type="button"
-                  disabled={!canCheckIn || busy || geo.isCapturing || isPhotoBusy}
+                  disabled={
+                    !canCheckIn || busy || geo.isCapturing || isPhotoBusy
+                  }
                   onClick={handleCheckIn}
                   className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${
                     canCheckIn && !busy && !geo.isCapturing && !isPhotoBusy
@@ -1863,7 +1903,9 @@ export default function AppointmentDetail() {
                 </button>
                 <button
                   type="button"
-                  disabled={!canCheckOut || busy || geo.isCapturing || isPhotoBusy}
+                  disabled={
+                    !canCheckOut || busy || geo.isCapturing || isPhotoBusy
+                  }
                   onClick={handleCheckOut}
                   className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${
                     canCheckOut && !busy && !geo.isCapturing && !isPhotoBusy

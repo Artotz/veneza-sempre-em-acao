@@ -10,6 +10,7 @@ import { COMPANY_SELECT, mapCompany } from "../lib/supabase";
 import type { Company } from "../lib/types";
 import {
   getCompaniesSnapshot,
+  saveCompaniesSnapshot,
   savePendingAppointment,
 } from "../storage/offlineSchedule";
 
@@ -28,15 +29,24 @@ const generateLocalAppointmentId = () => {
   return `local-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
 
+const toLocalInputValue = (date: Date) => {
+  const pad = (value: number) => `${value}`.padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
+    date.getDate(),
+  )}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
+
 export default function NewAppointment() {
   const { id } = useParams();
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const { actions } = useSchedule();
+  const { actions, state } = useSchedule();
 
-  const [company, setCompany] = useState<Company | null>(null);
-  const [loadingCompany, setLoadingCompany] = useState(true);
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [companiesLoading, setCompaniesLoading] = useState(true);
+  const [companiesError, setCompaniesError] = useState<string | null>(null);
+  const [selectedCompanyId, setSelectedCompanyId] = useState(id ?? "");
   const [error, setError] = useState<string | null>(null);
 
   const [startsAt, setStartsAt] = useState("");
@@ -45,18 +55,21 @@ export default function NewAppointment() {
 
   useEffect(() => {
     let active = true;
-    const loadCompany = async () => {
+    const loadCompanies = async () => {
       if (authLoading) return;
+      setCompaniesLoading(true);
+      setCompaniesError(null);
       const userEmail = user?.email?.trim();
       if (!userEmail) {
-        setError("Usuario nao autenticado.");
-        setLoadingCompany(false);
+        setCompaniesError("Usuario nao autenticado.");
+        setCompaniesLoading(false);
         return;
       }
 
-      if (!id) {
-        setError("Empresa nao encontrada.");
-        setLoadingCompany(false);
+      if (state.companies.length) {
+        setCompanies(state.companies);
+        setCompaniesLoading(false);
+        setCompaniesError(null);
         return;
       }
 
@@ -66,49 +79,80 @@ export default function NewAppointment() {
       if (isOffline) {
         const cached = await getCompaniesSnapshot(userEmail);
         if (!active) return;
-        const found =
-          cached?.companies.find((item) => item.id === id) ?? null;
-        if (!found) {
-          setError("Empresa nao encontrada no cache offline.");
-          setLoadingCompany(false);
+        if (!cached) {
+          setCompaniesError("Sem conexao e sem cache local.");
+          setCompaniesLoading(false);
           return;
         }
-        setCompany(found);
-        setLoadingCompany(false);
+        setCompanies(cached.companies);
+        setCompaniesLoading(false);
         return;
       }
 
       const { data, error: companyError } = await supabase
         .from("companies")
         .select(COMPANY_SELECT)
-        .eq("id", id)
         .eq("email_csa", userEmail)
-        .single();
+        .order("name", { ascending: true });
 
       if (!active) return;
 
       if (companyError) {
-        setError(companyError.message);
-        setLoadingCompany(false);
+        const cached = await getCompaniesSnapshot(userEmail);
+        if (!active) return;
+        if (cached) {
+          setCompanies(cached.companies);
+          setCompaniesLoading(false);
+          return;
+        }
+        setCompaniesError(companyError.message);
+        setCompaniesLoading(false);
         return;
       }
 
-      setCompany(data ? mapCompany(data) : null);
-      setLoadingCompany(false);
+      const mapped = (data ?? []).map(mapCompany);
+      setCompanies(mapped);
+      setCompaniesLoading(false);
+      await saveCompaniesSnapshot(userEmail, mapped);
     };
 
-    void loadCompany();
+    void loadCompanies();
 
     return () => {
       active = false;
     };
-  }, [authLoading, id, supabase, user?.email]);
+  }, [authLoading, state.companies, supabase, user?.email]);
+
+  useEffect(() => {
+    if (id) {
+      setSelectedCompanyId(id);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    if (selectedCompanyId || companies.length === 0) return;
+    setSelectedCompanyId(companies[0].id);
+  }, [companies, selectedCompanyId]);
+
+  useEffect(() => {
+    if (startsAt || endsAt) return;
+    const now = new Date();
+    const startValue = toLocalInputValue(now);
+    const endValue = toLocalInputValue(
+      new Date(now.getTime() + 60 * 60 * 1000),
+    );
+    setStartsAt(startValue);
+    setEndsAt(endValue);
+  }, [startsAt, endsAt]);
+
+  const company =
+    companies.find((item) => item.id === selectedCompanyId) ?? null;
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
 
-    if (!id) {
+    if (!selectedCompanyId) {
       setError("Empresa nao encontrada.");
       return;
     }
@@ -154,7 +198,7 @@ export default function NewAppointment() {
       const nowIso = new Date().toISOString();
       await savePendingAppointment(userEmail, {
         id: generateLocalAppointmentId(),
-        companyId: id,
+        companyId: selectedCompanyId,
         companyName: company.name ?? null,
         appointmentId: null,
         consultantId: user?.id ?? null,
@@ -176,7 +220,7 @@ export default function NewAppointment() {
     }
 
     const { error: insertError } = await supabase.from("apontamentos").insert({
-      company_id: id,
+      company_id: selectedCompanyId,
       starts_at: startsAtDate.toISOString(),
       ends_at: endsAtDate.toISOString(),
       consultant_id: user?.id ?? null,
@@ -197,7 +241,7 @@ export default function NewAppointment() {
     navigate("/cronograma/dia", { replace: true });
   };
 
-  if (loadingCompany) {
+  if (companiesLoading) {
     return (
       <AppShell title="Novo apontamento" subtitle="Carregando empresa...">
         <div className="space-y-3">
@@ -208,12 +252,14 @@ export default function NewAppointment() {
     );
   }
 
-  if (!company) {
+  if (!companies.length) {
     return (
       <AppShell title="Novo apontamento" subtitle="Empresa nao encontrada.">
         <EmptyState
           title="Empresa nao encontrada"
-          description={error ?? "Verifique o link ou escolha outra empresa."}
+          description={
+            companiesError ?? "Verifique o link ou escolha outra empresa."
+          }
         />
         <Link
           to="/empresas"
@@ -237,17 +283,48 @@ export default function NewAppointment() {
 
         <section className="space-y-2 rounded-3xl border border-border bg-white p-4 shadow-sm">
           <SectionHeader title="Empresa" />
-          <div className="space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-foreground-soft">
-              {company.document ?? "Sem documento"}
-            </p>
-            <p className="text-lg font-semibold text-foreground">
-              {company.name}
-            </p>
-            {company.state ? (
-              <p className="text-sm text-foreground-muted">{company.state}</p>
-            ) : null}
-          </div>
+          {companiesError ? (
+            <div className="rounded-2xl border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-foreground-soft">
+              {companiesError}
+            </div>
+          ) : null}
+          <label className="space-y-2 text-sm font-semibold text-foreground">
+            <span>Empresa</span>
+            <select
+              value={selectedCompanyId}
+              onChange={(event) => setSelectedCompanyId(event.target.value)}
+              className="w-full rounded-2xl border border-border bg-surface-muted px-4 py-3 text-sm font-normal text-foreground outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
+            >
+              <option value="" disabled>
+                Selecione uma empresa
+              </option>
+              {companies.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name ?? "Empresa"}
+                  {item.document ? ` (${item.document})` : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+          {company ? (
+            <div className="space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-foreground-soft">
+                {company.document ?? "Sem documento"}
+              </p>
+              <p className="text-lg font-semibold text-foreground">
+                {company.name}
+              </p>
+              {company.state ? (
+                <p className="text-sm text-foreground-muted">
+                  {company.state}
+                </p>
+              ) : null}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
+              Selecione uma empresa para continuar.
+            </div>
+          )}
         </section>
 
         <form
