@@ -11,7 +11,7 @@ type AppShellProps = {
 
 export const AppShell = ({
   title,
-  subtitle,
+  // subtitle,
   children,
   rightSlot,
 }: AppShellProps) => {

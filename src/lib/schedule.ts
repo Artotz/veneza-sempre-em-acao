@@ -42,9 +42,11 @@ export const isBlocked = (
   appointment: Appointment,
   appointments: Appointment[]
 ) => {
-  const firstPendingId = getFirstPendingId(appointments);
-  if (!firstPendingId) return false;
-  return isPending(appointment) && appointment.id !== firstPendingId;
+  // Restricao por ordem de horario desativada: check-in/out nao dependem mais
+  // do primeiro pendente do dia.
+  void appointment;
+  void appointments;
+  return false;
 };
 
 export const formatAppointmentWindow = (appointment: Appointment) => {

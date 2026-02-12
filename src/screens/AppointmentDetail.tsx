@@ -933,10 +933,18 @@ export default function AppointmentDetail() {
   const blocked = isBlocked(appointment, dayAppointments);
   const busy = state.busyIds.includes(appointment.id);
   const dayLabel = formatDateShort(new Date(appointment.startAt));
+  const isTodayAppointment = isSameDay(
+    new Date(appointment.startAt),
+    new Date(),
+  );
   const canCheckIn =
-    !blocked && (appointment.status ?? "scheduled") === "scheduled";
+    !blocked &&
+    isTodayAppointment &&
+    (appointment.status ?? "scheduled") === "scheduled";
   const canCheckOut =
-    !blocked && (appointment.status ?? "scheduled") === "in_progress";
+    !blocked &&
+    isTodayAppointment &&
+    (appointment.status ?? "scheduled") === "in_progress";
   const canAbsence =
     !blocked &&
     (appointment.status ?? "scheduled") !== "done" &&
@@ -1371,6 +1379,11 @@ export default function AppointmentDetail() {
             <div className="rounded-2xl border border-danger/30 bg-danger/10 p-3 text-xs text-danger">
               Este agendamento esta bloqueado. Conclua o pendente anterior no
               mesmo dia para liberar as acoes.
+            </div>
+          ) : null}
+          {!isTodayAppointment ? (
+            <div className="rounded-2xl border border-warning/40 bg-warning/10 p-3 text-xs text-foreground-soft">
+              Check-in e check-out so podem ser feitos no dia do apontamento.
             </div>
           ) : null}
         </section>
