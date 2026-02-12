@@ -73,8 +73,7 @@ export default function NewAppointment() {
         return;
       }
 
-      const isOffline =
-        typeof navigator !== "undefined" && !navigator.onLine;
+      const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
 
       if (isOffline) {
         const cached = await getCompaniesSnapshot(userEmail);
@@ -191,8 +190,7 @@ export default function NewAppointment() {
     setSaving(true);
 
     const addressSnapshot = buildAddressSnapshot(company);
-    const isOffline =
-      typeof navigator !== "undefined" && !navigator.onLine;
+    const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
 
     if (isOffline) {
       const nowIso = new Date().toISOString();
@@ -289,7 +287,7 @@ export default function NewAppointment() {
             </div>
           ) : null}
           <label className="space-y-2 text-sm font-semibold text-foreground">
-            <span>Empresa</span>
+            {/* <span>Empresa</span> */}
             <select
               value={selectedCompanyId}
               onChange={(event) => setSelectedCompanyId(event.target.value)}
@@ -306,7 +304,7 @@ export default function NewAppointment() {
               ))}
             </select>
           </label>
-          {company ? (
+          {/* {company ? (
             <div className="space-y-1">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-foreground-soft">
                 {company.document ?? "Sem documento"}
@@ -315,16 +313,14 @@ export default function NewAppointment() {
                 {company.name}
               </p>
               {company.state ? (
-                <p className="text-sm text-foreground-muted">
-                  {company.state}
-                </p>
+                <p className="text-sm text-foreground-muted">{company.state}</p>
               ) : null}
             </div>
           ) : (
             <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
               Selecione uma empresa para continuar.
             </div>
-          )}
+          )} */}
         </section>
 
         <form

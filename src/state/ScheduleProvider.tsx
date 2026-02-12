@@ -146,16 +146,19 @@ const buildCheckOutChanges = (payload: {
   lng?: number | null;
   accuracy?: number | null;
   oportunidades: string[];
+  notes?: string | null;
 }) => {
   const remoteChanges: Record<string, unknown> = {
     check_out_at: payload.at,
     status: "done",
     oportunidades: payload.oportunidades,
+    notes: payload.notes ?? null,
   };
   const localChanges: Partial<Appointment> = {
     checkOutAt: payload.at,
     status: "done",
     oportunidades: payload.oportunidades,
+    notes: payload.notes ?? null,
   };
 
   if (hasCoords(payload.lat, payload.lng)) {
@@ -264,6 +267,7 @@ const applyPendingActionsToAppointments = (
         };
       }
       if (action.actionType === "checkOut") {
+        const hasNotes = Object.prototype.hasOwnProperty.call(changes, "notes");
         return {
           ...current,
           status:
@@ -277,6 +281,7 @@ const applyPendingActionsToAppointments = (
             toNumberValue(changes.check_out_accuracy_m) ??
             current.checkOutAccuracyM ??
             null,
+          notes: hasNotes ? toStringValue(changes.notes) : current.notes ?? null,
           oportunidades: Array.isArray(changes.oportunidades)
             ? (changes.oportunidades as string[])
             : current.oportunidades,
@@ -530,6 +535,7 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
           lng?: number | null;
           accuracy?: number | null;
           oportunidades: string[];
+          notes?: string | null;
         }
       ) =>
         runUpdate(id, async () => {

@@ -211,6 +211,10 @@ export default function AppointmentDetail() {
   );
   const [pendingCheckoutOpportunities, setPendingCheckoutOpportunities] =
     useState<string[] | null>(null);
+  const [checkoutObservation, setCheckoutObservation] = useState("");
+  const [pendingCheckoutObservation, setPendingCheckoutObservation] = useState<
+    string | null
+  >(null);
   const [showCheckInMarker, setShowCheckInMarker] = useState(true);
   const [showCheckOutMarker, setShowCheckOutMarker] = useState(true);
 
@@ -516,11 +520,13 @@ export default function AppointmentDetail() {
       lng?: number | null;
       accuracy?: number | null;
       oportunidades: string[];
+      notes?: string | null;
     }) => {
       const changes: Record<string, unknown> = {
         check_out_at: payload.at,
         status: "done",
         oportunidades: payload.oportunidades,
+        notes: payload.notes ?? null,
       };
       if (payload.lat != null && payload.lng != null) {
         changes.check_out_lat = payload.lat;
@@ -750,6 +756,7 @@ export default function AppointmentDetail() {
       at: string;
       position: { lat: number; lng: number; accuracy: number } | null;
       oportunidades: string[];
+      notes?: string | null;
     }) => {
       try {
         const changes = buildCheckOutRemoteChanges({
@@ -758,6 +765,7 @@ export default function AppointmentDetail() {
           lng: params.position?.lng ?? null,
           accuracy: params.position?.accuracy ?? null,
           oportunidades: params.oportunidades,
+          notes: params.notes ?? null,
         });
 
         if (typeof navigator !== "undefined" && !navigator.onLine) {
@@ -976,6 +984,8 @@ export default function AppointmentDetail() {
     setError(null);
     setCheckoutOpportunities([]);
     setPendingCheckoutOpportunities(null);
+    setCheckoutObservation(appointment?.notes ?? "");
+    setPendingCheckoutObservation(null);
     setIsCheckoutOpen(true);
     setIsActionsOpen(false);
   };
@@ -985,6 +995,8 @@ export default function AppointmentDetail() {
     setIsCheckoutOpen(false);
     setCheckoutOpportunities([]);
     setPendingCheckoutOpportunities(null);
+    setCheckoutObservation("");
+    setPendingCheckoutObservation(null);
     geo.resetError();
     setGeoIntent(null);
   };
@@ -1001,6 +1013,10 @@ export default function AppointmentDetail() {
     if (!canCheckOut || busy || geo.isCapturing || isPhotoBusy) return;
     setError(null);
     setPendingCheckoutOpportunities([...checkoutOpportunities]);
+    const normalizedObservation = checkoutObservation.trim();
+    setPendingCheckoutObservation(
+      normalizedObservation.length ? normalizedObservation : null,
+    );
     setCameraIntent("checkout");
   };
 
@@ -1092,6 +1108,10 @@ export default function AppointmentDetail() {
     geo.resetError();
     setGeoIntent("check_out");
     const oportunidades = pendingCheckoutOpportunities ?? checkoutOpportunities;
+    const observationSource =
+      pendingCheckoutObservation ?? checkoutObservation;
+    const normalizedObservation = observationSource.trim();
+    const notes = normalizedObservation.length ? normalizedObservation : null;
     try {
       let position: { lat: number; lng: number; accuracy: number } | null =
         null;
@@ -1114,17 +1134,21 @@ export default function AppointmentDetail() {
         lng: position?.lng ?? null,
         accuracy: position?.accuracy ?? null,
         oportunidades: oportunidades ?? [],
+        notes,
       });
       setGeoIntent(null);
       setIsCheckoutOpen(false);
       setCheckoutOpportunities([]);
       setPendingCheckoutOpportunities(null);
+      setCheckoutObservation("");
+      setPendingCheckoutObservation(null);
       setPhotoStatus(null);
       void syncCheckOut({
         shot,
         at: now,
         position,
         oportunidades: oportunidades ?? [],
+        notes,
       });
     } catch (actionError) {
       setError(
@@ -1678,33 +1702,52 @@ export default function AppointmentDetail() {
                   Selecione oportunidades percebidas durante a visita
                   (opcional).
                 </p>
-                <div className="mt-3 grid gap-2">
-                  {oportunidadeOptions.map((option) => {
-                    const fieldId = `oportunidade-${option.value}`;
-                    const checked = checkoutOpportunities.includes(
-                      option.value,
-                    );
-                    return (
-                      <label
-                        key={option.value}
-                        htmlFor={fieldId}
-                        className="flex items-center gap-2 rounded-2xl border border-border bg-white px-3 py-2 text-xs text-foreground"
-                      >
-                        <input
-                          id={fieldId}
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() =>
-                            toggleCheckoutOpportunity(option.value)
-                          }
-                          disabled={isCheckoutBusy}
-                          className="h-4 w-4 accent-accent"
-                        />
-                        <span className="font-semibold">{option.label}</span>
-                      </label>
-                    );
-                  })}
+                <div className="mt-3 max-h-40 overflow-y-auto pr-1">
+                  <div className="grid gap-2">
+                    {oportunidadeOptions.map((option) => {
+                      const fieldId = `oportunidade-${option.value}`;
+                      const checked = checkoutOpportunities.includes(
+                        option.value,
+                      );
+                      return (
+                        <label
+                          key={option.value}
+                          htmlFor={fieldId}
+                          className="flex items-center gap-2 rounded-2xl border border-border bg-white px-3 py-2 text-xs text-foreground"
+                        >
+                          <input
+                            id={fieldId}
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() =>
+                              toggleCheckoutOpportunity(option.value)
+                            }
+                            disabled={isCheckoutBusy}
+                            className="h-4 w-4 accent-accent"
+                          />
+                          <span className="font-semibold">{option.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
                 </div>
+              </div>
+
+              <div className="rounded-2xl border border-border bg-white p-3">
+                <p className="text-xs font-semibold text-foreground">
+                  Observacoes do check-out
+                </p>
+                <p className="mt-1 text-[11px] text-foreground-muted">
+                  Registre detalhes relevantes da visita (opcional).
+                </p>
+                <textarea
+                  value={checkoutObservation}
+                  onChange={(event) => setCheckoutObservation(event.target.value)}
+                  placeholder="Ex: Cliente solicitou retorno em 15 dias."
+                  className="mt-3 w-full resize-none rounded-2xl border border-border bg-white px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-accent/40"
+                  rows={3}
+                  disabled={isCheckoutBusy}
+                />
               </div>
 
               {geo.isCapturing && geoIntent === "check_out" ? (

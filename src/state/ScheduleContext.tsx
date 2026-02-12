@@ -37,6 +37,7 @@ export type ScheduleContextValue = {
         lng?: number | null;
         accuracy?: number | null;
         oportunidades: string[];
+        notes?: string | null;
       }
     ) => Promise<Appointment | null>;
     justifyAbsence: (
