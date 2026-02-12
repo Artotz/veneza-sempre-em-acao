@@ -1248,6 +1248,8 @@ export default function AppointmentDetail() {
   const showOportunidades = Boolean(
     appointment.checkOutAt || appointment.status === "done",
   );
+  const checkoutNotes = appointment.notes?.trim() ?? "";
+  const showCheckoutNotes = checkoutNotes.length > 0;
   const hasMapPoints = mapPoints.length > 0;
   const hasFilteredMapPoints = filteredMapPoints.length > 0;
   const companyDisplayName =
@@ -1423,6 +1425,15 @@ export default function AppointmentDetail() {
             ) : (
               <p className="text-xs text-foreground-muted">Nenhuma</p>
             )}
+          </section>
+        ) : null}
+
+        {showCheckoutNotes ? (
+          <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
+            <SectionHeader title="Observacao do check-out" />
+            <p className="text-sm text-foreground-muted whitespace-pre-wrap">
+              {checkoutNotes}
+            </p>
           </section>
         ) : null}
 

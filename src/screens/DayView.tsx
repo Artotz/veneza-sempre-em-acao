@@ -16,6 +16,8 @@ import {
   parseMonthParam,
 } from "../lib/date";
 import {
+  formatAppointmentWindow,
+  getAppointmentTitle,
   isBlocked,
   isPending,
   sortByStart,
@@ -236,6 +238,11 @@ export default function DayView() {
                       appointment.companyName ??
                       selectors.getCompany(appointment.companyId)?.name ??
                       "Empresa";
+                    const appointmentDetail = getAppointmentTitle(appointment);
+                    const snapshot = appointment.addressSnapshot;
+                    const detailLabel = snapshot
+                      ? `${appointmentDetail} - ${snapshot}`
+                      : appointmentDetail;
                     const blocked = isBlocked(
                       appointment,
                       activeDayAppointments,
@@ -246,7 +253,10 @@ export default function DayView() {
                         appointment={appointment}
                         companyName={company}
                         blocked={blocked}
-                        order={index + 1}
+                        headerLabel={`#${index + 1} - ${formatAppointmentWindow(
+                          appointment,
+                        )}`}
+                        detailLabel={detailLabel}
                         onClick={() => handleOpenAppointment(appointment.id)}
                       />
                     );

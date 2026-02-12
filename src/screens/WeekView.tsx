@@ -13,11 +13,19 @@ import {
   isSameDay,
   parseMonthParam,
 } from "../lib/date";
-import { sortByStart } from "../lib/schedule";
+import { getAppointmentStatus, sortByStart } from "../lib/schedule";
+import type { AppointmentStatus } from "../lib/types";
 import { useSchedule } from "../state/useSchedule";
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(Math.max(value, min), max);
+
+const statusCardStyle: Record<AppointmentStatus, string> = {
+  agendado: "border-warning/30 bg-warning/15 text-warning",
+  em_execucao: "border-info/30 bg-info/15 text-info",
+  concluido: "border-success/30 bg-success/15 text-success",
+  cancelado: "border-danger/30 bg-danger/15 text-danger",
+};
 
 export default function WeekView() {
   const { state, actions, selectors } = useSchedule();
@@ -198,6 +206,7 @@ export default function WeekView() {
                               selectors.getCompany(appointment.companyId)
                                 ?.name ??
                               "Empresa";
+                            const status = getAppointmentStatus(appointment);
                             return (
                               <button
                                 key={appointment.id}
@@ -205,7 +214,7 @@ export default function WeekView() {
                                 onClick={() =>
                                   handleOpenAppointment(appointment.id)
                                 }
-                                className="min-w-0 rounded-md border border-border bg-white px-1 py-1 text-[9px] font-semibold text-foreground transition hover:border-accent/40"
+                                className={`min-w-0 rounded-md border px-1 py-1 text-[9px] font-semibold transition hover:shadow-sm ${statusCardStyle[status]}`}
                               >
                                 <span
                                   className="block overflow-hidden break-all text-center leading-tight"

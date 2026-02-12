@@ -11,6 +11,7 @@ import Companies from "./screens/Companies";
 import NewAppointment from "./screens/NewAppointment";
 import { AuthProvider } from "./contexts/AuthProvider";
 import { RequireAuth } from "./components/RequireAuth";
+import CompanyDetail from "./screens/CompanyDetail";
 
 export default function App() {
   return (
@@ -36,6 +37,14 @@ export default function App() {
               element={
                 <RequireAuth>
                   <NewAppointment />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/empresas/:id"
+              element={
+                <RequireAuth>
+                  <CompanyDetail />
                 </RequireAuth>
               }
             />

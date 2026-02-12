@@ -23,6 +23,7 @@ import {
 } from "./ScheduleContext";
 import {
   getCompaniesSnapshot,
+  getScheduleSnapshot,
   getTodayAppointments,
   listPendingActions,
   listPendingAppointments,
@@ -321,33 +322,50 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
       }
       dispatch({ type: "set_loading" });
       if (typeof navigator !== "undefined" && !navigator.onLine) {
-        const [todayCache, companiesCache, pendingAppointments, pendingActions] =
-          await Promise.all([
-            getTodayAppointments(userEmail),
-            getCompaniesSnapshot(userEmail),
-            listPendingAppointments(userEmail),
-            listPendingActions(userEmail),
-          ]);
+        const [
+          todayCache,
+          companiesCache,
+          pendingAppointments,
+          pendingActions,
+          scheduleSnapshot,
+        ] = await Promise.all([
+          getTodayAppointments(userEmail),
+          getCompaniesSnapshot(userEmail),
+          listPendingAppointments(userEmail),
+          listPendingActions(userEmail),
+          getScheduleSnapshot(userEmail, range),
+        ]);
         if (!activeRef.active) return;
 
+        const snapshotAppointments = scheduleSnapshot?.appointments ?? [];
+        const snapshotCompanies = scheduleSnapshot?.companies ?? [];
+        const baseAppointments = snapshotAppointments.length
+          ? mergeAppointments(
+              snapshotAppointments,
+              todayCache?.appointments ?? []
+            )
+          : todayCache?.appointments ?? [];
+        const baseCompanies = snapshotCompanies.length
+          ? snapshotCompanies
+          : companiesCache?.companies ?? [];
+
         const today = new Date();
-        const pendingToday = filterAppointmentsForDate(
-          pendingAppointments,
-          today
-        );
+        const pendingInRange = scheduleSnapshot
+          ? filterAppointmentsByRange(
+              pendingAppointments,
+              scheduleSnapshot.range
+            )
+          : filterAppointmentsForDate(pendingAppointments, today);
         const mergedAppointments = mergeAppointments(
-          todayCache?.appointments ?? [],
-          pendingToday
+          baseAppointments,
+          pendingInRange
         );
         const appointmentsWithPending = applyPendingActionsToAppointments(
           mergedAppointments,
           pendingActions
         );
 
-        if (
-          !appointmentsWithPending.length &&
-          !companiesCache?.companies?.length
-        ) {
+        if (!appointmentsWithPending.length && !baseCompanies.length) {
           dispatch({
             type: "error",
             payload: "Sem conexao e sem cache local.",
@@ -359,7 +377,7 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
           type: "init",
           payload: {
             appointments: appointmentsWithPending,
-            companies: companiesCache?.companies ?? [],
+            companies: baseCompanies,
           },
         });
         return;

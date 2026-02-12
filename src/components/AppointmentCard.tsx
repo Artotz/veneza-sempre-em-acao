@@ -1,16 +1,13 @@
 import type { Appointment } from "../lib/types";
-import {
-  formatAppointmentWindow,
-  getAppointmentStatus,
-  getAppointmentTitle,
-} from "../lib/schedule";
+import { getAppointmentStatus, getAppointmentTitle } from "../lib/schedule";
 import { StatusBadge } from "./StatusBadge";
 
 type AppointmentCardProps = {
   appointment: Appointment;
   companyName: string;
   blocked: boolean;
-  order: number;
+  headerLabel: string;
+  detailLabel?: string;
   onClick?: () => void;
 };
 
@@ -18,10 +15,12 @@ export const AppointmentCard = ({
   appointment,
   companyName,
   blocked,
-  order,
+  headerLabel,
+  detailLabel,
   onClick,
 }: AppointmentCardProps) => {
   const status = getAppointmentStatus(appointment);
+  const resolvedDetailLabel = detailLabel ?? getAppointmentTitle(appointment);
 
   return (
     <button
@@ -34,19 +33,19 @@ export const AppointmentCard = ({
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold text-foreground-soft">
-            #{order} - {formatAppointmentWindow(appointment)}
+            {headerLabel}
           </p>
           <h3 className="mt-1 text-base font-semibold text-foreground">
             {companyName}
           </h3>
-          <p className="mt-1 text-sm text-foreground-muted">
-            {getAppointmentTitle(appointment)}
-          </p>
-          {appointment.createdBy ? (
-            <p className="mt-1 text-xs text-foreground-soft">
-              Criado por {appointment.createdBy}
-            </p>
-          ) : null}
+          <div className="mt-1 space-y-1 text-sm text-foreground-muted">
+            <p>{resolvedDetailLabel}</p>
+            {appointment.createdBy ? (
+              <p className="text-xs text-foreground-soft">
+                Criado por {appointment.createdBy}
+              </p>
+            ) : null}
+          </div>
         </div>
         <div className="flex items-center gap-2">
           {appointment.pendingSync ? (

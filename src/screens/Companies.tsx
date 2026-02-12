@@ -166,38 +166,24 @@ export default function Companies() {
                 ) : null}
               </div>
 
-              <div className="flex flex-wrap gap-2 text-[11px] font-semibold text-foreground-muted">
-                {company.clientClass ? (
-                  <span className="rounded-full bg-surface-muted px-3 py-1">
-                    Classe: {company.clientClass}
-                  </span>
-                ) : null}
-                {company.carteiraDef ? (
-                  <span className="rounded-full bg-surface-muted px-3 py-1">
-                    Carteira: {company.carteiraDef}
-                  </span>
-                ) : null}
-                {company.carteiraDef2 ? (
-                  <span className="rounded-full bg-surface-muted px-3 py-1">
-                    Carteira 2: {company.carteiraDef2}
-                  </span>
-                ) : null}
-                {company.validacao ? (
-                  <span className="rounded-full bg-surface-muted px-3 py-1">
-                    Validacao: {company.validacao}
-                  </span>
-                ) : null}
+              <div className="grid gap-2 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => navigate(`/empresas/${company.id}`)}
+                  className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm font-semibold text-foreground shadow-sm transition hover:bg-surface-muted"
+                >
+                  Ver empresa
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    navigate(`/empresas/${company.id}/novo-apontamento`)
+                  }
+                  className="w-full rounded-2xl bg-foreground px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-foreground/90"
+                >
+                  Criar apontamento
+                </button>
               </div>
-
-              <button
-                type="button"
-                onClick={() =>
-                  navigate(`/empresas/${company.id}/novo-apontamento`)
-                }
-                className="w-full rounded-2xl bg-foreground px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-foreground/90"
-              >
-                Criar apontamento
-              </button>
             </div>
           ))
         ) : (

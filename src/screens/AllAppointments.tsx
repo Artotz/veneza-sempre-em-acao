@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppShell } from "../components/AppShell";
+import { AppointmentCard } from "../components/AppointmentCard";
 import { EmptyState } from "../components/EmptyState";
 import { SectionHeader } from "../components/SectionHeader";
-import { StatusBadge } from "../components/StatusBadge";
 import { buildMonthWeeks, formatDateShort, formatMonthYear } from "../lib/date";
 import {
   formatAppointmentWindow,
@@ -28,73 +28,6 @@ const buildDayGroups = (appointments: Appointment[]) => {
   });
   groups.forEach((list) => list.sort(sortByStart));
   return groups;
-};
-
-type AppointmentListItemProps = {
-  appointment: Appointment;
-  companyName: string;
-  detailLabel: string;
-  blocked: boolean;
-  onClick: () => void;
-};
-
-const AppointmentListItem = ({
-  appointment,
-  companyName,
-  detailLabel,
-  blocked,
-  onClick,
-}: AppointmentListItemProps) => {
-  const status = getAppointmentStatus(appointment);
-  const dayLabel = formatDateShort(new Date(appointment.startAt));
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`w-full rounded-2xl border border-border bg-white p-4 text-left shadow-sm transition ${
-        blocked ? "opacity-70" : "hover:-translate-y-0.5 hover:shadow-md"
-      }`}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold text-foreground-soft">
-            {dayLabel} - {formatAppointmentWindow(appointment)}
-          </p>
-          <h3 className="mt-1 text-base font-semibold text-foreground">
-            {companyName}
-          </h3>
-          <div className="mt-1 space-y-1 text-sm text-foreground-muted">
-            <p>{detailLabel}</p>
-            {appointment.createdBy ? (
-              <p className="text-xs text-foreground-soft">
-                Criado por {appointment.createdBy}
-              </p>
-            ) : null}
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {appointment.pendingSync ? (
-            <span className="rounded-full bg-warning/15 px-2 py-1 text-[10px] font-semibold text-warning">
-              Pendente
-            </span>
-          ) : null}
-          <StatusBadge status={status} />
-        </div>
-      </div>
-      <div className="mt-3 flex items-center justify-end text-xs text-foreground-soft">
-        <span
-          className={`rounded-full px-2 py-1 text-[10px] font-semibold ${
-            blocked
-              ? "bg-border text-foreground-muted"
-              : "bg-surface-muted text-foreground-muted"
-          }`}
-        >
-          {blocked ? "Bloqueado" : "Toque para detalhes"}
-        </span>
-      </div>
-    </button>
-  );
 };
 
 export default function AllAppointments() {
@@ -247,15 +180,21 @@ export default function AllAppointments() {
                 const detailLabel = snapshot
                   ? `${appointmentDetail} - ${snapshot}`
                   : appointmentDetail;
+                const dayLabel = formatDateShort(
+                  new Date(appointment.startAt),
+                );
                 const key = buildDayKey(new Date(appointment.startAt));
                 const dayAppointments = dayGroups.get(key) ?? [];
                 const blocked = isBlocked(appointment, dayAppointments);
 
                 return (
-                  <AppointmentListItem
+                  <AppointmentCard
                     key={appointment.id}
                     appointment={appointment}
                     companyName={companyName}
+                    headerLabel={`${dayLabel} - ${formatAppointmentWindow(
+                      appointment,
+                    )}`}
                     detailLabel={detailLabel}
                     blocked={blocked}
                     onClick={() => handleOpenAppointment(appointment.id)}
