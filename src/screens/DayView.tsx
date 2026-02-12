@@ -16,7 +16,6 @@ import {
   parseMonthParam,
 } from "../lib/date";
 import {
-  getFirstPendingId,
   isBlocked,
   isPending,
   sortByStart,

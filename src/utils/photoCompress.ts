@@ -4,9 +4,18 @@ export type CompressOptions = {
   quality?: number;
 };
 
+type Canvas2DContext =
+  | CanvasRenderingContext2D
+  | OffscreenCanvasRenderingContext2D;
+
 const DEFAULT_MAX_W = 1600;
 const DEFAULT_MAX_H = 1600;
 const DEFAULT_QUALITY = 0.78;
+
+const isOffscreenCanvas = (
+  canvas: HTMLCanvasElement | OffscreenCanvas
+): canvas is OffscreenCanvas =>
+  typeof OffscreenCanvas !== "undefined" && canvas instanceof OffscreenCanvas;
 
 const createCanvas = (width: number, height: number) => {
   if (
@@ -31,15 +40,13 @@ const canvasToBlob = async (
   type: string,
   quality: number
 ) => {
-  const isOffscreen =
-    typeof OffscreenCanvas !== "undefined" && canvas instanceof OffscreenCanvas;
-  if (isOffscreen) {
+  if (isOffscreenCanvas(canvas)) {
     return canvas.convertToBlob({ type, quality });
   }
 
   return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
-      (blob) => {
+      (blob: Blob | null) => {
         if (!blob) {
           reject(new Error("Nao foi possivel gerar a imagem comprimida."));
           return;
@@ -105,6 +112,16 @@ const tryEncode = async (
   return null;
 };
 
+const get2dContext = (
+  canvas: HTMLCanvasElement | OffscreenCanvas
+): Canvas2DContext | null => {
+  if (isOffscreenCanvas(canvas)) {
+    return canvas.getContext("2d");
+  }
+
+  return canvas.getContext("2d");
+};
+
 export const compressImage = async (
   input: Blob,
   opts: CompressOptions = {}
@@ -145,7 +162,7 @@ export const compressImage = async (
   const targetH = Math.max(1, Math.round(height * scale));
 
   const canvas = createCanvas(targetW, targetH);
-  const context = canvas.getContext("2d");
+  const context = get2dContext(canvas);
   if (!context) {
     cleanup?.();
     throw new Error("Nao foi possivel processar a imagem.");

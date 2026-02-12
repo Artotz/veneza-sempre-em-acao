@@ -33,11 +33,11 @@ export const AppShell = ({
               <h1 className="mt-1 text-2xl font-display font-semibold text-foreground">
                 {title}
               </h1>
-              {/* {subtitle ? (
+              {subtitle ? (
                 <p className="mt-2 max-w-[20rem] text-sm text-foreground-muted">
                   {subtitle}
                 </p>
-              ) : null} */}
+              ) : null}
             </div>
             {headerRightSlot ? (
               <div className="shrink-0 rounded-2xl border border-border bg-white/70 px-3 py-2 text-xs font-semibold text-foreground-soft shadow-sm">
