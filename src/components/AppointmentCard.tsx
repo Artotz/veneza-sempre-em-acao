@@ -51,7 +51,7 @@ export const AppointmentCard = ({
         <div className="flex items-center gap-2">
           {appointment.pendingSync ? (
             <span className="rounded-full bg-warning/15 px-2 py-1 text-[10px] font-semibold text-warning">
-              Nao enviado
+              Pendente
             </span>
           ) : null}
           <StatusBadge status={status} />

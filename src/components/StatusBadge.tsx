@@ -1,17 +1,17 @@
 import type { AppointmentStatus } from "../lib/types";
 
 const statusCopy: Record<AppointmentStatus, string> = {
-  pendente: "Pendente",
+  agendado: "Agendado",
   em_execucao: "Em execucao",
   concluido: "Concluido",
-  ausente: "Ausente",
+  cancelado: "Cancelado",
 };
 
 const statusStyle: Record<AppointmentStatus, string> = {
-  pendente: "bg-warning/15 text-warning",
+  agendado: "bg-warning/15 text-warning",
   em_execucao: "bg-info/15 text-info",
   concluido: "bg-success/15 text-success",
-  ausente: "bg-danger/15 text-danger",
+  cancelado: "bg-danger/15 text-danger",
 };
 
 export const StatusBadge = ({ status }: { status: AppointmentStatus }) => {

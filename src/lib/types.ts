@@ -1,8 +1,8 @@
 export type AppointmentStatus =
-  | "pendente"
+  | "agendado"
   | "em_execucao"
   | "concluido"
-  | "ausente";
+  | "cancelado";
 
 export type SupabaseAppointmentStatus =
   | "scheduled"

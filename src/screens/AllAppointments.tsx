@@ -76,7 +76,7 @@ const AppointmentListItem = ({
         <div className="flex items-center gap-2">
           {appointment.pendingSync ? (
             <span className="rounded-full bg-warning/15 px-2 py-1 text-[10px] font-semibold text-warning">
-              Nao enviado
+              Pendente
             </span>
           ) : null}
           <StatusBadge status={status} />
@@ -101,7 +101,7 @@ export default function AllAppointments() {
   const { state, selectors, actions } = useSchedule();
   const navigate = useNavigate();
   const [statusFilters, setStatusFilters] = useState<AppointmentStatus[]>(
-    () => ["pendente", "em_execucao", "concluido", "ausente"],
+    () => ["agendado", "em_execucao", "concluido", "cancelado"],
   );
 
   const weeks = useMemo(() => buildMonthWeeks(new Date()), []);
@@ -132,10 +132,10 @@ export default function AllAppointments() {
       },
       {
         total: state.appointments.length,
-        pendente: 0,
+        agendado: 0,
         em_execucao: 0,
         concluido: 0,
-        ausente: 0,
+        cancelado: 0,
       },
     );
   }, [state.appointments]);
@@ -150,9 +150,9 @@ export default function AllAppointments() {
   const pillOptions = useMemo(
     () => [
       {
-        status: "pendente" as const,
-        label: "Pendentes",
-        count: summary.pendente,
+        status: "agendado" as const,
+        label: "Agendados",
+        count: summary.agendado,
         baseClass: "bg-warning/15 text-warning",
         ringClass: "ring-warning/30",
       },
@@ -171,9 +171,9 @@ export default function AllAppointments() {
         ringClass: "ring-success/30",
       },
       {
-        status: "ausente" as const,
-        label: "Ausentes",
-        count: summary.ausente,
+        status: "cancelado" as const,
+        label: "Cancelados",
+        count: summary.cancelado,
         baseClass: "bg-danger/15 text-danger",
         ringClass: "ring-danger/30",
       },

@@ -5,12 +5,12 @@ export const getAppointmentStatus = (
   appointment: Appointment
 ): AppointmentStatus => {
   if (appointment.status === "absent" || appointment.absenceReason)
-    return "ausente";
+    return "cancelado";
   if (appointment.status === "done" || appointment.checkOutAt)
     return "concluido";
   if (appointment.status === "in_progress" || appointment.checkInAt)
     return "em_execucao";
-  return "pendente";
+  return "agendado";
 };
 
 export const isPending = (appointment: Appointment) =>
