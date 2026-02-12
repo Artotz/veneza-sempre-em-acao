@@ -10,6 +10,7 @@ import {
   formatAppointmentWindow,
   getAppointmentTitle,
   isBlocked,
+  isSuggested,
   sortByStart,
 } from "../lib/schedule";
 import { COMPANY_SELECT, mapCompany } from "../lib/supabase";
@@ -304,6 +305,7 @@ export default function CompanyDetail() {
                 const key = buildDayKey(new Date(appointment.startAt));
                 const dayAppointments = dayGroups.get(key) ?? [];
                 const blocked = isBlocked(appointment, dayAppointments);
+                const isSuggestion = isSuggested(appointment, user?.email);
                 return (
                   <AppointmentCard
                     key={appointment.id}
@@ -314,6 +316,7 @@ export default function CompanyDetail() {
                     )}`}
                     detailLabel={detailLabel}
                     blocked={blocked}
+                    highlight={isSuggestion}
                     onClick={() => handleOpenAppointment(appointment.id)}
                   />
                 );

@@ -4,12 +4,14 @@ import { AppShell } from "../components/AppShell";
 import { AppointmentCard } from "../components/AppointmentCard";
 import { EmptyState } from "../components/EmptyState";
 import { SectionHeader } from "../components/SectionHeader";
+import { useAuth } from "../contexts/useAuth";
 import { buildMonthWeeks, formatDateShort, formatMonthYear } from "../lib/date";
 import {
   formatAppointmentWindow,
   getAppointmentStatus,
   getAppointmentTitle,
   isBlocked,
+  isSuggested,
   sortByStart,
 } from "../lib/schedule";
 import type { Appointment, AppointmentStatus } from "../lib/types";
@@ -32,10 +34,12 @@ const buildDayGroups = (appointments: Appointment[]) => {
 
 export default function AllAppointments() {
   const { state, selectors, actions } = useSchedule();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [statusFilters, setStatusFilters] = useState<AppointmentStatus[]>(
-    () => ["agendado", "em_execucao", "concluido", "cancelado"],
+    () => ["agendado", "em_execucao"],
   );
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   const weeks = useMemo(() => buildMonthWeeks(new Date()), []);
   const monthRange = useMemo(() => {
@@ -73,12 +77,25 @@ export default function AllAppointments() {
     );
   }, [state.appointments]);
 
+  const suggestionCount = useMemo(
+    () =>
+      orderedAppointments.filter((appointment) =>
+        isSuggested(appointment, user?.email),
+      ).length,
+    [orderedAppointments, user?.email],
+  );
+
   const filteredAppointments = useMemo(() => {
     if (statusFilters.length === 0) return [];
-    return orderedAppointments.filter((appointment) =>
-      statusFilters.includes(getAppointmentStatus(appointment)),
-    );
-  }, [orderedAppointments, statusFilters]);
+    return orderedAppointments.filter((appointment) => {
+      const matchesStatus = statusFilters.includes(
+        getAppointmentStatus(appointment),
+      );
+      const matchesSuggestion =
+        showSuggestions && isSuggested(appointment, user?.email);
+      return matchesStatus || matchesSuggestion;
+    });
+  }, [orderedAppointments, showSuggestions, statusFilters, user?.email]);
 
   const pillOptions = useMemo(
     () => [
@@ -166,6 +183,16 @@ export default function AllAppointments() {
                   </button>
                 );
               })}
+              <button
+                type="button"
+                onClick={() => setShowSuggestions((current) => !current)}
+                aria-pressed={showSuggestions}
+                className={`rounded-full px-3 py-1 transition bg-accent/10 text-foreground ${
+                  showSuggestions ? "ring-2 ring-accent/30" : ""
+                }`}
+              >
+                Sugestoes: {suggestionCount}
+              </button>
             </div>
           </section>
 
@@ -186,6 +213,7 @@ export default function AllAppointments() {
                 const key = buildDayKey(new Date(appointment.startAt));
                 const dayAppointments = dayGroups.get(key) ?? [];
                 const blocked = isBlocked(appointment, dayAppointments);
+                const isSuggestion = isSuggested(appointment, user?.email);
 
                 return (
                   <AppointmentCard
@@ -197,6 +225,7 @@ export default function AllAppointments() {
                     )}`}
                     detailLabel={detailLabel}
                     blocked={blocked}
+                    highlight={isSuggestion}
                     onClick={() => handleOpenAppointment(appointment.id)}
                   />
                 );

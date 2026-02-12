@@ -18,6 +18,18 @@ export const isPending = (appointment: Appointment) =>
     ? appointment.status === "scheduled"
     : !appointment.checkOutAt && !appointment.absenceReason;
 
+const normalizeEmail = (value?: string | null) =>
+  value?.trim().toLowerCase() ?? "";
+
+export const isSuggested = (
+  appointment: Appointment,
+  userEmail?: string | null,
+) => {
+  const createdBy = normalizeEmail(appointment.createdBy);
+  const ownerEmail = normalizeEmail(userEmail);
+  return createdBy.length > 0 && ownerEmail.length > 0 && createdBy !== ownerEmail;
+};
+
 export const sortByStart = (a: Appointment, b: Appointment) =>
   new Date(a.startAt).getTime() - new Date(b.startAt).getTime();
 

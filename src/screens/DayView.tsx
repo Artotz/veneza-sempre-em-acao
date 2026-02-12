@@ -7,6 +7,7 @@ import { DateSelector } from "../components/DateSelector";
 import { DetailsMapTabs } from "../components/DetailsMapTabs";
 import { EmptyState } from "../components/EmptyState";
 import { SectionHeader } from "../components/SectionHeader";
+import { useAuth } from "../contexts/useAuth";
 import {
   buildMonthOptions,
   buildMonthWeeks,
@@ -18,11 +19,14 @@ import {
 } from "../lib/date";
 import {
   formatAppointmentWindow,
+  getAppointmentStatus,
   getAppointmentTitle,
   isBlocked,
   isPending,
+  isSuggested,
   sortByStart,
 } from "../lib/schedule";
+import type { AppointmentStatus } from "../lib/types";
 import { useSchedule } from "../state/useSchedule";
 
 const clamp = (value: number, min: number, max: number) =>
@@ -30,6 +34,7 @@ const clamp = (value: number, min: number, max: number) =>
 
 export default function DayView() {
   const { state, selectors, actions } = useSchedule();
+  const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
@@ -67,6 +72,10 @@ export default function DayView() {
     getDayIndexMonday(today),
   );
   const [activeTab, setActiveTab] = useState<"details" | "map">("details");
+  const [statusFilters, setStatusFilters] = useState<AppointmentStatus[]>(
+    () => ["agendado", "em_execucao"],
+  );
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   useEffect(() => {
     const monthParam = parseMonthParam(searchParams.get("month"));
@@ -139,6 +148,73 @@ export default function DayView() {
   const activeDayAppointments = dayGroups[selectedDayIndex] ?? [];
   const activeDay = week.days[selectedDayIndex] ?? week.days[0];
   const isActiveDayToday = isSameDay(activeDay.date, today);
+  const daySummary = useMemo(() => {
+    return activeDayAppointments.reduce(
+      (acc, appointment) => {
+        acc[getAppointmentStatus(appointment)] += 1;
+        return acc;
+      },
+      {
+        total: activeDayAppointments.length,
+        agendado: 0,
+        em_execucao: 0,
+        concluido: 0,
+        cancelado: 0,
+      },
+    );
+  }, [activeDayAppointments]);
+  const suggestionCount = useMemo(
+    () =>
+      activeDayAppointments.filter((appointment) =>
+        isSuggested(appointment, user?.email),
+      ).length,
+    [activeDayAppointments, user?.email],
+  );
+  const filteredAppointments = useMemo(() => {
+    if (statusFilters.length === 0) return [];
+    return activeDayAppointments.filter((appointment) => {
+      const matchesStatus = statusFilters.includes(
+        getAppointmentStatus(appointment),
+      );
+      const matchesSuggestion =
+        showSuggestions && isSuggested(appointment, user?.email);
+      return matchesStatus || matchesSuggestion;
+    });
+  }, [activeDayAppointments, showSuggestions, statusFilters, user?.email]);
+  const pillOptions = useMemo(
+    () => [
+      {
+        status: "agendado" as const,
+        label: "Agendados",
+        count: daySummary.agendado,
+        baseClass: "bg-warning/15 text-warning",
+        ringClass: "ring-warning/30",
+      },
+      {
+        status: "em_execucao" as const,
+        label: "Em execucao",
+        count: daySummary.em_execucao,
+        baseClass: "bg-info/15 text-info",
+        ringClass: "ring-info/30",
+      },
+      {
+        status: "concluido" as const,
+        label: "Concluidos",
+        count: daySummary.concluido,
+        baseClass: "bg-success/15 text-success",
+        ringClass: "ring-success/30",
+      },
+      {
+        status: "cancelado" as const,
+        label: "Cancelados",
+        count: daySummary.cancelado,
+        baseClass: "bg-danger/15 text-danger",
+        ringClass: "ring-danger/30",
+      },
+    ],
+    [daySummary],
+  );
+  const hasDayAppointments = activeDayAppointments.length > 0;
   // const firstPendingId = getFirstPendingId(activeDayAppointments);
 
   const handleOpenAppointment = (id: string) => {
@@ -235,9 +311,51 @@ export default function DayView() {
                   ) : null} */}
                 </div>
 
+                <div className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
+                  <SectionHeader
+                    title="Filtros do dia"
+                    subtitle="Status e sugestoes."
+                    rightSlot={`${filteredAppointments.length} ag.`}
+                  />
+                  <div className="flex flex-wrap gap-2 text-[11px] font-semibold">
+                    {pillOptions.map((pill) => {
+                      const isActive = statusFilters.includes(pill.status);
+                      return (
+                        <button
+                          key={pill.status}
+                          type="button"
+                          onClick={() =>
+                            setStatusFilters((current) =>
+                              current.includes(pill.status)
+                                ? current.filter((status) => status !== pill.status)
+                                : [...current, pill.status],
+                            )
+                          }
+                          aria-pressed={isActive}
+                          className={`rounded-full px-3 py-1 transition ${pill.baseClass} ${
+                            isActive ? `ring-2 ${pill.ringClass}` : ""
+                          }`}
+                        >
+                          {pill.label}: {pill.count}
+                        </button>
+                      );
+                    })}
+                    <button
+                      type="button"
+                      onClick={() => setShowSuggestions((current) => !current)}
+                      aria-pressed={showSuggestions}
+                      className={`rounded-full px-3 py-1 transition bg-accent/10 text-foreground ${
+                        showSuggestions ? "ring-2 ring-accent/30" : ""
+                      }`}
+                    >
+                      Sugestoes: {suggestionCount}
+                    </button>
+                  </div>
+                </div>
+
                 <div className="space-y-3">
-                  {activeDayAppointments.length ? (
-                    activeDayAppointments.map((appointment, index) => {
+                  {filteredAppointments.length ? (
+                    filteredAppointments.map((appointment, index) => {
                       const company =
                         appointment.companyName ??
                         selectors.getCompany(appointment.companyId)?.name ??
@@ -251,6 +369,10 @@ export default function DayView() {
                         appointment,
                         activeDayAppointments,
                       );
+                      const isSuggestion = isSuggested(
+                        appointment,
+                        user?.email,
+                      );
                       return (
                         <AppointmentCard
                           key={appointment.id}
@@ -261,6 +383,7 @@ export default function DayView() {
                             appointment,
                           )}`}
                           detailLabel={detailLabel}
+                          highlight={isSuggestion}
                           onClick={() => handleOpenAppointment(appointment.id)}
                         />
                       );
@@ -268,7 +391,13 @@ export default function DayView() {
                   ) : (
                     <EmptyState
                       title="Sem agendamentos"
-                      description="Selecione outro dia para ver a agenda."
+                      description={
+                        !hasDayAppointments
+                          ? "Selecione outro dia para ver a agenda."
+                          : statusFilters.length === 0
+                            ? "Nenhum filtro ativo. Ligue ao menos um status acima."
+                            : "Nenhum agendamento encontrado para os filtros ativos."
+                      }
                     />
                   )}
                 </div>

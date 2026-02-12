@@ -8,6 +8,7 @@ type AppointmentCardProps = {
   blocked: boolean;
   headerLabel: string;
   detailLabel?: string;
+  highlight?: boolean;
   onClick?: () => void;
 };
 
@@ -17,16 +18,20 @@ export const AppointmentCard = ({
   blocked,
   headerLabel,
   detailLabel,
+  highlight = false,
   onClick,
 }: AppointmentCardProps) => {
   const status = getAppointmentStatus(appointment);
   const resolvedDetailLabel = detailLabel ?? getAppointmentTitle(appointment);
+  const highlightClasses = highlight
+    ? "border-warning/90 bg-warning/10"
+    : "border-border bg-white";
 
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`w-full rounded-2xl border border-border bg-white p-4 text-left shadow-sm transition ${
+      className={`w-full rounded-2xl border p-4 text-left shadow-sm transition ${highlightClasses} ${
         blocked ? "opacity-70" : "hover:-translate-y-0.5 hover:shadow-md"
       }`}
     >
