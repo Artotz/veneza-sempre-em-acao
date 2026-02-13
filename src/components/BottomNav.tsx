@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 import { useOnlineStatus } from "../hooks/useOnlineStatus";
 
 const navItems = [
@@ -6,7 +6,6 @@ const navItems = [
   { to: "/cronograma/semana", label: "Semana" },
   { to: "/cronograma/mes", label: "Mes" },
   { to: "/cronograma/lista", label: "Lista" },
-  { to: "/empresas", label: "Empresas" },
 ];
 
 export const BottomNav = () => {
@@ -24,7 +23,14 @@ export const BottomNav = () => {
           </div>
         </div>
       )}
-      <div className="mx-auto flex w-full max-w-xl items-center justify-around px-6 py-3">
+      <div className="relative mx-auto flex w-full max-w-xl items-center justify-around px-6 py-3">
+        <Link
+          to="/apontamentos/novo"
+          aria-label="Novo apontamento"
+          className="absolute left-1/2 -top-6 z-30 flex h-12 w-12 -translate-x-1/2 items-center justify-center rounded-full bg-foreground text-white shadow-lg ring-4 ring-white/80 transition hover:bg-foreground/90"
+        >
+          <span className="text-2xl leading-none">+</span>
+        </Link>
         {navItems.map((item) => (
           <NavLink
             key={item.to}

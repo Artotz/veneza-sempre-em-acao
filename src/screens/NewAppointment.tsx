@@ -129,11 +129,6 @@ export default function NewAppointment() {
   }, [id]);
 
   useEffect(() => {
-    if (selectedCompanyId || companies.length === 0) return;
-    setSelectedCompanyId(companies[0].id);
-  }, [companies, selectedCompanyId]);
-
-  useEffect(() => {
     if (startsAt || endsAt) return;
     const now = new Date();
     const startValue = toLocalInputValue(now);

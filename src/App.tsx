@@ -85,6 +85,14 @@ export default function App() {
               }
             />
             <Route
+              path="/apontamentos/novo"
+              element={
+                <RequireAuth>
+                  <NewAppointment />
+                </RequireAuth>
+              }
+            />
+            <Route
               path="/apontamentos/:id"
               element={
                 <RequireAuth>
