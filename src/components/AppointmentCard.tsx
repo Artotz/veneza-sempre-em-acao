@@ -44,12 +44,16 @@ export const AppointmentCard = ({
             {companyName}
           </h3>
           <div className="mt-1 space-y-1 text-sm text-foreground-muted">
-            <p>{resolvedDetailLabel}</p>
+            {/* <p>{resolvedDetailLabel}</p> */}
             {appointment.createdBy ? (
               <p className="text-xs text-foreground-soft">
                 Criado por {appointment.createdBy}
               </p>
-            ) : null}
+            ) : (
+              <p className="text-xs text-foreground-soft">
+                Sem criador definido
+              </p>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2">

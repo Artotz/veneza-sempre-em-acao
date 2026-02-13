@@ -171,7 +171,7 @@ export default function DayView() {
     [activeDayAppointments, user?.email],
   );
   const filteredAppointments = useMemo(() => {
-    if (statusFilters.length === 0) return [];
+    if (statusFilters.length === 0 && !showSuggestions) return [];
     return activeDayAppointments.filter((appointment) => {
       const matchesStatus = statusFilters.includes(
         getAppointmentStatus(appointment),

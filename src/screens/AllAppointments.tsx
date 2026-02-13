@@ -86,7 +86,7 @@ export default function AllAppointments() {
   );
 
   const filteredAppointments = useMemo(() => {
-    if (statusFilters.length === 0) return [];
+    if (statusFilters.length === 0 && !showSuggestions) return [];
     return orderedAppointments.filter((appointment) => {
       const matchesStatus = statusFilters.includes(
         getAppointmentStatus(appointment),
@@ -234,7 +234,7 @@ export default function AllAppointments() {
               <EmptyState
                 title="Sem agendamentos"
                 description={
-                  statusFilters.length === 0
+                  statusFilters.length === 0 && !showSuggestions
                     ? "Nenhum filtro ativo. Ligue ao menos um status acima."
                     : "Nenhum agendamento encontrado para os filtros ativos."
                 }
