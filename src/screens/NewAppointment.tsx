@@ -255,7 +255,7 @@ export default function NewAppointment() {
           }
         />
         <Link
-          to="/empresas"
+          to="/cronograma/lista?tab=empresas"
           className="mt-4 inline-flex items-center justify-center rounded-full border border-border px-4 py-2 text-xs font-semibold text-foreground-soft"
         >
           Voltar para empresas
@@ -268,7 +268,7 @@ export default function NewAppointment() {
     <AppShell title="Novo apontamento" subtitle="Preencha os dados essenciais.">
       <div className="space-y-4">
         <Link
-          to="/empresas"
+          to="/cronograma/lista?tab=empresas"
           className="inline-flex items-center gap-2 text-xs font-semibold text-foreground-soft"
         >
           Voltar para empresas

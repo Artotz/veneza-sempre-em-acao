@@ -7,7 +7,6 @@ import DayView from "./screens/DayView";
 import WeekView from "./screens/WeekView";
 import { ScheduleProvider } from "./state/ScheduleProvider";
 import Login from "./screens/Login";
-import Companies from "./screens/Companies";
 import NewAppointment from "./screens/NewAppointment";
 import { AuthProvider } from "./contexts/AuthProvider";
 import { RequireAuth } from "./components/RequireAuth";
@@ -28,7 +27,7 @@ export default function App() {
               path="/empresas"
               element={
                 <RequireAuth>
-                  <Companies />
+                  <Navigate to="/cronograma/lista?tab=empresas" replace />
                 </RequireAuth>
               }
             />

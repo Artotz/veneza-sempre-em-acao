@@ -23,31 +23,50 @@ export const BottomNav = () => {
           </div>
         </div>
       )}
-      <div className="relative mx-auto flex w-full max-w-xl items-center justify-around px-6 py-3">
-        <Link
-          to="/apontamentos/novo"
-          aria-label="Novo apontamento"
-          className="absolute left-1/2 -top-6 z-30 flex h-12 w-12 -translate-x-1/2 items-center justify-center rounded-full bg-foreground text-white shadow-lg ring-4 ring-white/80 transition hover:bg-foreground/90"
-        >
-          <span className="text-2xl leading-none">+</span>
-        </Link>
-        {navItems.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            className={({ isActive }) =>
-              [
-                "flex flex-col items-center gap-1 rounded-xl px-4 py-2 text-xs font-semibold transition",
-                isActive
-                  ? "bg-brand/15 text-foreground"
-                  : "text-foreground-soft hover:bg-surface-muted",
-              ].join(" ")
-            }
+      <div className="mx-auto w-full max-w-xl px-4 py-3">
+        <div className="grid grid-cols-5 items-center">
+          {navItems.slice(0, 2).map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) =>
+                [
+                  "mx-auto flex w-full max-w-[84px] flex-col items-center gap-1 rounded-xl px-2 py-2 text-xs font-semibold transition",
+                  isActive
+                    ? "bg-brand/15 text-foreground"
+                    : "text-foreground-soft hover:bg-surface-muted",
+                ].join(" ")
+              }
+            >
+              <span className="h-2 w-2 rounded-full bg-accent" />
+              {item.label}
+            </NavLink>
+          ))}
+          <Link
+            to="/apontamentos/novo"
+            aria-label="Novo apontamento"
+            className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-foreground text-white shadow-lg transition hover:bg-foreground/90"
           >
-            <span className="h-2 w-2 rounded-full bg-accent" />
-            {item.label}
-          </NavLink>
-        ))}
+            <span className="text-2xl leading-none">+</span>
+          </Link>
+          {navItems.slice(2).map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) =>
+                [
+                  "mx-auto flex w-full max-w-[84px] flex-col items-center gap-1 rounded-xl px-2 py-2 text-xs font-semibold transition",
+                  isActive
+                    ? "bg-brand/15 text-foreground"
+                    : "text-foreground-soft hover:bg-surface-muted",
+                ].join(" ")
+              }
+            >
+              <span className="h-2 w-2 rounded-full bg-accent" />
+              {item.label}
+            </NavLink>
+          ))}
+        </div>
       </div>
     </nav>
   );

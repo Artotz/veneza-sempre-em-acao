@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { AppShell } from "../components/AppShell";
 import { AppointmentCard } from "../components/AppointmentCard";
 import { DetailsMapTabs } from "../components/DetailsMapTabs";
@@ -37,7 +37,10 @@ export default function AllAppointments() {
   const { state, selectors, actions } = useSchedule();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<"details" | "map">("details");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<"details" | "map">(() =>
+    searchParams.get("tab") === "empresas" ? "map" : "details",
+  );
   const [statusFilters, setStatusFilters] = useState<AppointmentStatus[]>(
     () => ["agendado", "em_execucao"],
   );
@@ -54,6 +57,10 @@ export default function AllAppointments() {
   useEffect(() => {
     actions.setRange({ startAt: monthRange.startAt, endAt: monthRange.endAt });
   }, [actions, monthRange.endAt, monthRange.startAt]);
+
+  useEffect(() => {
+    setActiveTab(searchParams.get("tab") === "empresas" ? "map" : "details");
+  }, [searchParams]);
 
   const orderedAppointments = useMemo(
     () => [...state.appointments].sort(sortByStart),
@@ -152,6 +159,17 @@ export default function AllAppointments() {
     navigate(`/empresas/${id}`);
   };
 
+  const handleTabChange = (tab: "details" | "map") => {
+    setActiveTab(tab);
+    const nextParams = new URLSearchParams(searchParams);
+    if (tab === "map") {
+      nextParams.set("tab", "empresas");
+    } else {
+      nextParams.delete("tab");
+    }
+    setSearchParams(nextParams, { replace: true });
+  };
+
   return (
     <AppShell
       title="Lista geral"
@@ -161,7 +179,7 @@ export default function AllAppointments() {
       <div className="space-y-4">
         <DetailsMapTabs
           value={activeTab}
-          onChange={setActiveTab}
+          onChange={handleTabChange}
           detailsLabel="Agendamentos"
           mapLabel="Empresas"
         />
