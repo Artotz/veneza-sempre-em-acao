@@ -9,6 +9,7 @@ import { buildMonthWeeks, formatDateShort, formatMonthYear } from "../lib/date";
 import { formatCurrencyBRL, formatQuantity } from "../lib/format";
 import {
   formatAppointmentWindow,
+  getAppointmentStatus,
   getAppointmentTitle,
   isBlocked,
   isSuggested,
@@ -16,7 +17,7 @@ import {
 } from "../lib/schedule";
 import { COMPANY_SELECT, mapCompany } from "../lib/supabase";
 import { createSupabaseBrowserClient } from "../lib/supabaseClient";
-import type { Appointment, Company } from "../lib/types";
+import type { Appointment, AppointmentStatus, Company } from "../lib/types";
 import { useSchedule } from "../state/useSchedule";
 import {
   getCompaniesSnapshot,
@@ -48,6 +49,11 @@ export default function CompanyDetail() {
   const [company, setCompany] = useState<Company | null>(null);
   const [companyLoading, setCompanyLoading] = useState(true);
   const [companyError, setCompanyError] = useState<string | null>(null);
+  const [statusFilters, setStatusFilters] = useState<AppointmentStatus[]>(() => [
+    "agendado",
+    "em_execucao",
+  ]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   const weeks = useMemo(() => buildMonthWeeks(new Date()), []);
   const monthRange = useMemo(() => {
@@ -158,6 +164,76 @@ export default function CompanyDetail() {
   const dayGroups = useMemo(
     () => buildDayGroups(orderedAppointments),
     [orderedAppointments],
+  );
+
+  const summary = useMemo(() => {
+    return orderedAppointments.reduce(
+      (acc, appointment) => {
+        acc[getAppointmentStatus(appointment)] += 1;
+        return acc;
+      },
+      {
+        total: orderedAppointments.length,
+        agendado: 0,
+        em_execucao: 0,
+        concluido: 0,
+        cancelado: 0,
+      },
+    );
+  }, [orderedAppointments]);
+
+  const suggestionCount = useMemo(
+    () =>
+      orderedAppointments.filter((appointment) =>
+        isSuggested(appointment, user?.email),
+      ).length,
+    [orderedAppointments, user?.email],
+  );
+
+  const filteredAppointments = useMemo(() => {
+    if (statusFilters.length === 0 && !showSuggestions) return [];
+    return orderedAppointments.filter((appointment) => {
+      const matchesStatus = statusFilters.includes(
+        getAppointmentStatus(appointment),
+      );
+      const matchesSuggestion =
+        showSuggestions && isSuggested(appointment, user?.email);
+      return matchesStatus || matchesSuggestion;
+    });
+  }, [orderedAppointments, showSuggestions, statusFilters, user?.email]);
+
+  const pillOptions = useMemo(
+    () => [
+      {
+        status: "agendado" as const,
+        label: "Agendados",
+        count: summary.agendado,
+        baseClass: "bg-warning/15 text-warning",
+        ringClass: "ring-warning/30",
+      },
+      {
+        status: "em_execucao" as const,
+        label: "Em execucao",
+        count: summary.em_execucao,
+        baseClass: "bg-info/15 text-info",
+        ringClass: "ring-info/30",
+      },
+      {
+        status: "concluido" as const,
+        label: "Concluidos",
+        count: summary.concluido,
+        baseClass: "bg-success/15 text-success",
+        ringClass: "ring-success/30",
+      },
+      {
+        status: "cancelado" as const,
+        label: "Cancelados",
+        count: summary.cancelado,
+        baseClass: "bg-danger/15 text-danger",
+        ringClass: "ring-danger/30",
+      },
+    ],
+    [summary],
   );
 
   const companyDisplayName =
@@ -303,45 +379,97 @@ export default function CompanyDetail() {
               title="Nao foi possivel carregar"
               description={state.error}
             />
-          ) : orderedAppointments.length ? (
+          ) : (
             <div className="space-y-3">
+              <div className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
+                <SectionHeader
+                  title="Filtros do mes"
+                  subtitle="Status e sugestoes."
+                  rightSlot={`${filteredAppointments.length} ag.`}
+                />
+                <div className="flex flex-wrap gap-2 text-[11px] font-semibold">
+                  {pillOptions.map((pill) => {
+                    const isActive = statusFilters.includes(pill.status);
+                    return (
+                      <button
+                        key={pill.status}
+                        type="button"
+                        onClick={() =>
+                          setStatusFilters((current) =>
+                            current.includes(pill.status)
+                              ? current.filter((status) => status !== pill.status)
+                              : [...current, pill.status],
+                          )
+                        }
+                        aria-pressed={isActive}
+                        className={`rounded-full px-3 py-1 transition ${pill.baseClass} ${
+                          isActive ? `ring-2 ${pill.ringClass}` : ""
+                        }`}
+                      >
+                        {pill.label}: {pill.count}
+                      </button>
+                    );
+                  })}
+                  <button
+                    type="button"
+                    onClick={() => setShowSuggestions((current) => !current)}
+                    aria-pressed={showSuggestions}
+                    className={`rounded-full px-3 py-1 transition bg-accent/10 text-foreground ${
+                      showSuggestions ? "ring-2 ring-accent/30" : ""
+                    }`}
+                  >
+                    Sugestoes: {suggestionCount}
+                  </button>
+                </div>
+              </div>
+
               {state.error ? (
                 <div className="rounded-2xl border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-foreground-soft">
                   {state.error}
                 </div>
               ) : null}
-              {orderedAppointments.map((appointment) => {
-                const appointmentDetail = getAppointmentTitle(appointment);
-                const snapshot = appointment.addressSnapshot;
-                const detailLabel = snapshot
-                  ? `${appointmentDetail} - ${snapshot}`
-                  : appointmentDetail;
-                const dayLabel = formatDateShort(new Date(appointment.startAt));
-                const key = buildDayKey(new Date(appointment.startAt));
-                const dayAppointments = dayGroups.get(key) ?? [];
-                const blocked = isBlocked(appointment, dayAppointments);
-                const isSuggestion = isSuggested(appointment, user?.email);
-                return (
-                  <AppointmentCard
-                    key={appointment.id}
-                    appointment={appointment}
-                    companyName={companyDisplayName}
-                    headerLabel={`${dayLabel} - ${formatAppointmentWindow(
-                      appointment,
-                    )}`}
-                    detailLabel={detailLabel}
-                    blocked={blocked}
-                    highlight={isSuggestion}
-                    onClick={() => handleOpenAppointment(appointment.id)}
-                  />
-                );
-              })}
+              {filteredAppointments.length ? (
+                filteredAppointments.map((appointment) => {
+                  const appointmentDetail = getAppointmentTitle(appointment);
+                  const snapshot = appointment.addressSnapshot;
+                  const detailLabel = snapshot
+                    ? `${appointmentDetail} - ${snapshot}`
+                    : appointmentDetail;
+                  const dayLabel = formatDateShort(
+                    new Date(appointment.startAt),
+                  );
+                  const key = buildDayKey(new Date(appointment.startAt));
+                  const dayAppointments = dayGroups.get(key) ?? [];
+                  const blocked = isBlocked(appointment, dayAppointments);
+                  const isSuggestion = isSuggested(appointment, user?.email);
+                  return (
+                    <AppointmentCard
+                      key={appointment.id}
+                      appointment={appointment}
+                      companyName={companyDisplayName}
+                      headerLabel={`${dayLabel} - ${formatAppointmentWindow(
+                        appointment,
+                      )}`}
+                      detailLabel={detailLabel}
+                      blocked={blocked}
+                      highlight={isSuggestion}
+                      onClick={() => handleOpenAppointment(appointment.id)}
+                    />
+                  );
+                })
+              ) : (
+                <EmptyState
+                  title="Sem apontamentos"
+                  description={
+                    orderedAppointments.length === 0
+                      ? "Nenhum apontamento encontrado para este mes."
+                      : statusFilters.length === 0 && !showSuggestions
+                        ? "Nenhum filtro ativo. Ligue ao menos um status acima."
+                        : "Nenhum apontamento encontrado para os filtros ativos."
+                  }
+                />
+              )}
             </div>
-          ) : (
-            <EmptyState
-              title="Sem apontamentos"
-              description="Nenhum apontamento encontrado para este mes."
-            />
           )}
         </section>
       </div>
