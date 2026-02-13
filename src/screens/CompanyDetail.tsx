@@ -6,6 +6,7 @@ import { EmptyState } from "../components/EmptyState";
 import { SectionHeader } from "../components/SectionHeader";
 import { useAuth } from "../contexts/useAuth";
 import { buildMonthWeeks, formatDateShort, formatMonthYear } from "../lib/date";
+import { formatCurrencyBRL, formatQuantity } from "../lib/format";
 import {
   formatAppointmentWindow,
   getAppointmentTitle,
@@ -98,8 +99,7 @@ export default function CompanyDetail() {
         return;
       }
 
-      const isOffline =
-        typeof navigator !== "undefined" && !navigator.onLine;
+      const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
       if (isOffline) {
         setCompanyError("Sem conexao e sem cache local.");
         setCompanyLoading(false);
@@ -161,9 +161,7 @@ export default function CompanyDetail() {
   );
 
   const companyDisplayName =
-    company?.name ??
-    orderedAppointments[0]?.companyName ??
-    "Empresa";
+    company?.name ?? orderedAppointments[0]?.companyName ?? "Empresa";
 
   const handleOpenAppointment = (appointmentId: string) => {
     navigate(`/apontamentos/${appointmentId}`);
@@ -253,6 +251,25 @@ export default function CompanyDetail() {
                   <p>Validacao: {company.validacao}</p>
                 ) : null}
               </div>
+
+              <div className="grid gap-2 text-xs sm:grid-cols-2">
+                <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
+                    Valor Cot (3m)
+                  </p>
+                  <p className="text-sm font-semibold text-foreground">
+                    {formatCurrencyBRL(company.vlrUltimos3Meses)}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
+                    Qtd Cot (3m)
+                  </p>
+                  <p className="text-sm font-semibold text-foreground">
+                    {formatQuantity(company.qtdUltimos3Meses)}
+                  </p>
+                </div>
+              </div>
             </div>
           ) : (
             <EmptyState
@@ -299,9 +316,7 @@ export default function CompanyDetail() {
                 const detailLabel = snapshot
                   ? `${appointmentDetail} - ${snapshot}`
                   : appointmentDetail;
-                const dayLabel = formatDateShort(
-                  new Date(appointment.startAt),
-                );
+                const dayLabel = formatDateShort(new Date(appointment.startAt));
                 const key = buildDayKey(new Date(appointment.startAt));
                 const dayAppointments = dayGroups.get(key) ?? [];
                 const blocked = isBlocked(appointment, dayAppointments);

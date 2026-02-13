@@ -7,6 +7,7 @@ import { EmptyState } from "../components/EmptyState";
 import { SectionHeader } from "../components/SectionHeader";
 import { useAuth } from "../contexts/useAuth";
 import { buildMonthWeeks, formatDateShort, formatMonthYear } from "../lib/date";
+import { formatCurrencyBRL, formatQuantity } from "../lib/format";
 import {
   formatAppointmentWindow,
   getAppointmentStatus,
@@ -46,6 +47,9 @@ export default function AllAppointments() {
   );
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [companyQuery, setCompanyQuery] = useState("");
+  const [companySortBy, setCompanySortBy] = useState<"valor" | "quantidade">(
+    "valor",
+  );
 
   const weeks = useMemo(() => buildMonthWeeks(new Date()), []);
   const monthRange = useMemo(() => {
@@ -109,13 +113,26 @@ export default function AllAppointments() {
 
   const filteredCompanies = useMemo(() => {
     const trimmed = companyQuery.trim().toLowerCase();
-    if (!trimmed) return state.companies;
-    return state.companies.filter((company) => {
-      const name = company.name?.toLowerCase() ?? "";
-      const document = company.document?.toLowerCase() ?? "";
-      return name.includes(trimmed) || document.includes(trimmed);
+    const base = trimmed
+      ? state.companies.filter((company) => {
+          const name = company.name?.toLowerCase() ?? "";
+          const document = company.document?.toLowerCase() ?? "";
+          return name.includes(trimmed) || document.includes(trimmed);
+        })
+      : state.companies;
+
+    const items = [...base];
+    const getMetric = (company: (typeof items)[number]) =>
+      companySortBy === "valor"
+        ? (company.vlrUltimos3Meses ?? 0)
+        : (company.qtdUltimos3Meses ?? 0);
+    items.sort((a, b) => {
+      const diff = getMetric(b) - getMetric(a);
+      if (diff !== 0) return diff;
+      return (a.name ?? "").localeCompare(b.name ?? "", "pt-BR");
     });
-  }, [companyQuery, state.companies]);
+    return items;
+  }, [companyQuery, companySortBy, state.companies]);
 
   const pillOptions = useMemo(
     () => [
@@ -304,6 +321,33 @@ export default function AllAppointments() {
                 placeholder="Buscar empresa..."
                 className="w-full rounded-2xl border border-border bg-surface-muted px-4 py-3 text-sm text-foreground outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
               />
+              <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
+                <span className="text-foreground-soft">Ordenar por:</span>
+                <button
+                  type="button"
+                  onClick={() => setCompanySortBy("valor")}
+                  aria-pressed={companySortBy === "valor"}
+                  className={`rounded-full px-3 py-1 transition ${
+                    companySortBy === "valor"
+                      ? "bg-foreground text-white"
+                      : "bg-surface-muted text-foreground-soft"
+                  }`}
+                >
+                  Valor Cot (3m)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCompanySortBy("quantidade")}
+                  aria-pressed={companySortBy === "quantidade"}
+                  className={`rounded-full px-3 py-1 transition ${
+                    companySortBy === "quantidade"
+                      ? "bg-foreground text-white"
+                      : "bg-surface-muted text-foreground-soft"
+                  }`}
+                >
+                  Quantidade Cot (3m)
+                </button>
+              </div>
             </section>
 
             <section className="space-y-3">
@@ -320,14 +364,38 @@ export default function AllAppointments() {
                       <h3 className="text-lg font-semibold text-foreground">
                         {company.name}
                       </h3>
-                      {[company.state, company.csa ? `CSA ${company.csa}` : null].filter(Boolean)
-                        .length ? (
+                      {[
+                        company.state,
+                        company.csa ? `CSA ${company.csa}` : null,
+                      ].filter(Boolean).length ? (
                         <p className="text-sm text-foreground-muted">
-                          {[company.state, company.csa ? `CSA ${company.csa}` : null]
+                          {[
+                            company.state,
+                            company.csa ? `CSA ${company.csa}` : null,
+                          ]
                             .filter(Boolean)
                             .join(" - ")}
                         </p>
                       ) : null}
+                    </div>
+
+                    <div className="grid gap-2 text-xs sm:grid-cols-2">
+                      <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
+                          Valor Cot (3m)
+                        </p>
+                        <p className="text-sm font-semibold text-foreground">
+                          {formatCurrencyBRL(company.vlrUltimos3Meses)}
+                        </p>
+                      </div>
+                      <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
+                          Qtd Cot (3m)
+                        </p>
+                        <p className="text-sm font-semibold text-foreground">
+                          {formatQuantity(company.qtdUltimos3Meses)}
+                        </p>
+                      </div>
                     </div>
 
                     <div className="grid gap-2 sm:grid-cols-2">

@@ -4,6 +4,7 @@ import { AppShell } from "../components/AppShell";
 import { EmptyState } from "../components/EmptyState";
 import { SectionHeader } from "../components/SectionHeader";
 import { useAuth } from "../contexts/useAuth";
+import { formatCurrencyBRL, formatQuantity } from "../lib/format";
 import { createSupabaseBrowserClient } from "../lib/supabaseClient";
 import { COMPANY_SELECT, mapCompany } from "../lib/supabase";
 import type { Company } from "../lib/types";
@@ -18,6 +19,7 @@ export default function Companies() {
   const { user, loading: authLoading } = useAuth();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [query, setQuery] = useState("");
+  const [sortBy, setSortBy] = useState<"valor" | "quantidade">("valor");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,67 +56,83 @@ export default function Companies() {
       };
     }
 
-    handle = setTimeout(async () => {
-      setLoading(true);
-      setError(null);
-      const trimmed = query.trim();
-      const isOffline =
-        typeof navigator !== "undefined" && !navigator.onLine;
+    handle = setTimeout(
+      async () => {
+        setLoading(true);
+        setError(null);
+        const trimmed = query.trim();
+        const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
 
-      if (isOffline) {
-        const cached = await getCompaniesSnapshot(userEmail);
-        if (!active) return;
-        if (!cached) {
-          setCompanies([]);
-          setError("Sem conexao e sem cache local.");
-          setLoading(false);
-          return;
-        }
-        setCompanies(filterCompanies(cached.companies, trimmed));
-        setLoading(false);
-        return;
-      }
-      let request = supabase
-        .from("companies")
-        .select(COMPANY_SELECT)
-        .eq("email_csa", userEmail)
-        .order("name", { ascending: true });
-
-      if (trimmed.length) {
-        request = request.or(
-          `name.ilike.%${trimmed}%,document.ilike.%${trimmed}%`
-        );
-      }
-
-      const { data, error: requestError } = await request;
-
-      if (!active) return;
-
-      if (requestError) {
-        const cached = await getCompaniesSnapshot(userEmail);
-        if (!active) return;
-        if (cached) {
+        if (isOffline) {
+          const cached = await getCompaniesSnapshot(userEmail);
+          if (!active) return;
+          if (!cached) {
+            setCompanies([]);
+            setError("Sem conexao e sem cache local.");
+            setLoading(false);
+            return;
+          }
           setCompanies(filterCompanies(cached.companies, trimmed));
           setLoading(false);
           return;
         }
-        setError(requestError.message);
-        setCompanies([]);
-        setLoading(false);
-        return;
-      }
+        let request = supabase
+          .from("companies")
+          .select(COMPANY_SELECT)
+          .eq("email_csa", userEmail)
+          .order("name", { ascending: true });
 
-      const mapped = (data ?? []).map(mapCompany);
-      setCompanies(filterCompanies(mapped, trimmed));
-      await saveCompaniesSnapshot(userEmail, mapped);
-      setLoading(false);
-    }, query.trim().length ? 300 : 0);
+        if (trimmed.length) {
+          request = request.or(
+            `name.ilike.%${trimmed}%,document.ilike.%${trimmed}%`,
+          );
+        }
+
+        const { data, error: requestError } = await request;
+
+        if (!active) return;
+
+        if (requestError) {
+          const cached = await getCompaniesSnapshot(userEmail);
+          if (!active) return;
+          if (cached) {
+            setCompanies(filterCompanies(cached.companies, trimmed));
+            setLoading(false);
+            return;
+          }
+          setError(requestError.message);
+          setCompanies([]);
+          setLoading(false);
+          return;
+        }
+
+        const mapped = (data ?? []).map(mapCompany);
+        setCompanies(filterCompanies(mapped, trimmed));
+        await saveCompaniesSnapshot(userEmail, mapped);
+        setLoading(false);
+      },
+      query.trim().length ? 300 : 0,
+    );
 
     return () => {
       active = false;
       if (handle) clearTimeout(handle);
     };
   }, [authLoading, query, supabase, user?.email]);
+
+  const sortedCompanies = useMemo(() => {
+    const items = [...companies];
+    const getMetric = (company: Company) =>
+      sortBy === "valor"
+        ? (company.vlrUltimos3Meses ?? 0)
+        : (company.qtdUltimos3Meses ?? 0);
+    items.sort((a, b) => {
+      const diff = getMetric(b) - getMetric(a);
+      if (diff !== 0) return diff;
+      return (a.name ?? "").localeCompare(b.name ?? "", "pt-BR");
+    });
+    return items;
+  }, [companies, sortBy]);
 
   return (
     <AppShell
@@ -129,6 +147,33 @@ export default function Companies() {
           placeholder="Buscar empresa..."
           className="w-full rounded-2xl border border-border bg-surface-muted px-4 py-3 text-sm text-foreground outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
         />
+        <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
+          <span className="text-foreground-soft">Ordenar por:</span>
+          <button
+            type="button"
+            onClick={() => setSortBy("valor")}
+            aria-pressed={sortBy === "valor"}
+            className={`rounded-full px-3 py-1 transition ${
+              sortBy === "valor"
+                ? "bg-foreground text-white"
+                : "bg-surface-muted text-foreground-soft"
+            }`}
+          >
+            Valor Cot (3m)
+          </button>
+          <button
+            type="button"
+            onClick={() => setSortBy("quantidade")}
+            aria-pressed={sortBy === "quantidade"}
+            className={`rounded-full px-3 py-1 transition ${
+              sortBy === "quantidade"
+                ? "bg-foreground text-white"
+                : "bg-surface-muted text-foreground-soft"
+            }`}
+          >
+            Quantidade Cot (3m)
+          </button>
+        </div>
       </section>
 
       <section className="mt-5 space-y-3">
@@ -139,12 +184,9 @@ export default function Companies() {
             <div className="h-24 animate-pulse rounded-3xl bg-surface-muted" />
           </div>
         ) : error ? (
-          <EmptyState
-            title="Nao foi possivel carregar"
-            description={error}
-          />
-        ) : companies.length ? (
-          companies.map((company) => (
+          <EmptyState title="Nao foi possivel carregar" description={error} />
+        ) : sortedCompanies.length ? (
+          sortedCompanies.map((company) => (
             <div
               key={company.id}
               className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm"
@@ -156,14 +198,35 @@ export default function Companies() {
                 <h3 className="text-lg font-semibold text-foreground">
                   {company.name}
                 </h3>
-                {[company.state, company.csa ? `CSA ${company.csa}` : null].filter(Boolean)
-                  .length ? (
+                {[
+                  company.state,
+                  company.csa ? `CSA ${company.csa}` : null,
+                ].filter(Boolean).length ? (
                   <p className="text-sm text-foreground-muted">
                     {[company.state, company.csa ? `CSA ${company.csa}` : null]
                       .filter(Boolean)
                       .join(" - ")}
                   </p>
                 ) : null}
+              </div>
+
+              <div className="grid gap-2 text-xs sm:grid-cols-2">
+                <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
+                    Valor Cot (3m)
+                  </p>
+                  <p className="text-sm font-semibold text-foreground">
+                    {formatCurrencyBRL(company.vlrUltimos3Meses)}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
+                    Qtd Cot (3m)
+                  </p>
+                  <p className="text-sm font-semibold text-foreground">
+                    {formatQuantity(company.qtdUltimos3Meses)}
+                  </p>
+                </div>
               </div>
 
               <div className="grid gap-2 sm:grid-cols-2">
@@ -196,6 +259,3 @@ export default function Companies() {
     </AppShell>
   );
 }
-
-
-

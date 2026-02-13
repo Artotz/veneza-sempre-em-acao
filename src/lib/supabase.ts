@@ -15,6 +15,8 @@ type CompanyRow = {
   classe_cliente?: string | null;
   validacao?: string | null;
   referencia?: string | null;
+  qtd_ultimos_3_meses?: number | string | null;
+  vlr_ultimos_3_meses?: number | string | null;
   created_at?: string | null;
 };
 
@@ -48,10 +50,16 @@ type AppointmentRow = {
 };
 
 export const COMPANY_SELECT =
-  "id, document, name, state, lat, lng, csa, email_csa, carteira_def, client_class, carteira_def2, classe_cliente, validacao, referencia, created_at";
+  "id, document, name, state, lat, lng, csa, email_csa, carteira_def, client_class, carteira_def2, classe_cliente, validacao, referencia, qtd_ultimos_3_meses, vlr_ultimos_3_meses, created_at";
 
 export const APPOINTMENT_SELECT =
   "id, company_id, appointment_id, consultant_id, consultant_name, created_by, starts_at, ends_at, status, check_in_at, check_out_at, check_in_lat, check_in_lng, check_in_accuracy_m, check_out_lat, check_out_lng, check_out_accuracy_m, address_snapshot, absence_reason, absence_note, notes, oportunidades, created_at, updated_at";
+
+const parseNumber = (value?: number | string | null) => {
+  if (value == null) return null;
+  const parsed = Number(value);
+  return Number.isNaN(parsed) ? null : parsed;
+};
 
 export const mapCompany = (row: CompanyRow): Company => ({
   id: row.id,
@@ -68,6 +76,8 @@ export const mapCompany = (row: CompanyRow): Company => ({
   classeCliente: row.classe_cliente ?? null,
   validacao: row.validacao ?? null,
   referencia: row.referencia ?? null,
+  qtdUltimos3Meses: parseNumber(row.qtd_ultimos_3_meses),
+  vlrUltimos3Meses: parseNumber(row.vlr_ultimos_3_meses),
   createdAt: row.created_at ?? null,
 });
 
