@@ -1,5 +1,5 @@
 import type { Appointment } from "../lib/types";
-import { getAppointmentStatus, getAppointmentTitle } from "../lib/schedule";
+import { getAppointmentStatus } from "../lib/schedule";
 import { StatusBadge } from "./StatusBadge";
 
 type AppointmentCardProps = {
@@ -17,12 +17,12 @@ export const AppointmentCard = ({
   companyName,
   blocked,
   headerLabel,
-  detailLabel,
+  // detailLabel,
   highlight = false,
   onClick,
 }: AppointmentCardProps) => {
   const status = getAppointmentStatus(appointment);
-  const resolvedDetailLabel = detailLabel ?? getAppointmentTitle(appointment);
+  // const resolvedDetailLabel = detailLabel ?? getAppointmentTitle(appointment);
   const highlightClasses = highlight
     ? "border-warning/90 bg-warning/10"
     : "border-border bg-white";
