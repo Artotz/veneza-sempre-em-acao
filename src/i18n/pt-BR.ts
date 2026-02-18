@@ -218,7 +218,7 @@ const ptBR = {
   Outro: "Outro",
   Outros: "Outros",
   POPs: "POPs",
-  "PWA Cronograma": "PWA Cronograma",
+  "PWA Cronograma": "Veneza Field Service",
   "Pagina nao encontrada": "Página não encontrada",
   Pendente: "Pendente",
   "Permissao de localizacao negada. Ative a localizacao para registrar o atendimento.":

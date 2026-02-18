@@ -74,20 +74,20 @@ export default function Login() {
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-white/70">
                 {t("PWA Cronograma")}
               </p>
-              <h1 className="text-3xl font-semibold leading-tight">
+              {/* <h1 className="text-3xl font-semibold leading-tight">
                 {t("Acesse o painel seguro")}
               </h1>
               <p className="text-sm text-white/80">
                 {t(
                   "Entre com as credenciais do CRM para acessar empresas e agendamentos.",
                 )}
-              </p>
+              </p> */}
             </div>
-            <div className="rounded-2xl bg-white/10 p-4 text-sm text-white/90 shadow-inner">
+            {/* <div className="rounded-2xl bg-white/10 p-4 text-sm text-white/90 shadow-inner">
               {t(
                 "Sessoes sao preservadas pelo Supabase. Faca login para continuar.",
               )}
-            </div>
+            </div> */}
           </div>
 
           <div className="rounded-2xl border border-white/30 bg-white p-6 text-foreground shadow-lg shadow-brand/20">
