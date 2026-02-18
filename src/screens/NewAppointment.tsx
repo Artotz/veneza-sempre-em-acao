@@ -13,6 +13,8 @@ import {
   saveCompaniesSnapshot,
   savePendingAppointment,
 } from "../storage/offlineSchedule";
+import { formatDateShort, isSameDay } from "../lib/date";
+import { formatAppointmentWindow, getAppointmentStatus } from "../lib/schedule";
 
 const buildAddressSnapshot = (company: Company): string | null => {
   if (company.lat == null || company.lng == null) return null;
@@ -182,10 +184,55 @@ export default function NewAppointment() {
       return;
     }
 
-    setSaving(true);
+    const now = new Date();
+    if (startsAtDate < now) {
+      setError("Inicio nao pode ser menor que agora.");
+      return;
+    }
 
-    const addressSnapshot = buildAddressSnapshot(company);
     const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
+    if (isOffline) {
+      const isTodayStart = isSameDay(startsAtDate, now);
+      const isTodayEnd = isSameDay(endsAtDate, now);
+      if (!isTodayStart || !isTodayEnd) {
+        setError(
+          `Sem conexao: so e possivel criar apontamentos para hoje (${formatDateShort(
+            now,
+          )}).`,
+        );
+        return;
+      }
+    }
+
+    const conflict = state.appointments.find((appointment) => {
+      if (
+        getAppointmentStatus(appointment) === "cancelado" ||
+        !isSameDay(new Date(appointment.startAt), startsAtDate)
+      ) {
+        return false;
+      }
+      const existingStart = new Date(appointment.startAt);
+      const existingEnd = new Date(appointment.endAt);
+      if (
+        Number.isNaN(existingStart.getTime()) ||
+        Number.isNaN(existingEnd.getTime())
+      ) {
+        return false;
+      }
+      return startsAtDate < existingEnd && endsAtDate > existingStart;
+    });
+
+    if (conflict) {
+      setError(
+        `Conflito de horario: ja existe um apontamento em ${formatAppointmentWindow(
+          conflict,
+        )}.`,
+      );
+      return;
+    }
+
+    setSaving(true);
+    const addressSnapshot = buildAddressSnapshot(company);
 
     if (isOffline) {
       const nowIso = new Date().toISOString();

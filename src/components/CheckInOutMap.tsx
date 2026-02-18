@@ -4,6 +4,7 @@ import L from "leaflet";
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
 import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
+import { formatDateShort, formatTime } from "../lib/date";
 import type { Appointment } from "../lib/types";
 
 type MapPointKind = "checkin" | "checkout";
@@ -13,6 +14,7 @@ type MapPoint = {
   label: string;
   position: [number, number];
   kind: MapPointKind;
+  timestampLabel: string;
 };
 
 type CheckInOutMapProps = {
@@ -71,12 +73,20 @@ export const CheckInOutMap = ({
   const [showCheckOutMarker, setShowCheckOutMarker] = useState(true);
 
   const mapPoints = useMemo(() => {
+    const formatDateTimeLabel = (value?: string | null) => {
+      if (!value) return "Data/hora nao registrada";
+      const parsed = new Date(value);
+      if (Number.isNaN(parsed.getTime())) return "Data/hora invalida";
+      return `${formatDateShort(parsed)} - ${formatTime(parsed)}`;
+    };
+
     const points: MapPoint[] = [];
     const pushPoint = (
       appointment: Appointment,
       kind: MapPointKind,
       lat?: number | null,
-      lng?: number | null
+      lng?: number | null,
+      occurredAt?: string | null,
     ) => {
       if (lat == null || lng == null) return;
       const latNumber = Number(lat);
@@ -88,6 +98,7 @@ export const CheckInOutMap = ({
         label: getLabel ? getLabel(appointment, kind) : fallbackLabel,
         position: [latNumber, lngNumber],
         kind,
+        timestampLabel: formatDateTimeLabel(occurredAt),
       });
     };
 
@@ -96,13 +107,15 @@ export const CheckInOutMap = ({
         appointment,
         "checkin",
         appointment.checkInLat,
-        appointment.checkInLng
+        appointment.checkInLng,
+        appointment.checkInAt,
       );
       pushPoint(
         appointment,
         "checkout",
         appointment.checkOutLat,
-        appointment.checkOutLng
+        appointment.checkOutLng,
+        appointment.checkOutAt,
       );
     });
 
@@ -173,7 +186,7 @@ export const CheckInOutMap = ({
                   <div className="space-y-1 text-xs">
                     <p className="font-semibold text-foreground">{point.label}</p>
                     <p className="text-foreground-muted">
-                      {point.position[0].toFixed(5)}, {point.position[1].toFixed(5)}
+                      {point.timestampLabel}
                     </p>
                   </div>
                 </Popup>

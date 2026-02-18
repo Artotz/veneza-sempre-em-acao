@@ -11,6 +11,7 @@ import {
   buildMonthWeeks,
   formatMonthParam,
   formatMonthYear,
+  formatTime,
   isSameDay,
   parseMonthParam,
 } from "../lib/date";
@@ -20,6 +21,11 @@ import { useSchedule } from "../state/useSchedule";
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(Math.max(value, min), max);
+
+const DEFAULT_MIN_HOUR = 6;
+const DEFAULT_MAX_HOUR = 20;
+const SLOT_MINUTES = 30;
+const HOUR_HEIGHT = 64;
 
 const statusCardStyle: Record<AppointmentStatus, string> = {
   agendado: "border-warning/30 bg-warning/15 text-warning",
@@ -107,6 +113,91 @@ export default function WeekView() {
   }, [state.appointments, week]);
 
   const weekAppointments = dayGroups.flat();
+  const timeRange = useMemo(() => {
+    if (!weekAppointments.length) {
+      return { minHour: DEFAULT_MIN_HOUR, maxHour: DEFAULT_MAX_HOUR };
+    }
+    let minHour = Number.POSITIVE_INFINITY;
+    let maxHour = Number.NEGATIVE_INFINITY;
+    weekAppointments.forEach((appointment) => {
+      const start = new Date(appointment.startAt);
+      const end = new Date(appointment.endAt);
+      if (
+        Number.isNaN(start.getTime()) ||
+        Number.isNaN(end.getTime())
+      ) {
+        return;
+      }
+      const startHour = start.getHours() + start.getMinutes() / 60;
+      const endHour = end.getHours() + end.getMinutes() / 60;
+      minHour = Math.min(minHour, startHour);
+      maxHour = Math.max(maxHour, endHour);
+    });
+    if (!Number.isFinite(minHour) || !Number.isFinite(maxHour)) {
+      return { minHour: DEFAULT_MIN_HOUR, maxHour: DEFAULT_MAX_HOUR };
+    }
+    const computedMin = Math.floor(minHour);
+    const computedMax = Math.ceil(maxHour);
+    const clampedMin = clamp(
+      Math.min(computedMin, DEFAULT_MIN_HOUR),
+      0,
+      23,
+    );
+    const clampedMax = clamp(
+      Math.max(computedMax, DEFAULT_MAX_HOUR),
+      clampedMin + 1,
+      24,
+    );
+    return { minHour: clampedMin, maxHour: clampedMax };
+  }, [weekAppointments]);
+  const slotMarkers = useMemo(() => {
+    const totalMinutes = (timeRange.maxHour - timeRange.minHour) * 60;
+    const totalSlots = Math.ceil(totalMinutes / SLOT_MINUTES);
+    return Array.from({ length: totalSlots + 1 }).map((_, index) => {
+      const minutesFromStart = index * SLOT_MINUTES;
+      const absoluteMinutes = timeRange.minHour * 60 + minutesFromStart;
+      const hour = Math.floor(absoluteMinutes / 60);
+      const minute = absoluteMinutes % 60;
+      const isHour = minute === 0;
+      return {
+        key: `${hour}-${minute}`,
+        minutesFromStart,
+        isHour,
+        label: isHour
+          ? `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`
+          : "",
+      };
+    });
+  }, [timeRange.maxHour, timeRange.minHour]);
+  const gridHeight =
+    (timeRange.maxHour - timeRange.minHour) * HOUR_HEIGHT;
+  const pixelsPerMinute = HOUR_HEIGHT / 60;
+  const getAppointmentStyle = useCallback(
+    (appointment: (typeof weekAppointments)[number]) => {
+      const start = new Date(appointment.startAt);
+      const end = new Date(appointment.endAt);
+      if (
+        Number.isNaN(start.getTime()) ||
+        Number.isNaN(end.getTime())
+      ) {
+        return null;
+      }
+      const rangeStartMinutes = timeRange.minHour * 60;
+      const rangeEndMinutes = timeRange.maxHour * 60;
+      const startMinutes = start.getHours() * 60 + start.getMinutes();
+      const endMinutes = end.getHours() * 60 + end.getMinutes();
+      const clampedStart = Math.max(startMinutes, rangeStartMinutes);
+      const clampedEnd = Math.min(endMinutes, rangeEndMinutes);
+      if (clampedEnd <= clampedStart) return null;
+      const top = (clampedStart - rangeStartMinutes) * pixelsPerMinute;
+      const height = Math.max(
+        (clampedEnd - clampedStart) * pixelsPerMinute,
+        18,
+      );
+      return { top, height };
+    },
+    [pixelsPerMinute, timeRange.maxHour, timeRange.minHour],
+  );
 
   const handleOpenAppointment = (id: string) => {
     navigate(`/apontamentos/${id}`);
@@ -172,78 +263,133 @@ export default function WeekView() {
               <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
                 <SectionHeader
                   title="Agenda da semana"
-                  // subtitle="Dias lado a lado, ordenados por horario."
+                  subtitle="Dias lado a lado com escala horaria."
                 />
-                <div className="grid grid-cols-7 gap-1">
-                  {week.days.map((day, dayIndex) => {
-                    const dayAppointments = dayGroups[dayIndex] ?? [];
-                    const isToday = isSameDay(day.date, today);
-                    return (
-                      <div
-                        key={day.id}
-                        className={`flex min-w-0 flex-col gap-1 rounded-xl border p-1 ${
-                          isToday
-                            ? "border-accent bg-white ring-1 ring-accent/20"
-                            : "border-border bg-surface-muted"
-                        }`}
-                      >
-                        <div
-                          className={`rounded-lg px-1 py-1 text-center text-[9px] font-semibold leading-tight ${
-                            isToday
-                              ? "bg-accent/15 text-foreground"
-                              : "bg-white text-foreground"
-                          }`}
-                        >
-                          <span className="block">
-                            {day.short.toLowerCase()}
-                          </span>
-                          <span className="block">{day.date.getDate()}</span>
-                          {/* {isToday ? (
-                            <span className="mt-0.5 block rounded-full bg-accent/25 px-1 py-0.5 text-[8px] font-semibold uppercase tracking-wide text-foreground">
-                              Hoje
-                            </span>
-                          ) : null} */}
+                <div className="overflow-hidden rounded-2xl border border-border">
+                  <div className="max-h-[70vh] overflow-auto">
+                    <div className="min-w-[900px]">
+                      <div className="sticky top-0 z-10 grid grid-cols-[64px_repeat(7,minmax(0,1fr))] border-b border-border/60 bg-surface-muted/90 text-[10px] font-semibold uppercase text-foreground-muted backdrop-blur">
+                        <div className="flex items-center justify-center border-r border-border/60 px-2 py-2">
+                          Hora
                         </div>
-                        <div className="flex min-w-0 flex-col gap-1">
-                          {dayAppointments.length ? (
-                            dayAppointments.map((appointment) => {
-                              const companyName =
-                                appointment.companyName ??
-                                selectors.getCompany(appointment.companyId)
-                                  ?.name ??
-                                "Empresa";
-                              const status = getAppointmentStatus(appointment);
-                              return (
-                                <button
-                                  key={appointment.id}
-                                  type="button"
-                                  onClick={() =>
-                                    handleOpenAppointment(appointment.id)
-                                  }
-                                  className={`min-w-0 rounded-md border px-1 py-1 text-[9px] font-semibold transition hover:shadow-sm ${statusCardStyle[status]}`}
-                                >
-                                  <span
-                                    className="block overflow-hidden break-all text-center leading-tight"
-                                    style={{
-                                      display: "-webkit-box",
-                                      WebkitLineClamp: 2,
-                                      WebkitBoxOrient: "vertical",
-                                    }}
-                                  >
-                                    {companyName}
-                                  </span>
-                                </button>
-                              );
-                            })
-                          ) : (
-                            <div className="rounded-md border border-dashed border-border px-1 py-1 text-center text-[9px] text-foreground-muted">
-                              Sem
+                        {week.days.map((day) => {
+                          const isToday = isSameDay(day.date, today);
+                          return (
+                            <div
+                              key={day.id}
+                              className={`flex flex-col items-center justify-center gap-0.5 px-2 py-2 ${
+                                isToday
+                                  ? "bg-accent/15 text-foreground"
+                                  : "text-foreground-muted"
+                              }`}
+                            >
+                              <span className="text-[10px]">
+                                {day.short.toLowerCase()}
+                              </span>
+                              <span className="text-[11px] font-semibold text-foreground">
+                                {day.date.getDate()}
+                              </span>
                             </div>
-                          )}
-                        </div>
+                          );
+                        })}
                       </div>
-                    );
-                  })}
+                      <div className="grid grid-cols-[64px_repeat(7,minmax(0,1fr))]">
+                        <div
+                          className="relative border-r border-border/60 bg-surface-muted/40"
+                          style={{ height: gridHeight }}
+                        >
+                          {slotMarkers.map((slot) => (
+                            <div
+                              key={slot.key}
+                              className={`absolute left-0 right-0 ${
+                                slot.isHour
+                                  ? "border-t border-border/60"
+                                  : "border-t border-border/20"
+                              }`}
+                              style={{
+                                top: slot.minutesFromStart * pixelsPerMinute,
+                              }}
+                            >
+                              {slot.isHour ? (
+                                <span className="absolute -top-2 right-2 bg-surface-muted/80 px-1 text-[10px] font-semibold text-foreground-muted">
+                                  {slot.label}
+                                </span>
+                              ) : null}
+                            </div>
+                          ))}
+                        </div>
+                        {week.days.map((day, dayIndex) => {
+                          const dayAppointments = dayGroups[dayIndex] ?? [];
+                          const isToday = isSameDay(day.date, today);
+                          return (
+                            <div
+                              key={day.id}
+                              className={`relative border-r border-border/40 ${
+                                isToday ? "bg-accent/5" : "bg-white"
+                              }`}
+                              style={{ height: gridHeight }}
+                            >
+                              {slotMarkers.map((slot) => (
+                                <div
+                                  key={`${day.id}-${slot.key}`}
+                                  className={`absolute left-0 right-0 ${
+                                    slot.isHour
+                                      ? "border-t border-border/50"
+                                      : "border-t border-border/15"
+                                  }`}
+                                  style={{
+                                    top:
+                                      slot.minutesFromStart * pixelsPerMinute,
+                                  }}
+                                />
+                              ))}
+                              {dayAppointments.map((appointment) => {
+                                const companyName =
+                                  appointment.companyName ??
+                                  selectors.getCompany(appointment.companyId)
+                                    ?.name ??
+                                  "Empresa";
+                                const status = getAppointmentStatus(appointment);
+                                const style = getAppointmentStyle(appointment);
+                                if (!style) return null;
+                                return (
+                                  <button
+                                    key={appointment.id}
+                                    type="button"
+                                    onClick={() =>
+                                      handleOpenAppointment(appointment.id)
+                                    }
+                                    className={`absolute left-1 right-1 flex flex-col gap-1 overflow-hidden rounded-md border px-2 py-1 text-left text-[10px] font-semibold transition hover:shadow-sm ${statusCardStyle[status]}`}
+                                    style={style}
+                                  >
+                                    <span className="text-[9px] uppercase tracking-[0.08em]">
+                                      {formatTime(
+                                        new Date(appointment.startAt),
+                                      )}{" "}
+                                      -{" "}
+                                      {formatTime(
+                                        new Date(appointment.endAt),
+                                      )}
+                                    </span>
+                                    <span
+                                      className="text-[10px] leading-tight"
+                                      style={{
+                                        display: "-webkit-box",
+                                        WebkitLineClamp: 2,
+                                        WebkitBoxOrient: "vertical",
+                                      }}
+                                    >
+                                      {companyName}
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </section>
             ) : (

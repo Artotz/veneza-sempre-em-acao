@@ -135,6 +135,7 @@ type MapPoint = {
   label: string;
   position: [number, number];
   kind: "company" | "checkin" | "checkout";
+  timestampLabel: string;
 };
 
 const mapMarkerIcons: Record<MapPoint["kind"], L.Icon> = {
@@ -160,6 +161,13 @@ const MapFitBounds = ({ points }: { points: MapPoint[] }) => {
   }, [map, points]);
 
   return null;
+};
+
+const formatMapDateTimeLabel = (value?: string | null) => {
+  if (!value) return "Data/hora nao registrada";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "Data/hora invalida";
+  return `${formatDateShort(parsed)} - ${formatTime(parsed)}`;
 };
 
 export default function AppointmentDetail() {
@@ -856,12 +864,19 @@ export default function AppointmentDetail() {
       lat?: number | null,
       lng?: number | null,
       kind: MapPoint["kind"] = "company",
+      occurredAt?: string | null,
     ) => {
       if (lat == null || lng == null) return;
       const latNumber = Number(lat);
       const lngNumber = Number(lng);
       if (!Number.isFinite(latNumber) || !Number.isFinite(lngNumber)) return;
-      points.push({ id, label, position: [latNumber, lngNumber], kind });
+      points.push({
+        id,
+        label,
+        position: [latNumber, lngNumber],
+        kind,
+        timestampLabel: formatMapDateTimeLabel(occurredAt),
+      });
     };
 
     if (company) {
@@ -871,6 +886,7 @@ export default function AppointmentDetail() {
         company.lat,
         company.lng,
         "company",
+        appointment.startAt,
       );
     }
     pushPoint(
@@ -879,6 +895,7 @@ export default function AppointmentDetail() {
       appointment.checkInLat,
       appointment.checkInLng,
       "checkin",
+      appointment.checkInAt,
     );
     pushPoint(
       "checkout",
@@ -886,6 +903,7 @@ export default function AppointmentDetail() {
       appointment.checkOutLat,
       appointment.checkOutLng,
       "checkout",
+      appointment.checkOutAt,
     );
 
     return points;
@@ -1513,8 +1531,7 @@ export default function AppointmentDetail() {
                           {point.label}
                         </p>
                         <p className="text-foreground-muted">
-                          {point.position[0].toFixed(5)},{" "}
-                          {point.position[1].toFixed(5)}
+                          {point.timestampLabel}
                         </p>
                       </div>
                     </Popup>
