@@ -189,8 +189,10 @@ export default function NewAppointment() {
     }
 
     const now = new Date();
-    if (startsAtDate < now) {
-      setError(t("Inicio nao pode ser menor que agora."));
+    const nowMs = now.getTime();
+    const toleranceMs = 5 * 60 * 1000;
+    if (startsAtDate.getTime() < nowMs - toleranceMs) {
+      setError(t("Inicio nao pode ser menor que agora (5 min de tolerancia)."));
       return;
     }
 
