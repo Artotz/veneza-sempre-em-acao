@@ -1,10 +1,11 @@
 import type { AppointmentStatus } from "../lib/types";
+import { t } from "../i18n";
 
 const statusCopy: Record<AppointmentStatus, string> = {
-  agendado: "Agendado",
-  em_execucao: "Em execucao",
-  concluido: "Concluido",
-  cancelado: "Cancelado",
+  agendado: t("Agendado"),
+  em_execucao: t("Em execucao"),
+  concluido: t("Concluido"),
+  cancelado: t("Cancelado"),
 };
 
 const statusStyle: Record<AppointmentStatus, string> = {

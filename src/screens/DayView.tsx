@@ -28,6 +28,7 @@ import {
 } from "../lib/schedule";
 import type { AppointmentStatus } from "../lib/types";
 import { useSchedule } from "../state/useSchedule";
+import { t } from "../i18n";
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(Math.max(value, min), max);
@@ -185,28 +186,28 @@ export default function DayView() {
     () => [
       {
         status: "agendado" as const,
-        label: "Agendados",
+        label: t("Agendados"),
         count: daySummary.agendado,
         baseClass: "bg-warning/15 text-warning",
         ringClass: "ring-warning/30",
       },
       {
         status: "em_execucao" as const,
-        label: "Em execucao",
+        label: t("Em execucao"),
         count: daySummary.em_execucao,
         baseClass: "bg-info/15 text-info",
         ringClass: "ring-info/30",
       },
       {
         status: "concluido" as const,
-        label: "Concluidos",
+        label: t("Concluidos"),
         count: daySummary.concluido,
         baseClass: "bg-success/15 text-success",
         ringClass: "ring-success/30",
       },
       {
         status: "cancelado" as const,
-        label: "Cancelados",
+        label: t("Cancelados"),
         count: daySummary.cancelado,
         baseClass: "bg-danger/15 text-danger",
         ringClass: "ring-danger/30",
@@ -229,16 +230,20 @@ export default function DayView() {
       const companyName =
         appointment.companyName ??
         selectors.getCompany(appointment.companyId)?.name ??
-        "Empresa";
-      return `${companyName} - ${kind === "checkin" ? "Check-in" : "Check-out"}`;
+        t("Empresa");
+      return `${companyName} - ${
+        kind === "checkin" ? t("Check-in") : t("Check-out")
+      }`;
     },
     [selectors],
   );
 
   return (
     <AppShell
-      title="Dia"
-      subtitle="Agendamentos do dia selecionado, ordenados por horario."
+      title={t("Dia")}
+      subtitle={t(
+        "Agendamentos do dia selecionado, ordenados por horario.",
+      )}
       rightSlot={formatMonthYear(selectedMonth)}
     >
       <div className="space-y-5">
@@ -265,7 +270,11 @@ export default function DayView() {
             selectedDayIndex={selectedDayIndex}
             onSelectDay={setSelectedDayIndex}
             dayRightSlot={
-              state.loading ? null : `Pendentes na semana: ${pendingWeekCount}`
+              state.loading
+                ? null
+                : t("Pendentes na semana: {{count}}", {
+                    count: pendingWeekCount,
+                  })
             }
             today={today}
           />
@@ -280,7 +289,7 @@ export default function DayView() {
           </div>
         ) : state.error ? (
           <EmptyState
-            title="Nao foi possivel carregar"
+            title={t("Nao foi possivel carregar")}
             description={state.error}
           />
         ) : (
@@ -295,13 +304,15 @@ export default function DayView() {
                       </p>
                       {isActiveDayToday ? (
                         <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-semibold text-foreground">
-                          Hoje
+                          {t("Hoje")}
                         </span>
                       ) : null}
                     </div>
                     <p className="text-xs text-foreground-muted">
-                      {activeDay.label} - {activeDayAppointments.length}{" "}
-                      agendamentos
+                      {t("{{label}} - {{count}} agendamentos", {
+                        label: activeDay.label,
+                        count: activeDayAppointments.length,
+                      })}
                     </p>
                   </div>
                   {/* {firstPendingId ? (
@@ -313,9 +324,11 @@ export default function DayView() {
 
                 <div className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
                   <SectionHeader
-                    title="Filtros do dia"
-                    subtitle="Status e sugestoes."
-                    rightSlot={`${filteredAppointments.length} ag.`}
+                    title={t("Filtros do dia")}
+                    subtitle={t("Status e sugestoes.")}
+                    rightSlot={t("{{count}} ag.", {
+                      count: filteredAppointments.length,
+                    })}
                   />
                   <div className="flex flex-wrap gap-2 text-[11px] font-semibold">
                     {pillOptions.map((pill) => {
@@ -350,7 +363,7 @@ export default function DayView() {
                         showSuggestions ? "ring-2 ring-accent/30" : ""
                       }`}
                     >
-                      Sugestoes: {suggestionCount}
+                      {t("Sugestoes")}: {suggestionCount}
                     </button>
                   </div>
                 </div>
@@ -361,7 +374,7 @@ export default function DayView() {
                       const company =
                         appointment.companyName ??
                         selectors.getCompany(appointment.companyId)?.name ??
-                        "Empresa";
+                        t("Empresa");
                       const appointmentDetail =
                         getAppointmentTitle(appointment);
                       const snapshot = appointment.addressSnapshot;
@@ -393,13 +406,17 @@ export default function DayView() {
                     })
                   ) : (
                     <EmptyState
-                      title="Sem agendamentos"
+                      title={t("Sem agendamentos")}
                       description={
                         !hasDayAppointments
-                          ? "Selecione outro dia para ver a agenda."
+                          ? t("Selecione outro dia para ver a agenda.")
                           : statusFilters.length === 0
-                            ? "Nenhum filtro ativo. Ligue ao menos um status acima."
-                            : "Nenhum agendamento encontrado para os filtros ativos."
+                            ? t(
+                                "Nenhum filtro ativo. Ligue ao menos um status acima.",
+                              )
+                            : t(
+                                "Nenhum agendamento encontrado para os filtros ativos.",
+                              )
                       }
                     />
                   )}
@@ -414,13 +431,17 @@ export default function DayView() {
             ) : (
               <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
                 <SectionHeader
-                  title="Mapa do dia"
-                  subtitle="Check-ins e check-outs registrados no dia selecionado."
+                  title={t("Mapa do dia")}
+                  subtitle={t(
+                    "Check-ins e check-outs registrados no dia selecionado.",
+                  )}
                 />
                 <CheckInOutMap
                   appointments={activeDayAppointments}
                   getLabel={getMapLabel}
-                  emptyMessage="Sem check-ins ou check-outs para exibir no dia."
+                  emptyMessage={t(
+                    "Sem check-ins ou check-outs para exibir no dia.",
+                  )}
                 />
               </section>
             )}

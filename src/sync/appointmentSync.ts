@@ -1,6 +1,7 @@
 import { createSupabaseBrowserClient } from "../lib/supabaseClient";
 import { APPOINTMENT_SELECT, mapAppointment } from "../lib/supabase";
 import { uploadApontamentoImage } from "../services/storageUploads";
+import { t } from "../i18n";
 import {
   getPhotoBlob,
   listPendingPhotos,
@@ -35,7 +36,7 @@ export const syncAppointment = async (
   params: SyncAppointmentParams
 ): Promise<SyncAppointmentResult> => {
   if (typeof navigator !== "undefined" && !navigator.onLine) {
-    throw new Error("Sem internet.");
+    throw new Error(t("Sem internet."));
   }
 
   const supabase = createSupabaseBrowserClient();
@@ -65,7 +66,7 @@ export const syncAppointment = async (
 
     const mapped = data ? mapAppointment(data) : null;
     if (!mapped) {
-      throw new Error("Nao foi possivel criar o apontamento.");
+      throw new Error(t("Nao foi possivel criar o apontamento."));
     }
 
     const newId = mapped.id;

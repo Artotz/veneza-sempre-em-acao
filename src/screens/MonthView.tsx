@@ -16,6 +16,7 @@ import {
   WEEK_DAYS,
 } from "../lib/date";
 import { useSchedule } from "../state/useSchedule";
+import { t } from "../i18n";
 
 const getDateKey = (date: Date) =>
   `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
@@ -78,16 +79,18 @@ export default function MonthView() {
       const companyName =
         appointment.companyName ??
         selectors.getCompany(appointment.companyId)?.name ??
-        "Empresa";
-      return `${companyName} - ${kind === "checkin" ? "Check-in" : "Check-out"}`;
+        t("Empresa");
+      return `${companyName} - ${
+        kind === "checkin" ? t("Check-in") : t("Check-out")
+      }`;
     },
     [selectors, state.appointments],
   );
 
   return (
     <AppShell
-      title="Mês"
-      subtitle="Grade mensal em 7 colunas, com acesso rapido por dia."
+      title={t("Mes")}
+      subtitle={t("Grade mensal em 7 colunas, com acesso rapido por dia.")}
       rightSlot={monthLabel}
     >
       <div className="space-y-4">
@@ -118,7 +121,7 @@ export default function MonthView() {
           </div>
         ) : state.error ? (
           <EmptyState
-            title="Nao foi possivel carregar"
+            title={t("Nao foi possivel carregar")}
             description={state.error}
           />
         ) : (
@@ -126,8 +129,8 @@ export default function MonthView() {
             {activeTab === "details" ? (
               <section className="space-y-4 rounded-3xl border border-border bg-white p-4 shadow-sm">
                 <SectionHeader
-                  title="Grade do mes"
-                  subtitle="Todos os dias do mes em 7 colunas."
+                  title={t("Grade do mes")}
+                  subtitle={t("Todos os dias do mes em 7 colunas.")}
                 />
                 <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-semibold uppercase text-foreground-muted">
                   {WEEK_DAYS.map((day) => (
@@ -165,7 +168,10 @@ export default function MonthView() {
                           to={`/cronograma/dia?month=${formatMonthParam(
                             selectedMonth,
                           )}&week=${weekIndex + 1}&day=${day.index}`}
-                          aria-label={`${day.label} com ${count} agendamentos`}
+                          aria-label={t("{{label}} com {{count}} agendamentos", {
+                            label: day.label,
+                            count,
+                          })}
                           className={`group flex min-h-[76px] flex-col justify-between rounded-xl border p-2 text-left transition hover:border-accent/40 hover:bg-white ${borderClass} ${backgroundClass} ${textClass}`}
                         >
                           <span
@@ -191,13 +197,15 @@ export default function MonthView() {
             ) : (
               <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
                 <SectionHeader
-                  title="Mapa do mes"
-                  subtitle="Check-ins e check-outs registrados no mes."
+                  title={t("Mapa do mes")}
+                  subtitle={t("Check-ins e check-outs registrados no mes.")}
                 />
                 <CheckInOutMap
                   appointments={state.appointments}
                   getLabel={getMapLabel}
-                  emptyMessage="Sem check-ins ou check-outs para exibir no mes."
+                  emptyMessage={t(
+                    "Sem check-ins ou check-outs para exibir no mes.",
+                  )}
                 />
               </section>
             )}

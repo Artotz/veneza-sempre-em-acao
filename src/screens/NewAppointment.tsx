@@ -15,13 +15,17 @@ import {
 } from "../storage/offlineSchedule";
 import { formatDateShort, isSameDay } from "../lib/date";
 import { formatAppointmentWindow, getAppointmentStatus } from "../lib/schedule";
+import { t } from "../i18n";
 
 const buildAddressSnapshot = (company: Company): string | null => {
   if (company.lat == null || company.lng == null) return null;
   const lat = Number(company.lat);
   const lng = Number(company.lng);
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-  return `Empresa georreferenciada (lat: ${lat.toFixed(5)}, lng: ${lng.toFixed(5)})`;
+  return t("Empresa georreferenciada (lat: {{lat}}, lng: {{lng}})", {
+    lat: lat.toFixed(5),
+    lng: lng.toFixed(5),
+  });
 };
 
 const generateLocalAppointmentId = () => {
@@ -63,7 +67,7 @@ export default function NewAppointment() {
       setCompaniesError(null);
       const userEmail = user?.email?.trim();
       if (!userEmail) {
-        setCompaniesError("Usuario nao autenticado.");
+        setCompaniesError(t("Usuario nao autenticado."));
         setCompaniesLoading(false);
         return;
       }
@@ -81,7 +85,7 @@ export default function NewAppointment() {
         const cached = await getCompaniesSnapshot(userEmail);
         if (!active) return;
         if (!cached) {
-          setCompaniesError("Sem conexao e sem cache local.");
+          setCompaniesError(t("Sem conexao e sem cache local."));
           setCompaniesLoading(false);
           return;
         }
@@ -149,22 +153,22 @@ export default function NewAppointment() {
     setError(null);
 
     if (!selectedCompanyId) {
-      setError("Empresa nao encontrada.");
+      setError(t("Empresa nao encontrada."));
       return;
     }
     if (!company) {
-      setError("Empresa nao encontrada.");
+      setError(t("Empresa nao encontrada."));
       return;
     }
 
     if (!startsAt || !endsAt) {
-      setError("Preencha inicio e fim.");
+      setError(t("Preencha inicio e fim."));
       return;
     }
 
     const userEmail = user?.email?.trim();
     if (!userEmail) {
-      setError("Email do usuario nao encontrado.");
+      setError(t("Email do usuario nao encontrado."));
       return;
     }
 
@@ -175,18 +179,18 @@ export default function NewAppointment() {
       Number.isNaN(startsAtDate.getTime()) ||
       Number.isNaN(endsAtDate.getTime())
     ) {
-      setError("Datas invalidas.");
+      setError(t("Datas invalidas."));
       return;
     }
 
     if (endsAtDate <= startsAtDate) {
-      setError("Fim precisa ser depois do inicio.");
+      setError(t("Fim precisa ser depois do inicio."));
       return;
     }
 
     const now = new Date();
     if (startsAtDate < now) {
-      setError("Inicio nao pode ser menor que agora.");
+      setError(t("Inicio nao pode ser menor que agora."));
       return;
     }
 
@@ -196,9 +200,10 @@ export default function NewAppointment() {
       const isTodayEnd = isSameDay(endsAtDate, now);
       if (!isTodayStart || !isTodayEnd) {
         setError(
-          `Sem conexao: so e possivel criar apontamentos para hoje (${formatDateShort(
-            now,
-          )}).`,
+          t(
+            "Sem conexao: so e possivel criar apontamentos para hoje ({{date}}).",
+            { date: formatDateShort(now) },
+          ),
         );
         return;
       }
@@ -224,9 +229,10 @@ export default function NewAppointment() {
 
     if (conflict) {
       setError(
-        `Conflito de horario: ja existe um apontamento em ${formatAppointmentWindow(
-          conflict,
-        )}.`,
+        t(
+          "Conflito de horario: ja existe um apontamento em {{window}}.",
+          { window: formatAppointmentWindow(conflict) },
+        ),
       );
       return;
     }
@@ -283,7 +289,10 @@ export default function NewAppointment() {
 
   if (companiesLoading) {
     return (
-      <AppShell title="Novo apontamento" subtitle="Carregando empresa...">
+      <AppShell
+        title={t("Novo apontamento")}
+        subtitle={t("Carregando empresa...")}
+      >
         <div className="space-y-3">
           <div className="h-24 animate-pulse rounded-3xl bg-surface-muted" />
           <div className="h-32 animate-pulse rounded-3xl bg-surface-muted" />
@@ -294,11 +303,14 @@ export default function NewAppointment() {
 
   if (!companies.length) {
     return (
-      <AppShell title="Novo apontamento" subtitle="Empresa nao encontrada.">
+      <AppShell
+        title={t("Novo apontamento")}
+        subtitle={t("Empresa nao encontrada.")}
+      >
         <EmptyState
-          title="Empresa nao encontrada"
+          title={t("Empresa nao encontrada")}
           description={
-            companiesError ?? "Verifique o link ou escolha outra empresa."
+            companiesError ?? t("Verifique o link ou escolha outra empresa.")
           }
         />
         {/* <Link
@@ -312,7 +324,10 @@ export default function NewAppointment() {
   }
 
   return (
-    <AppShell title="Novo apontamento" subtitle="Preencha os dados essenciais.">
+    <AppShell
+      title={t("Novo apontamento")}
+      subtitle={t("Preencha os dados essenciais.")}
+    >
       <div className="space-y-4">
         {/* <Link
           to="/cronograma/lista?tab=empresas"
@@ -322,7 +337,7 @@ export default function NewAppointment() {
         </Link> */}
 
         <section className="space-y-2 rounded-3xl border border-border bg-white p-4 shadow-sm">
-          <SectionHeader title="Empresa" />
+          <SectionHeader title={t("Empresa")} />
           {companiesError ? (
             <div className="rounded-2xl border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-foreground-soft">
               {companiesError}
@@ -336,11 +351,11 @@ export default function NewAppointment() {
               className="w-full rounded-2xl border border-border bg-surface-muted px-4 py-3 text-sm font-normal text-foreground outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
             >
               <option value="" disabled>
-                Selecione uma empresa
+                {t("Selecione uma empresa")}
               </option>
               {companies.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.name ?? "Empresa"}
+                  {item.name ?? t("Empresa")}
                   {item.document ? ` (${item.document})` : ""}
                 </option>
               ))}
@@ -369,7 +384,7 @@ export default function NewAppointment() {
           onSubmit={handleSubmit}
           className="space-y-4 rounded-3xl border border-border bg-white p-4 shadow-sm"
         >
-          <SectionHeader title="Dados do apontamento" />
+          <SectionHeader title={t("Dados do apontamento")} />
 
           {error ? (
             <div className="rounded-2xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -383,7 +398,7 @@ export default function NewAppointment() {
 
           <div className="grid gap-3 md:grid-cols-2">
             <label className="space-y-2 text-sm font-semibold text-foreground">
-              <span>Inicio</span>
+              <span>{t("Inicio")}</span>
               <input
                 type="datetime-local"
                 value={startsAt}
@@ -393,7 +408,7 @@ export default function NewAppointment() {
               />
             </label>
             <label className="space-y-2 text-sm font-semibold text-foreground">
-              <span>Fim</span>
+              <span>{t("Fim")}</span>
               <input
                 type="datetime-local"
                 value={endsAt}
@@ -409,7 +424,7 @@ export default function NewAppointment() {
             disabled={saving}
             className="w-full rounded-2xl bg-foreground px-4 py-3 text-sm font-semibold text-white transition hover:bg-foreground/90 disabled:cursor-not-allowed disabled:opacity-70"
           >
-            {saving ? "Salvando..." : "Salvar apontamento"}
+            {saving ? t("Salvando...") : t("Salvar apontamento")}
           </button>
         </form>
       </div>

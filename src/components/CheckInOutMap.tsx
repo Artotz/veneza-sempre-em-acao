@@ -6,6 +6,7 @@ import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
 import { formatDateShort, formatTime } from "../lib/date";
 import type { Appointment } from "../lib/types";
+import { t } from "../i18n";
 
 type MapPointKind = "checkin" | "checkout";
 
@@ -66,17 +67,17 @@ export const CheckInOutMap = ({
   appointments,
   getLabel,
   heightClass = "h-64",
-  emptyMessage = "Sem coordenadas para exibir no mapa.",
-  emptyFilteredMessage = "Nenhum pino visivel com os filtros atuais.",
+  emptyMessage = t("Sem coordenadas para exibir no mapa."),
+  emptyFilteredMessage = t("Nenhum pino visivel com os filtros atuais."),
 }: CheckInOutMapProps) => {
   const [showCheckInMarker, setShowCheckInMarker] = useState(true);
   const [showCheckOutMarker, setShowCheckOutMarker] = useState(true);
 
   const mapPoints = useMemo(() => {
     const formatDateTimeLabel = (value?: string | null) => {
-      if (!value) return "Data/hora nao registrada";
+      if (!value) return t("Data/hora nao registrada");
       const parsed = new Date(value);
-      if (Number.isNaN(parsed.getTime())) return "Data/hora invalida";
+      if (Number.isNaN(parsed.getTime())) return t("Data/hora invalida");
       return `${formatDateShort(parsed)} - ${formatTime(parsed)}`;
     };
 
@@ -92,7 +93,8 @@ export const CheckInOutMap = ({
       const latNumber = Number(lat);
       const lngNumber = Number(lng);
       if (!Number.isFinite(latNumber) || !Number.isFinite(lngNumber)) return;
-      const fallbackLabel = kind === "checkin" ? "Check-in" : "Check-out";
+      const fallbackLabel =
+        kind === "checkin" ? t("Check-in") : t("Check-out");
       points.push({
         id: `${appointment.id}-${kind}`,
         label: getLabel ? getLabel(appointment, kind) : fallbackLabel,
@@ -146,7 +148,7 @@ export const CheckInOutMap = ({
               : "border-border bg-white text-foreground-soft"
           }`}
         >
-          Check-in
+          {t("Check-in")}
         </button>
         <button
           type="button"
@@ -157,7 +159,7 @@ export const CheckInOutMap = ({
               : "border-border bg-white text-foreground-soft"
           }`}
         >
-          Check-out
+          {t("Check-out")}
         </button>
       </div>
 

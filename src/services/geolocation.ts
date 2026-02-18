@@ -1,3 +1,5 @@
+import { t } from "../i18n";
+
 export type GeoPosition = {
   lat: number;
   lng: number;
@@ -41,25 +43,29 @@ const mapNativeError = (error: GeolocationPositionError): GeoError => {
     case 1:
       return buildError(
         "PERMISSION_DENIED",
-        "Permissao de localizacao negada. Ative a localizacao para registrar o atendimento.",
+        t(
+          "Permissao de localizacao negada. Ative a localizacao para registrar o atendimento.",
+        ),
         error
       );
     case 2:
       return buildError(
         "POSITION_UNAVAILABLE",
-        "Nao foi possivel obter a localizacao. Verifique o GPS e tente novamente.",
+        t(
+          "Nao foi possivel obter a localizacao. Verifique o GPS e tente novamente.",
+        ),
         error
       );
     case 3:
       return buildError(
         "TIMEOUT",
-        "Tempo esgotado ao capturar a localizacao. Tente novamente.",
+        t("Tempo esgotado ao capturar a localizacao. Tente novamente."),
         error
       );
     default:
       return buildError(
         "UNKNOWN",
-        "Nao foi possivel capturar a localizacao. Tente novamente.",
+        t("Nao foi possivel capturar a localizacao. Tente novamente."),
         error
       );
   }
@@ -70,7 +76,7 @@ export const normalizeGeoError = (error: unknown): GeoError => {
     const typed = error as GeoError;
     return {
       code: typed.code ?? "UNKNOWN",
-      message: typed.message ?? "Nao foi possivel capturar a localizacao.",
+      message: typed.message ?? t("Nao foi possivel capturar a localizacao."),
       raw: typed.raw,
     };
   }
@@ -86,7 +92,7 @@ export const normalizeGeoError = (error: unknown): GeoError => {
 
   return buildError(
     "UNKNOWN",
-    "Nao foi possivel capturar a localizacao. Tente novamente.",
+    t("Nao foi possivel capturar a localizacao. Tente novamente."),
     error
   );
 };
@@ -97,7 +103,7 @@ export const getCurrentPosition = async (
   if (typeof navigator === "undefined" || !navigator.geolocation) {
     throw buildError(
       "UNSUPPORTED",
-      "Geolocalizacao nao disponivel neste dispositivo."
+      t("Geolocalizacao nao disponivel neste dispositivo.")
     );
   }
 
@@ -114,7 +120,7 @@ export const getCurrentPosition = async (
       reject(
         buildError(
           "TIMEOUT",
-          "Tempo esgotado ao capturar a localizacao. Tente novamente."
+          t("Tempo esgotado ao capturar a localizacao. Tente novamente.")
         )
       );
     }, settings.timeout);

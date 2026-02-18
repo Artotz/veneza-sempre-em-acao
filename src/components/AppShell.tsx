@@ -1,6 +1,7 @@
 import { type ReactNode } from "react";
 import { BottomNav } from "./BottomNav";
 import { useAuth } from "../contexts/useAuth";
+import { t } from "../i18n";
 
 type AppShellProps = {
   title: string;
@@ -27,7 +28,7 @@ export const AppShell = ({
         <div className="relative px-5 pb-6 pt-3">
           <div className="flex items-start justify-between gap-3 mb-5">
             <p className="text-[11px] pt-[6px] uppercase tracking-[0.2em] text-foreground-soft">
-              Cronograma
+              {t("Cronograma")}
             </p>
             {headerRightSlot ? (
               <div className="shrink-0 rounded-2xl border border-border bg-white/70 px-3 py-1 text-xs font-semibold text-foreground-soft shadow-sm">

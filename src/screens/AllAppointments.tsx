@@ -18,6 +18,7 @@ import {
 } from "../lib/schedule";
 import type { Appointment, AppointmentStatus } from "../lib/types";
 import { useSchedule } from "../state/useSchedule";
+import { t } from "../i18n";
 
 const buildDayKey = (date: Date) =>
   `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
@@ -138,28 +139,28 @@ export default function AllAppointments() {
     () => [
       {
         status: "agendado" as const,
-        label: "Agendados",
+        label: t("Agendados"),
         count: summary.agendado,
         baseClass: "bg-warning/15 text-warning",
         ringClass: "ring-warning/30",
       },
       {
         status: "em_execucao" as const,
-        label: "Em execucao",
+        label: t("Em execucao"),
         count: summary.em_execucao,
         baseClass: "bg-info/15 text-info",
         ringClass: "ring-info/30",
       },
       {
         status: "concluido" as const,
-        label: "Concluidos",
+        label: t("Concluidos"),
         count: summary.concluido,
         baseClass: "bg-success/15 text-success",
         ringClass: "ring-success/30",
       },
       {
         status: "cancelado" as const,
-        label: "Cancelados",
+        label: t("Cancelados"),
         count: summary.cancelado,
         baseClass: "bg-danger/15 text-danger",
         ringClass: "ring-danger/30",
@@ -189,16 +190,18 @@ export default function AllAppointments() {
 
   return (
     <AppShell
-      title="Lista"
-      subtitle="Todos os agendamentos em sequencia unica, sem agrupamento por data."
+      title={t("Lista")}
+      subtitle={t(
+        "Todos os agendamentos em sequencia unica, sem agrupamento por data.",
+      )}
       rightSlot={formatMonthYear(new Date())}
     >
       <div className="space-y-4">
         <DetailsMapTabs
           value={activeTab}
           onChange={handleTabChange}
-          detailsLabel="Agendamentos"
-          mapLabel="Empresas"
+          detailsLabel={t("Agendamentos")}
+          mapLabel={t("Empresas")}
         />
         {state.loading ? (
           <div className="space-y-4">
@@ -208,16 +211,16 @@ export default function AllAppointments() {
           </div>
         ) : state.error ? (
           <EmptyState
-            title="Nao foi possivel carregar"
+            title={t("Nao foi possivel carregar")}
             description={state.error}
           />
         ) : activeTab === "details" ? (
           <div className="space-y-4">
             <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
               <SectionHeader
-                title="Resumo geral"
-                subtitle="Distribuicao por status."
-                rightSlot={`${summary.total} ag.`}
+                title={t("Resumo geral")}
+                subtitle={t("Distribuicao por status.")}
+                rightSlot={t("{{count}} ag.", { count: summary.total })}
               />
               <div className="flex flex-wrap gap-2 text-[11px] font-semibold">
                 {pillOptions.map((pill) => {
@@ -250,7 +253,7 @@ export default function AllAppointments() {
                     showSuggestions ? "ring-2 ring-accent/30" : ""
                   }`}
                 >
-                  Sugestoes: {suggestionCount}
+                  {t("Sugestoes")}: {suggestionCount}
                 </button>
               </div>
             </section>
@@ -260,7 +263,7 @@ export default function AllAppointments() {
                 filteredAppointments.map((appointment) => {
                   const company = selectors.getCompany(appointment.companyId);
                   const companyName =
-                    appointment.companyName ?? company?.name ?? "Empresa";
+                    appointment.companyName ?? company?.name ?? t("Empresa");
                   const appointmentDetail = getAppointmentTitle(appointment);
                   const snapshot = appointment.addressSnapshot;
                   const detailLabel = snapshot
@@ -291,11 +294,13 @@ export default function AllAppointments() {
                 })
               ) : (
                 <EmptyState
-                  title="Sem agendamentos"
+                  title={t("Sem agendamentos")}
                   description={
                     statusFilters.length === 0 && !showSuggestions
-                      ? "Nenhum filtro ativo. Ligue ao menos um status acima."
-                      : "Nenhum agendamento encontrado para os filtros ativos."
+                      ? t("Nenhum filtro ativo. Ligue ao menos um status acima.")
+                      : t(
+                          "Nenhum agendamento encontrado para os filtros ativos.",
+                        )
                   }
                 />
               )}
@@ -311,18 +316,20 @@ export default function AllAppointments() {
           <div className="space-y-4">
             <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
               <SectionHeader
-                title="Busca rapida"
-                subtitle="Nome ou documento."
-                rightSlot={`${filteredCompanies.length} emp.`}
+                title={t("Busca rapida")}
+                subtitle={t("Nome ou documento.")}
+                rightSlot={t("{{count}} emp.", {
+                  count: filteredCompanies.length,
+                })}
               />
               <input
                 value={companyQuery}
                 onChange={(event) => setCompanyQuery(event.target.value)}
-                placeholder="Buscar empresa..."
+                placeholder={t("Buscar empresa...")}
                 className="w-full rounded-2xl border border-border bg-surface-muted px-4 py-3 text-sm text-foreground outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
               />
               <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
-                <span className="text-foreground-soft">Ordenar por:</span>
+                <span className="text-foreground-soft">{t("Ordenar por:")}</span>
                 <button
                   type="button"
                   onClick={() => setCompanySortBy("valor")}
@@ -333,7 +340,7 @@ export default function AllAppointments() {
                       : "bg-surface-muted text-foreground-soft"
                   }`}
                 >
-                  Valor Cot (3m)
+                  {t("Valor Cot (3m)")}
                 </button>
                 <button
                   type="button"
@@ -345,7 +352,7 @@ export default function AllAppointments() {
                       : "bg-surface-muted text-foreground-soft"
                   }`}
                 >
-                  Quantidade Cot (3m)
+                  {t("Quantidade Cot (3m)")}
                 </button>
               </div>
             </section>
@@ -359,19 +366,23 @@ export default function AllAppointments() {
                   >
                     <div className="space-y-1">
                       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-foreground-soft">
-                        {company.document ?? "Sem documento"}
+                        {company.document ?? t("Sem documento")}
                       </p>
                       <h3 className="text-lg font-semibold text-foreground">
                         {company.name}
                       </h3>
                       {[
                         company.state,
-                        company.csa ? `CSA ${company.csa}` : null,
+                        company.csa
+                          ? t("CSA {{csa}}", { csa: company.csa })
+                          : null,
                       ].filter(Boolean).length ? (
                         <p className="text-sm text-foreground-muted">
                           {[
                             company.state,
-                            company.csa ? `CSA ${company.csa}` : null,
+                            company.csa
+                              ? t("CSA {{csa}}", { csa: company.csa })
+                              : null,
                           ]
                             .filter(Boolean)
                             .join(" - ")}
@@ -382,7 +393,7 @@ export default function AllAppointments() {
                     <div className="grid gap-2 text-xs sm:grid-cols-2">
                       <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2">
                         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
-                          Valor Cot (3m)
+                          {t("Valor Cot (3m)")}
                         </p>
                         <p className="text-sm font-semibold text-foreground">
                           {formatCurrencyBRL(company.vlrUltimos3Meses)}
@@ -390,7 +401,7 @@ export default function AllAppointments() {
                       </div>
                       <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2">
                         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
-                          Qtd Cot (3m)
+                          {t("Qtd Cot (3m)")}
                         </p>
                         <p className="text-sm font-semibold text-foreground">
                           {formatQuantity(company.qtdUltimos3Meses)}
@@ -404,7 +415,7 @@ export default function AllAppointments() {
                         onClick={() => handleOpenCompany(company.id)}
                         className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm font-semibold text-foreground shadow-sm transition hover:bg-surface-muted"
                       >
-                        Ver empresa
+                        {t("Ver empresa")}
                       </button>
                       <button
                         type="button"
@@ -413,15 +424,15 @@ export default function AllAppointments() {
                         }
                         className="w-full rounded-2xl bg-foreground px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-foreground/90"
                       >
-                        Criar apontamento
+                        {t("Criar apontamento")}
                       </button>
                     </div>
                   </div>
                 ))
               ) : (
                 <EmptyState
-                  title="Nenhuma empresa encontrada"
-                  description="Ajuste a busca ou tente novamente."
+                  title={t("Nenhuma empresa encontrada")}
+                  description={t("Ajuste a busca ou tente novamente.")}
                 />
               )}
             </section>

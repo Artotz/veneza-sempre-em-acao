@@ -1,5 +1,6 @@
 import type { Appointment, AppointmentStatus } from "./types";
 import { formatTime } from "./date";
+import { t } from "../i18n";
 
 export const getAppointmentStatus = (
   appointment: Appointment
@@ -58,5 +59,7 @@ export const formatAppointmentWindow = (appointment: Appointment) => {
 export const getAppointmentTitle = (appointment: Appointment) => {
   const explicit = appointment.appointmentTitle?.trim();
   if (explicit) return explicit;
-  return `Apontamento - ${formatAppointmentWindow(appointment)}`;
+  return t("Apontamento - {{window}}", {
+    window: formatAppointmentWindow(appointment),
+  });
 };

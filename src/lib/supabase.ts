@@ -1,4 +1,5 @@
 import type { Appointment, Company, SupabaseAppointmentStatus } from "./types";
+import { t } from "../i18n";
 
 type CompanyRow = {
   id: string;
@@ -131,8 +132,8 @@ export const mapAppointment = (row: AppointmentRow): Appointment => {
 };
 
 export const absenceReasonLabels: Record<string, string> = {
-  client_requested_reschedule: "Cliente solicitou remarcacao",
-  address_closed: "Endereco fechado",
-  equipment_unavailable: "Equipamento indisponivel",
-  other: "Outro",
+  client_requested_reschedule: t("Cliente solicitou remarcacao"),
+  address_closed: t("Endereco fechado"),
+  equipment_unavailable: t("Equipamento indisponivel"),
+  other: t("Outro"),
 };

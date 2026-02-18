@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { createSupabaseBrowserClient } from "../lib/supabaseClient";
 import { useAuth } from "../contexts/useAuth";
+import { t } from "../i18n";
 
 type BannerState =
   | { variant: "error"; message: string }
@@ -54,7 +55,9 @@ export default function Login() {
         variant: "error",
         message:
           error.message ||
-          "Nao foi possivel entrar com email e senha. Verifique os dados e tente novamente.",
+          t(
+            "Nao foi possivel entrar com email e senha. Verifique os dados e tente novamente.",
+          ),
       });
       return;
     }
@@ -69,18 +72,21 @@ export default function Login() {
           <div className="flex flex-col justify-between gap-6">
             <div className="space-y-3">
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-white/70">
-                PWA Cronograma
+                {t("PWA Cronograma")}
               </p>
               <h1 className="text-3xl font-semibold leading-tight">
-                Acesse o painel seguro
+                {t("Acesse o painel seguro")}
               </h1>
               <p className="text-sm text-white/80">
-                Entre com as credenciais do CRM para acessar empresas e
-                agendamentos.
+                {t(
+                  "Entre com as credenciais do CRM para acessar empresas e agendamentos.",
+                )}
               </p>
             </div>
             <div className="rounded-2xl bg-white/10 p-4 text-sm text-white/90 shadow-inner">
-              Sessoes sao preservadas pelo Supabase. Faca login para continuar.
+              {t(
+                "Sessoes sao preservadas pelo Supabase. Faca login para continuar.",
+              )}
             </div>
           </div>
 
@@ -88,10 +94,10 @@ export default function Login() {
             <div className="space-y-4">
               <div>
                 <p className="text-sm font-semibold text-foreground">
-                  Faca login
+                  {t("Faca login")}
                 </p>
                 <p className="text-xs text-foreground-muted">
-                  Entre com email e senha.
+                  {t("Entre com email e senha.")}
                 </p>
               </div>
 
@@ -109,19 +115,19 @@ export default function Login() {
 
               <form className="space-y-4" onSubmit={handlePasswordSignIn}>
                 <label className="space-y-2 text-sm font-medium text-foreground">
-                  <span>Email</span>
+                  <span>{t("Email")}</span>
                   <input
                     type="email"
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
                     className="w-full rounded-xl border border-border bg-white px-3 py-2 text-sm font-normal text-foreground shadow-inner outline-none transition focus:border-accent/60 focus:ring-4 focus:ring-accent/10"
-                    placeholder="seu@email.com"
+                    placeholder={t("seu@email.com")}
                     required
                   />
                 </label>
 
                 <label className="space-y-2 text-sm font-medium text-foreground">
-                  <span>Senha</span>
+                  <span>{t("Senha")}</span>
                   <input
                     type="password"
                     value={password}
@@ -137,7 +143,7 @@ export default function Login() {
                   disabled={loading}
                   className="flex w-full items-center justify-center gap-2 rounded-xl bg-foreground px-4 py-2 text-sm font-semibold text-white shadow-lg transition hover:bg-foreground/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground disabled:cursor-not-allowed disabled:opacity-70"
                 >
-                  {loading ? "Entrando..." : "Entrar"}
+                  {loading ? t("Entrando...") : t("Entrar")}
                 </button>
               </form>
             </div>

@@ -1,4 +1,5 @@
 import { compressImage } from "../utils/photoCompress";
+import { t } from "../i18n";
 
 export type CapturePhotoResult = {
   blob: Blob;
@@ -17,7 +18,7 @@ const mimeToExtension = (mimeType: string) => {
 
 const ensureBrowser = () => {
   if (typeof window === "undefined" || typeof document === "undefined") {
-    throw new Error("Captura de foto indisponivel neste ambiente.");
+    throw new Error(t("Captura de foto indisponivel neste ambiente."));
   }
 };
 
@@ -30,7 +31,7 @@ const canvasToBlob = (
     canvas.toBlob(
       (blob) => {
         if (!blob) {
-          reject(new Error("Nao foi possivel gerar a foto."));
+          reject(new Error(t("Nao foi possivel gerar a foto.")));
           return;
         }
         resolve(blob);
@@ -51,7 +52,7 @@ const waitForVideoReady = (video: HTMLVideoElement) =>
     const timeoutId = window.setTimeout(() => {
       if (settled) return;
       settled = true;
-      reject(new Error("Nao foi possivel iniciar a camera."));
+      reject(new Error(t("Nao foi possivel iniciar a camera.")));
     }, 3000);
 
     const handleReady = () => {
@@ -65,7 +66,7 @@ const waitForVideoReady = (video: HTMLVideoElement) =>
       if (settled) return;
       settled = true;
       window.clearTimeout(timeoutId);
-      reject(new Error("Nao foi possivel iniciar a camera."));
+      reject(new Error(t("Nao foi possivel iniciar a camera.")));
     };
 
     video.addEventListener("loadeddata", handleReady, { once: true });
@@ -75,7 +76,7 @@ const waitForVideoReady = (video: HTMLVideoElement) =>
 const captureWithStream = async (): Promise<Blob> => {
   ensureBrowser();
   if (!navigator.mediaDevices?.getUserMedia) {
-    throw new Error("Camera indisponivel.");
+    throw new Error(t("Camera indisponivel."));
   }
 
   const stream = await navigator.mediaDevices.getUserMedia({
@@ -119,7 +120,7 @@ const captureWithStream = async (): Promise<Blob> => {
 
     const context = canvas.getContext("2d");
     if (!context) {
-      throw new Error("Nao foi possivel acessar a camera.");
+      throw new Error(t("Nao foi possivel acessar a camera."));
     }
 
     context.drawImage(video, 0, 0, width, height);
@@ -145,7 +146,7 @@ const loadImage = (blob: Blob) =>
 
     img.onerror = () => {
       cleanup();
-      reject(new Error("Nao foi possivel processar a imagem."));
+      reject(new Error(t("Nao foi possivel processar a imagem.")));
     };
 
     img.src = url;
@@ -165,7 +166,7 @@ const ensureJpeg = async (blob: Blob): Promise<Blob> => {
     canvas.height = bitmap.height;
     const context = canvas.getContext("2d");
     if (!context) {
-      throw new Error("Nao foi possivel processar a imagem.");
+      throw new Error(t("Nao foi possivel processar a imagem."));
     }
     context.drawImage(bitmap, 0, 0);
     if ("close" in bitmap) {
@@ -180,7 +181,7 @@ const ensureJpeg = async (blob: Blob): Promise<Blob> => {
   canvas.height = img.naturalHeight || img.height;
   const context = canvas.getContext("2d");
   if (!context) {
-    throw new Error("Nao foi possivel processar a imagem.");
+    throw new Error(t("Nao foi possivel processar a imagem."));
   }
   context.drawImage(img, 0, 0);
   return await canvasToBlob(canvas, jpegMimeType, 0.9);

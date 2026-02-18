@@ -3,6 +3,7 @@ import type { MonthOption, MonthWeek, WeekDay } from "../lib/date";
 import { DaySelector } from "./DaySelector";
 import { MonthSelector } from "./MonthSelector";
 import { WeekSelector } from "./WeekSelector";
+import { t } from "../i18n";
 
 type BaseProps = {
   months: MonthOption[];
@@ -40,7 +41,7 @@ export const DateSelector = (props: DateSelectorProps) => {
     <div className="space-y-3">
       <div className="space-y-2">
         <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
-          Mes
+          {t("Mes")}
         </div>
         <MonthSelector
           months={props.months}
@@ -52,7 +53,7 @@ export const DateSelector = (props: DateSelectorProps) => {
       {props.mode !== "month" ? (
         <div className="space-y-2">
           <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
-            Semana
+            {t("Semana")}
           </div>
           <WeekSelector
             weeks={props.weeks}
@@ -65,7 +66,7 @@ export const DateSelector = (props: DateSelectorProps) => {
       {props.mode === "day-week-month" ? (
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
-            <span>Dia</span>
+            <span>{t("Dia")}</span>
             {/* {props.dayRightSlot ? (
               <span className="normal-case tracking-normal text-foreground-muted">
                 {props.dayRightSlot}

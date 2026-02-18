@@ -17,6 +17,7 @@ import {
 import { getAppointmentStatus, sortByStart } from "../lib/schedule";
 import type { AppointmentStatus } from "../lib/types";
 import { useSchedule } from "../state/useSchedule";
+import { t } from "../i18n";
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(Math.max(value, min), max);
@@ -180,16 +181,18 @@ export default function WeekView() {
       const companyName =
         appointment.companyName ??
         selectors.getCompany(appointment.companyId)?.name ??
-        "Empresa";
-      return `${companyName} - ${kind === "checkin" ? "Check-in" : "Check-out"}`;
+        t("Empresa");
+      return `${companyName} - ${
+        kind === "checkin" ? t("Check-in") : t("Check-out")
+      }`;
     },
     [selectors],
   );
 
   return (
     <AppShell
-      title="Semana"
-      subtitle="Visao simultanea dos 7 dias com cards compactos."
+      title={t("Semana")}
+      subtitle={t("Visao simultanea dos 7 dias com cards compactos.")}
       rightSlot={formatMonthYear(selectedMonth)}
     >
       <div className="space-y-5">
@@ -223,7 +226,7 @@ export default function WeekView() {
           </div>
         ) : state.error ? (
           <EmptyState
-            title="Nao foi possivel carregar"
+            title={t("Nao foi possivel carregar")}
             description={state.error}
           />
         ) : (
@@ -231,15 +234,15 @@ export default function WeekView() {
             {activeTab === "details" ? (
               <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
                 <SectionHeader
-                  title="Agenda da semana"
-                  subtitle="Dias lado a lado com escala horaria."
+                  title={t("Agenda da semana")}
+                  subtitle={t("Dias lado a lado com escala horaria.")}
                 />
                 <div className="overflow-hidden rounded-2xl border border-border">
                   <div className="overflow-hidden">
                     <div className="min-w-0">
                       <div className="sticky top-0 z-10 grid grid-cols-[48px_repeat(7,minmax(0,1fr))] border-b border-border/60 bg-surface-muted/90 text-[9px] font-semibold uppercase text-foreground-muted backdrop-blur">
                         <div className="flex items-center justify-center border-r border-border/60 px-1 py-1.5">
-                          Hora
+                          {t("Hora")}
                         </div>
                         {week.days.map((day) => {
                           const isToday = isSameDay(day.date, today);
@@ -320,7 +323,7 @@ export default function WeekView() {
                                   appointment.companyName ??
                                   selectors.getCompany(appointment.companyId)
                                     ?.name ??
-                                  "Empresa";
+                                  t("Empresa");
                                 const status = getAppointmentStatus(appointment);
                                 const style = getAppointmentStyle(appointment);
                                 if (!style) return null;
@@ -358,13 +361,15 @@ export default function WeekView() {
             ) : (
               <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
                 <SectionHeader
-                  title="Mapa da semana"
-                  subtitle="Check-ins e check-outs registrados na semana."
+                  title={t("Mapa da semana")}
+                  subtitle={t("Check-ins e check-outs registrados na semana.")}
                 />
                 <CheckInOutMap
                   appointments={weekAppointments}
                   getLabel={getMapLabel}
-                  emptyMessage="Sem check-ins ou check-outs para exibir na semana."
+                  emptyMessage={t(
+                    "Sem check-ins ou check-outs para exibir na semana.",
+                  )}
                 />
               </section>
             )}

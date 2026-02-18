@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { CapturePhotoResult } from "../services/camera";
 import { useLockBodyScroll } from "../hooks/useLockBodyScroll";
 import { compressImage } from "../utils/photoCompress";
+import { t } from "../i18n";
 
 type CameraCaptureModalProps = {
   open: boolean;
@@ -29,7 +30,7 @@ const waitForVideoReady = (video: HTMLVideoElement) =>
     const timeoutId = window.setTimeout(() => {
       if (settled) return;
       settled = true;
-      reject(new Error("Nao foi possivel iniciar a camera."));
+      reject(new Error(t("Nao foi possivel iniciar a camera.")));
     }, 3000);
 
     const handleReady = () => {
@@ -43,7 +44,7 @@ const waitForVideoReady = (video: HTMLVideoElement) =>
       if (settled) return;
       settled = true;
       window.clearTimeout(timeoutId);
-      reject(new Error("Nao foi possivel iniciar a camera."));
+      reject(new Error(t("Nao foi possivel iniciar a camera.")));
     };
 
     video.addEventListener("loadeddata", handleReady, { once: true });
@@ -55,7 +56,7 @@ const canvasToBlob = (canvas: HTMLCanvasElement) =>
     canvas.toBlob(
       (blob) => {
         if (!blob) {
-          reject(new Error("Nao foi possivel gerar a foto."));
+          reject(new Error(t("Nao foi possivel gerar a foto.")));
           return;
         }
         resolve(blob);
@@ -67,8 +68,8 @@ const canvasToBlob = (canvas: HTMLCanvasElement) =>
 
 export const CameraCaptureModal = ({
   open,
-  title = "Capturar foto",
-  subtitle = "Aponte a camera e tire a foto.",
+  title = t("Capturar foto"),
+  subtitle = t("Aponte a camera e tire a foto."),
   onClose,
   onConfirm,
   onError,
@@ -116,7 +117,7 @@ export const CameraCaptureModal = ({
     stopStream();
 
     if (!navigator.mediaDevices?.getUserMedia) {
-      const message = "Camera indisponivel.";
+      const message = t("Camera indisponivel.");
       setError(message);
       onError?.(message);
       setIsStarting(false);
@@ -143,7 +144,7 @@ export const CameraCaptureModal = ({
       const message =
         requestError instanceof Error
           ? requestError.message
-          : "Nao foi possivel iniciar a camera.";
+          : t("Nao foi possivel iniciar a camera.");
       setError(message);
       onError?.(message);
     } finally {
@@ -169,7 +170,7 @@ export const CameraCaptureModal = ({
     try {
       const video = videoRef.current;
       if (!video) {
-        throw new Error("Camera indisponivel.");
+        throw new Error(t("Camera indisponivel."));
       }
 
       await waitForVideoReady(video);
@@ -182,7 +183,7 @@ export const CameraCaptureModal = ({
 
       const context = canvas.getContext("2d");
       if (!context) {
-        throw new Error("Nao foi possivel acessar a camera.");
+        throw new Error(t("Nao foi possivel acessar a camera."));
       }
 
       context.drawImage(video, 0, 0, width, height);
@@ -202,7 +203,7 @@ export const CameraCaptureModal = ({
       const message =
         captureError instanceof Error
           ? captureError.message
-          : "Nao foi possivel capturar a foto.";
+          : t("Nao foi possivel capturar a foto.");
       setError(message);
       onError?.(message);
     } finally {
@@ -241,7 +242,7 @@ export const CameraCaptureModal = ({
             {previewUrl ? (
               <img
                 src={previewUrl}
-                alt="Preview da foto"
+                alt={t("Preview da foto")}
                 className="h-64 w-full object-cover"
               />
             ) : (
@@ -254,7 +255,7 @@ export const CameraCaptureModal = ({
             )}
             {isStarting ? (
               <div className="absolute inset-0 flex items-center justify-center bg-black/30 text-xs font-semibold text-white">
-                Abrindo camera...
+                {t("Abrindo camera...")}
               </div>
             ) : null}
           </div>
@@ -272,7 +273,7 @@ export const CameraCaptureModal = ({
             onClick={onClose}
             className="rounded-full border border-border px-4 py-2 text-xs font-semibold text-foreground-soft"
           >
-            Fechar
+            {t("Fechar")}
           </button>
           <div className="flex flex-wrap gap-2">
             {shot ? (
@@ -281,7 +282,7 @@ export const CameraCaptureModal = ({
                 onClick={handleRetake}
                 className="rounded-full border border-border bg-white px-4 py-2 text-xs font-semibold text-foreground"
               >
-                Nova foto
+                {t("Nova foto")}
               </button>
             ) : (
               <button
@@ -294,7 +295,7 @@ export const CameraCaptureModal = ({
                     : "bg-accent text-white"
                 }`}
               >
-                Tirar foto
+                {t("Tirar foto")}
               </button>
             )}
             <button
@@ -307,7 +308,7 @@ export const CameraCaptureModal = ({
                   : "cursor-not-allowed bg-surface-muted text-foreground-muted"
               }`}
             >
-              Usar foto
+              {t("Usar foto")}
             </button>
           </div>
         </div>

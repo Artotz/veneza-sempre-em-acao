@@ -1,6 +1,7 @@
 import type { Appointment } from "../lib/types";
 import { getAppointmentStatus } from "../lib/schedule";
 import { StatusBadge } from "./StatusBadge";
+import { t } from "../i18n";
 
 type AppointmentCardProps = {
   appointment: Appointment;
@@ -47,11 +48,11 @@ export const AppointmentCard = ({
             {/* <p>{resolvedDetailLabel}</p> */}
             {appointment.createdBy ? (
               <p className="text-xs text-foreground-soft">
-                Criado por {appointment.createdBy}
+                {t("Criado por {{name}}", { name: appointment.createdBy })}
               </p>
             ) : (
               <p className="text-xs text-foreground-soft">
-                Sem criador definido
+                {t("Sem criador definido")}
               </p>
             )}
           </div>
@@ -59,7 +60,7 @@ export const AppointmentCard = ({
         <div className="flex items-center gap-2">
           {appointment.pendingSync ? (
             <span className="rounded-full bg-warning/15 px-2 py-1 text-[10px] font-semibold text-warning">
-              Pendente
+              {t("Pendente")}
             </span>
           ) : null}
           <StatusBadge status={status} />
@@ -68,11 +69,11 @@ export const AppointmentCard = ({
       <div className="mt-3 flex items-center justify-end text-xs text-foreground-soft">
         {blocked ? (
           <span className="rounded-full bg-border px-2 py-1 text-[10px] font-semibold text-foreground-muted">
-            Bloqueado
+            {t("Bloqueado")}
           </span>
         ) : (
           <span className="rounded-full bg-surface-muted px-2 py-1 text-[10px] font-semibold text-foreground-muted">
-            Toque para detalhes
+            {t("Toque para detalhes")}
           </span>
         )}
       </div>

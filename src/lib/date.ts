@@ -1,3 +1,5 @@
+import { t } from "../i18n";
+
 export const WEEK_DAYS = [
   { id: "mon", short: "Seg", full: "Segunda", index: 0 },
   { id: "tue", short: "Ter", full: "Terca", index: 1 },
@@ -190,7 +192,7 @@ export const buildMonthWeeks = (referenceDate: Date, weeksCount?: number) => {
     return {
       index,
       id: `week-${index + 1}`,
-      label: `Semana ${index + 1}`,
+      label: t("Semana {{index}}", { index: index + 1 }),
       startAt,
       endAt,
       days,

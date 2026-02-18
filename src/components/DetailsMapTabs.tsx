@@ -1,3 +1,5 @@
+import { t } from "../i18n";
+
 type DetailsMapTab = "details" | "map";
 
 type DetailsMapTabsProps = {
@@ -10,14 +12,14 @@ type DetailsMapTabsProps = {
 export const DetailsMapTabs = ({
   value,
   onChange,
-  detailsLabel = "Detalhes",
-  mapLabel = "Mapa",
+  detailsLabel = t("Detalhes"),
+  mapLabel = t("Mapa"),
 }: DetailsMapTabsProps) => {
   return (
     <div
       className="rounded-2xl border border-border bg-surface-muted p-1"
       role="tablist"
-      aria-label="Alternar visualizacao"
+      aria-label={t("Alternar visualizacao")}
     >
       <div className="grid grid-cols-2 gap-1">
         <button

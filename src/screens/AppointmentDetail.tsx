@@ -45,30 +45,31 @@ import {
   savePendingAction,
 } from "../storage/offlineSchedule";
 import { syncAppointment } from "../sync/appointmentSync";
+import { t } from "../i18n";
 
 const absenceOptions = [
   {
-    label: "Cliente solicitou remarcacao",
+    label: t("Cliente solicitou remarcacao"),
     value: "client_requested_reschedule",
   },
-  { label: "Endereco fechado", value: "address_closed" },
-  { label: "Equipamento indisponivel", value: "equipment_unavailable" },
-  { label: "Outro", value: "other" },
+  { label: t("Endereco fechado"), value: "address_closed" },
+  { label: t("Equipamento indisponivel"), value: "equipment_unavailable" },
+  { label: t("Outro"), value: "other" },
 ];
 
 const oportunidadeOptions = [
-  { label: "Preventiva", value: "preventiva" },
-  { label: "Garantia basica", value: "garantia_basica" },
-  { label: "Garantia estendida", value: "garantia_estendida" },
-  { label: "Reforma de componentes", value: "reforma_componentes" },
-  { label: "Lamina", value: "lamina" },
-  { label: "Dentes", value: "dentes" },
-  { label: "Rodante", value: "rodante" },
-  { label: "Disponibilidade", value: "disponibilidade" },
-  { label: "Reconexao", value: "reconexao" },
-  { label: "Transferencia AOR", value: "transferencia_aor" },
-  { label: "POPs", value: "pops" },
-  { label: "Outros", value: "outros" },
+  { label: t("Preventiva"), value: "preventiva" },
+  { label: t("Garantia basica"), value: "garantia_basica" },
+  { label: t("Garantia estendida"), value: "garantia_estendida" },
+  { label: t("Reforma de componentes"), value: "reforma_componentes" },
+  { label: t("Lamina"), value: "lamina" },
+  { label: t("Dentes"), value: "dentes" },
+  { label: t("Rodante"), value: "rodante" },
+  { label: t("Disponibilidade"), value: "disponibilidade" },
+  { label: t("Reconexao"), value: "reconexao" },
+  { label: t("Transferencia AOR"), value: "transferencia_aor" },
+  { label: t("POPs"), value: "pops" },
+  { label: t("Outros"), value: "outros" },
 ];
 
 const oportunidadeLabels = Object.fromEntries(
@@ -103,9 +104,9 @@ type OfflinePhotoPreview = OfflinePhotoMeta & {
 };
 
 const mediaKindLabels: Record<MediaKind, string> = {
-  checkin: "Check-in",
-  checkout: "Check-out",
-  absence: "Ausencia",
+  checkin: t("Check-in"),
+  checkout: t("Check-out"),
+  absence: t("Ausencia"),
 };
 
 const markerIconOptions: L.IconOptions = {
@@ -164,9 +165,9 @@ const MapFitBounds = ({ points }: { points: MapPoint[] }) => {
 };
 
 const formatMapDateTimeLabel = (value?: string | null) => {
-  if (!value) return "Data/hora nao registrada";
+  if (!value) return t("Data/hora nao registrada");
   const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return "Data/hora invalida";
+  if (Number.isNaN(parsed.getTime())) return t("Data/hora invalida");
   return `${formatDateShort(parsed)} - ${formatTime(parsed)}`;
 };
 
@@ -265,7 +266,7 @@ export default function AppointmentDetail() {
     }
     const userEmail = user?.email?.trim();
     if (!userEmail) {
-      setError("Usuario nao autenticado.");
+      setError(t("Usuario nao autenticado."));
       setLoading(false);
       return;
     }
@@ -285,7 +286,7 @@ export default function AppointmentDetail() {
     }
 
     if (!data) {
-      setError("Agendamento nao encontrado.");
+      setError(t("Agendamento nao encontrado."));
       setLoading(false);
       return;
     }
@@ -441,7 +442,7 @@ export default function AppointmentDetail() {
       setPendingError(
         pendingLoadError instanceof Error
           ? pendingLoadError.message
-          : "Nao foi possivel carregar as fotos pendentes.",
+          : t("Nao foi possivel carregar as fotos pendentes."),
       );
     } finally {
       setPendingLoading(false);
@@ -477,11 +478,11 @@ export default function AppointmentDetail() {
   const storeOfflinePhoto = useCallback(
     async (kind: MediaKind, shot: CapturePhotoResult) => {
       if (!appointment) {
-        throw new Error("Agendamento nao encontrado.");
+        throw new Error(t("Agendamento nao encontrado."));
       }
       const consultantId = session?.user?.id;
       if (!consultantId) {
-        throw new Error("Usuario nao autenticado.");
+        throw new Error(t("Usuario nao autenticado."));
       }
 
       const photoId = generatePhotoId();
@@ -560,7 +561,7 @@ export default function AppointmentDetail() {
   const updateAppointmentRemote = useCallback(
     async (changes: Record<string, unknown>) => {
       if (!appointment) {
-        throw new Error("Agendamento nao encontrado.");
+        throw new Error(t("Agendamento nao encontrado."));
       }
       const { error: updateError } = await supabase
         .from("apontamentos")
@@ -579,11 +580,11 @@ export default function AppointmentDetail() {
   const uploadPhotoRemote = useCallback(
     async (kind: MediaKind, shot: CapturePhotoResult) => {
       if (!appointment) {
-        throw new Error("Agendamento nao encontrado.");
+        throw new Error(t("Agendamento nao encontrado."));
       }
       const consultantId = session?.user?.id;
       if (!consultantId) {
-        throw new Error("Usuario nao autenticado.");
+        throw new Error(t("Usuario nao autenticado."));
       }
 
       const upload = await uploadApontamentoImage({
@@ -618,11 +619,11 @@ export default function AppointmentDetail() {
       changes: Record<string, unknown>;
     }) => {
       if (!appointment) {
-        throw new Error("Agendamento nao encontrado.");
+        throw new Error(t("Agendamento nao encontrado."));
       }
       const userEmail = user?.email?.trim();
       if (!userEmail) {
-        throw new Error("Usuario nao autenticado.");
+        throw new Error(t("Usuario nao autenticado."));
       }
       await savePendingAction({
         userEmail,
@@ -644,11 +645,11 @@ export default function AppointmentDetail() {
       shot: CapturePhotoResult;
     }) => {
       if (!appointment) {
-        throw new Error("Agendamento nao encontrado.");
+        throw new Error(t("Agendamento nao encontrado."));
       }
       const userEmail = user?.email?.trim();
       if (!userEmail) {
-        throw new Error("Usuario nao autenticado.");
+        throw new Error(t("Usuario nao autenticado."));
       }
       const pendingAction = await savePendingAction({
         userEmail,
@@ -660,7 +661,7 @@ export default function AppointmentDetail() {
       try {
         const consultantId = session?.user?.id;
         if (!consultantId) {
-          throw new Error("Usuario nao autenticado.");
+          throw new Error(t("Usuario nao autenticado."));
         }
         const photoId = generatePhotoId();
         await saveOfflinePhoto(photoId, params.shot.blob, {
@@ -744,7 +745,7 @@ export default function AppointmentDetail() {
         setSyncStatus(
           error instanceof Error
             ? error.message
-            : "Nao foi possivel sincronizar o check-in.",
+          : t("Nao foi possivel sincronizar o check-in."),
         );
       }
     },
@@ -808,7 +809,7 @@ export default function AppointmentDetail() {
         setSyncStatus(
           error instanceof Error
             ? error.message
-            : "Nao foi possivel sincronizar o check-out.",
+          : t("Nao foi possivel sincronizar o check-out."),
         );
       }
     },
@@ -844,7 +845,7 @@ export default function AppointmentDetail() {
         setSyncStatus(
           error instanceof Error
             ? error.message
-            : "Nao foi possivel sincronizar a ausencia.",
+          : t("Nao foi possivel sincronizar a ausencia."),
         );
       }
     },
@@ -882,7 +883,7 @@ export default function AppointmentDetail() {
     if (company) {
       pushPoint(
         "company",
-        company.name ?? "Empresa",
+        company.name ?? t("Empresa"),
         company.lat,
         company.lng,
         "company",
@@ -891,7 +892,7 @@ export default function AppointmentDetail() {
     }
     pushPoint(
       "checkin",
-      "Check-in",
+      t("Check-in"),
       appointment.checkInLat,
       appointment.checkInLng,
       "checkin",
@@ -899,7 +900,7 @@ export default function AppointmentDetail() {
     );
     pushPoint(
       "checkout",
-      "Check-out",
+      t("Check-out"),
       appointment.checkOutLat,
       appointment.checkOutLng,
       "checkout",
@@ -921,7 +922,10 @@ export default function AppointmentDetail() {
 
   if (!appointment && loading) {
     return (
-      <AppShell title="Agendamento" subtitle="Carregando detalhes.">
+      <AppShell
+        title={t("Agendamento")}
+        subtitle={t("Carregando detalhes.")}
+      >
         <div className="space-y-3">
           <div className="h-24 animate-pulse rounded-3xl bg-surface-muted" />
           <div className="h-32 animate-pulse rounded-3xl bg-surface-muted" />
@@ -932,10 +936,15 @@ export default function AppointmentDetail() {
 
   if (!appointment) {
     return (
-      <AppShell title="Agendamento" subtitle="Detalhe do atendimento.">
+      <AppShell
+        title={t("Agendamento")}
+        subtitle={t("Detalhe do atendimento.")}
+      >
         <EmptyState
-          title="Agendamento nao encontrado"
-          description={error ?? "Volte para o dia e selecione outro horario."}
+          title={t("Agendamento nao encontrado")}
+          description={
+            error ?? t("Volte para o dia e selecione outro horario.")
+          }
         />
         {/* <Link
           to="/cronograma/dia"
@@ -973,17 +982,17 @@ export default function AppointmentDetail() {
   const isCheckoutBusy = isPhotoBusy || geo.isCapturing;
 
   const formatCoordinates = (lat?: number | null, lng?: number | null) => {
-    if (lat == null || lng == null) return "Nao registrado";
+    if (lat == null || lng == null) return t("Nao registrado");
     return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
   };
 
   const formatAccuracy = (accuracy?: number | null) => {
-    if (accuracy == null) return "Nao registrado";
+    if (accuracy == null) return t("Nao registrado");
     return `+/- ${Math.round(accuracy)} m`;
   };
 
   const formatGeoTime = (value?: string | null) =>
-    value ? formatTime(new Date(value)) : "Nao registrado";
+    value ? formatTime(new Date(value)) : t("Nao registrado");
 
   const isGeoError = (value: unknown) => {
     const code = (value as { code?: unknown })?.code;
@@ -1049,12 +1058,12 @@ export default function AppointmentDetail() {
   const handleSyncAppointment = async () => {
     if (isSyncing || !appointment) return;
     if (!isOnline) {
-      setSyncStatus("Sem internet.");
+      setSyncStatus(t("Sem internet."));
       return;
     }
     const userEmail = user?.email?.trim();
     if (!userEmail) {
-      setSyncStatus("Usuario nao autenticado.");
+      setSyncStatus(t("Usuario nao autenticado."));
       return;
     }
     setSyncStatus("Sincronizando apontamento...");
@@ -1077,7 +1086,7 @@ export default function AppointmentDetail() {
       setSyncStatus(
         syncError instanceof Error
           ? syncError.message
-          : "Nao foi possivel sincronizar o apontamento.",
+          : t("Nao foi possivel sincronizar o apontamento."),
       );
     } finally {
       setIsSyncing(false);
@@ -1119,7 +1128,7 @@ export default function AppointmentDetail() {
       setError(
         actionError instanceof Error
           ? actionError.message
-          : "Nao foi possivel registrar o check-in.",
+          : t("Nao foi possivel registrar o check-in."),
       );
       setGeoIntent(null);
     } finally {
@@ -1179,7 +1188,7 @@ export default function AppointmentDetail() {
       setError(
         actionError instanceof Error
           ? actionError.message
-          : "Nao foi possivel registrar o check-out.",
+          : t("Nao foi possivel registrar o check-out."),
       );
       setGeoIntent(null);
     } finally {
@@ -1215,7 +1224,7 @@ export default function AppointmentDetail() {
       setError(
         actionError instanceof Error
           ? actionError.message
-          : "Nao foi possivel registrar a ausencia.",
+          : t("Nao foi possivel registrar a ausencia."),
       );
     } finally {
       setPhotoStatus(null);
@@ -1267,7 +1276,7 @@ export default function AppointmentDetail() {
   const absenceLabel =
     absenceReasonLabels[appointment.absenceReason ?? ""] ??
     appointment.absenceReason ??
-    "Nenhuma";
+    t("Nenhuma");
 
   const oportunidades = appointment.oportunidades ?? [];
   const showOportunidades = Boolean(
@@ -1278,7 +1287,7 @@ export default function AppointmentDetail() {
   const hasMapPoints = mapPoints.length > 0;
   const hasFilteredMapPoints = filteredMapPoints.length > 0;
   const companyDisplayName =
-    company?.name ?? appointment.companyName ?? "Empresa";
+    company?.name ?? appointment.companyName ?? t("Empresa");
   const pendingItemBase = pendingPhotos.length + pendingActionCount;
   const pendingItemCount =
     pendingItemBase +
@@ -1286,14 +1295,14 @@ export default function AppointmentDetail() {
 
   const cameraTitle =
     cameraIntent === "checkin"
-      ? "Foto do check-in"
+      ? t("Foto do check-in")
       : cameraIntent === "checkout"
-        ? "Foto do check-out"
-        : "Capturar foto";
+        ? t("Foto do check-out")
+        : t("Capturar foto");
 
   return (
     <AppShell
-      title="Detalhe do agendamento"
+      title={t("Detalhe do agendamento")}
       subtitle={getAppointmentTitle(appointment)}
     >
       <div className="space-y-4">
@@ -1312,7 +1321,7 @@ export default function AppointmentDetail() {
                   : "bg-warning/15 text-warning"
               }`}
             >
-              {isOnline ? "Online" : "Offline"}
+              {isOnline ? t("Online") : t("Offline")}
             </span>
             <button
               type="button"
@@ -1325,8 +1334,10 @@ export default function AppointmentDetail() {
               }`}
             >
               {isSyncing
-                ? "Sincronizando apontamento..."
-                : `Sincronizar apontamento (${pendingItemCount} pendencias)`}
+                ? t("Sincronizando apontamento...")
+                : t("Sincronizar apontamento ({{count}} pendencias)", {
+                    count: pendingItemCount,
+                  })}
             </button>
           </div>
         </div>
@@ -1360,7 +1371,7 @@ export default function AppointmentDetail() {
             <div className="flex items-center gap-2">
               {appointment.pendingSync ? (
                 <span className="rounded-full bg-warning/15 px-2 py-1 text-[10px] font-semibold text-warning">
-                  Pendente
+                  {t("Pendente")}
                 </span>
               ) : null}
               <StatusBadge status={status} />
@@ -1369,14 +1380,14 @@ export default function AppointmentDetail() {
 
           <div className="mt-3 space-y-2 text-sm text-foreground-muted">
             <div className="flex items-center justify-between">
-              <span>Consultor</span>
+              <span>{t("Consultor")}</span>
               <span className="font-semibold text-foreground">
-                {appointment.consultant || "Nao informado"}
+                {appointment.consultant || t("Nao informado")}
               </span>
             </div>
             {appointment.createdBy ? (
               <div className="flex items-center justify-between">
-                <span>Criado por</span>
+                <span>{t("Criado por")}</span>
                 <span className="font-semibold text-foreground">
                   {appointment.createdBy}
                 </span>
@@ -1384,7 +1395,7 @@ export default function AppointmentDetail() {
             ) : null}
             {snapshotLabel ? (
               <div className="flex items-center justify-between">
-                <span>Endereco (snapshot)</span>
+                <span>{t("Endereco (snapshot)")}</span>
                 <span className="font-semibold text-foreground">
                   {snapshotLabel}
                 </span>
@@ -1394,38 +1405,41 @@ export default function AppointmentDetail() {
 
           {blocked ? (
             <div className="rounded-2xl border border-danger/30 bg-danger/10 p-3 text-xs text-danger">
-              Este agendamento esta bloqueado. Conclua o pendente anterior no
-              mesmo dia para liberar as acoes.
+              {t(
+                "Este agendamento esta bloqueado. Conclua o pendente anterior no mesmo dia para liberar as acoes.",
+              )}
             </div>
           ) : null}
           {!isTodayAppointment ? (
             <div className="rounded-2xl border border-warning/40 bg-warning/10 p-3 text-xs text-foreground-soft">
-              Check-in e check-out so podem ser feitos no dia do apontamento.
+              {t(
+                "Check-in e check-out so podem ser feitos no dia do apontamento.",
+              )}
             </div>
           ) : null}
         </section>
 
         <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
-          <SectionHeader title="Linha do tempo" />
+          <SectionHeader title={t("Linha do tempo")} />
           <div className="space-y-2 text-sm">
             <div className="flex items-center justify-between rounded-2xl bg-surface-muted px-3 py-2">
-              <span className="text-foreground-soft">Check-in</span>
+              <span className="text-foreground-soft">{t("Check-in")}</span>
               <span className="font-semibold text-foreground">
                 {appointment.checkInAt
                   ? formatTime(new Date(appointment.checkInAt))
-                  : "Nao realizado"}
+                  : t("Nao realizado")}
               </span>
             </div>
             <div className="flex items-center justify-between rounded-2xl bg-surface-muted px-3 py-2">
-              <span className="text-foreground-soft">Check-out</span>
+              <span className="text-foreground-soft">{t("Check-out")}</span>
               <span className="font-semibold text-foreground">
                 {appointment.checkOutAt
                   ? formatTime(new Date(appointment.checkOutAt))
-                  : "Nao realizado"}
+                  : t("Nao realizado")}
               </span>
             </div>
             <div className="flex items-center justify-between rounded-2xl bg-surface-muted px-3 py-2">
-              <span className="text-foreground-soft">Ausencia</span>
+              <span className="text-foreground-soft">{t("Ausencia")}</span>
               <span className="font-semibold text-foreground">
                 {absenceLabel}
               </span>
@@ -1440,7 +1454,7 @@ export default function AppointmentDetail() {
 
         {showOportunidades ? (
           <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
-            <SectionHeader title="Oportunidades percebidas" />
+            <SectionHeader title={t("Oportunidades percebidas")} />
             {oportunidades.length ? (
               <div className="flex flex-wrap gap-2">
                 {oportunidades.map((item) => (
@@ -1453,14 +1467,14 @@ export default function AppointmentDetail() {
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-foreground-muted">Nenhuma</p>
+              <p className="text-xs text-foreground-muted">{t("Nenhuma")}</p>
             )}
           </section>
         ) : null}
 
         {showCheckoutNotes ? (
           <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
-            <SectionHeader title="Observacao do check-out" />
+            <SectionHeader title={t("Observacao do check-out")} />
             <p className="text-sm text-foreground-muted whitespace-pre-wrap">
               {checkoutNotes}
             </p>
@@ -1468,18 +1482,24 @@ export default function AppointmentDetail() {
         ) : null}
 
         <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
-          <SectionHeader title="Acoes" subtitle="Sincroniza com o Supabase." />
+          <SectionHeader
+            title={t("Acoes")}
+            subtitle={t("Sincroniza com o Supabase.")}
+          />
           <button
             type="button"
             onClick={handleOpenActions}
             className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm font-semibold text-foreground transition hover:border-accent"
           >
-            Acoes
+            {t("Acoes")}
           </button>
         </section>
 
         <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
-          <SectionHeader title="Mapa" subtitle="Pinos do atendimento." />
+          <SectionHeader
+            title={t("Mapa")}
+            subtitle={t("Pinos do atendimento.")}
+          />
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -1490,7 +1510,7 @@ export default function AppointmentDetail() {
                   : "border-border bg-white text-foreground-soft"
               }`}
             >
-              Check-in
+              {t("Check-in")}
             </button>
             <button
               type="button"
@@ -1501,7 +1521,7 @@ export default function AppointmentDetail() {
                   : "border-border bg-white text-foreground-soft"
               }`}
             >
-              Check-out
+              {t("Check-out")}
             </button>
           </div>
           {hasFilteredMapPoints ? (
@@ -1542,25 +1562,25 @@ export default function AppointmentDetail() {
           ) : (
             <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
               {hasMapPoints
-                ? "Nenhum pino visivel com os filtros atuais."
-                : "Sem coordenadas para exibir no mapa."}
+                ? t("Nenhum pino visivel com os filtros atuais.")
+                : t("Sem coordenadas para exibir no mapa.")}
             </div>
           )}
         </section>
 
         <section className="rounded-3xl border border-border bg-white p-4 shadow-sm">
           <SectionHeader
-            title="Recursos"
-            subtitle="Geolocalizacao registrada."
+            title={t("Recursos")}
+            subtitle={t("Geolocalizacao registrada.")}
           />
           <div className="mt-3 space-y-3 text-xs text-foreground-muted">
             <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2">
               <p className="text-[11px] font-semibold text-foreground">
-                Check-in
+                {t("Check-in")}
               </p>
               <div className="mt-2 space-y-1">
                 <div className="flex items-center justify-between">
-                  <span>Geo</span>
+                  <span>{t("Geo")}</span>
                   <span className="font-semibold text-foreground">
                     {formatCoordinates(
                       appointment.checkInLat,
@@ -1569,13 +1589,13 @@ export default function AppointmentDetail() {
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span>Precisao</span>
+                  <span>{t("Precisao")}</span>
                   <span className="font-semibold text-foreground">
                     {formatAccuracy(appointment.checkInAccuracyM)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span>Horario</span>
+                  <span>{t("Horario")}</span>
                   <span className="font-semibold text-foreground">
                     {formatGeoTime(appointment.checkInAt)}
                   </span>
@@ -1584,11 +1604,11 @@ export default function AppointmentDetail() {
             </div>
             <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2">
               <p className="text-[11px] font-semibold text-foreground">
-                Check-out
+                {t("Check-out")}
               </p>
               <div className="mt-2 space-y-1">
                 <div className="flex items-center justify-between">
-                  <span>Geo</span>
+                  <span>{t("Geo")}</span>
                   <span className="font-semibold text-foreground">
                     {formatCoordinates(
                       appointment.checkOutLat,
@@ -1597,13 +1617,13 @@ export default function AppointmentDetail() {
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span>Precisao</span>
+                  <span>{t("Precisao")}</span>
                   <span className="font-semibold text-foreground">
                     {formatAccuracy(appointment.checkOutAccuracyM)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span>Horario</span>
+                  <span>{t("Horario")}</span>
                   <span className="font-semibold text-foreground">
                     {formatGeoTime(appointment.checkOutAt)}
                   </span>
@@ -1615,12 +1635,12 @@ export default function AppointmentDetail() {
 
         <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
           <SectionHeader
-            title="Fotos"
-            subtitle="Registro visual do apontamento."
+            title={t("Fotos")}
+            subtitle={t("Registro visual do apontamento.")}
           />
           {mediaLoading || pendingLoading ? (
             <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
-              Carregando fotos...
+              {t("Carregando fotos...")}
             </div>
           ) : null}
           {pendingError ? (
@@ -1638,7 +1658,7 @@ export default function AppointmentDetail() {
           mediaItems.length === 0 &&
           pendingPhotos.length === 0 ? (
             <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
-              Nenhuma foto registrada ainda.
+              {t("Nenhuma foto registrada ainda.")}
             </div>
           ) : null}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -1646,7 +1666,7 @@ export default function AppointmentDetail() {
               const kindLabel =
                 (item.kind &&
                   (mediaKindLabels as Record<string, string>)[item.kind]) ||
-                "Foto";
+                t("Foto");
               return (
                 <div
                   key={item.id}
@@ -1655,17 +1675,17 @@ export default function AppointmentDetail() {
                   {item.previewUrl ? (
                     <img
                       src={item.previewUrl}
-                      alt={`Foto pendente ${kindLabel}`}
+                      alt={t("Foto pendente {{kind}}", { kind: kindLabel })}
                       className="h-28 w-full object-cover"
                     />
                   ) : (
                     <div className="flex h-28 items-center justify-center text-[10px] text-foreground-soft">
-                      Sem preview
+                      {t("Sem preview")}
                     </div>
                   )}
                   <div className="flex items-center justify-between px-2 py-1 text-[10px] font-semibold text-foreground">
                     <span>{kindLabel}</span>
-                    <span className="text-warning">Pendente</span>
+                    <span className="text-warning">{t("Pendente")}</span>
                   </div>
                 </div>
               );
@@ -1678,17 +1698,19 @@ export default function AppointmentDetail() {
                 {item.signedUrl ? (
                   <img
                     src={item.signedUrl}
-                    alt={`Foto ${mediaKindLabels[item.kind]}`}
+                    alt={t("Foto {{kind}}", {
+                      kind: mediaKindLabels[item.kind],
+                    })}
                     className="h-28 w-full object-cover"
                   />
                 ) : (
                   <div className="flex h-28 items-center justify-center text-[10px] text-foreground-soft">
-                    URL expirada
+                    {t("URL expirada")}
                   </div>
                 )}
                 <div className="flex items-center justify-between px-2 py-1 text-[10px] font-semibold text-foreground">
                   <span>{mediaKindLabels[item.kind]}</span>
-                  <span className="text-success">Enviado</span>
+                  <span className="text-success">{t("Enviado")}</span>
                 </div>
               </div>
             ))}
@@ -1706,27 +1728,27 @@ export default function AppointmentDetail() {
           >
             <div className="border-b border-border px-5 py-4">
               <h3 className="text-base font-semibold text-foreground">
-                Check-out do agendamento
+                {t("Check-out do agendamento")}
               </h3>
               <p className="mt-1 text-xs text-foreground-muted">
-                Confirme os dados antes de finalizar.
+                {t("Confirme os dados antes de finalizar.")}
               </p>
             </div>
 
             <div className="space-y-4 px-5 py-4">
               <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-muted">
                 <p className="text-[11px] font-semibold text-foreground">
-                  Resumo do apontamento
+                  {t("Resumo do apontamento")}
                 </p>
                 <div className="mt-2 space-y-1">
                   <div className="flex items-center justify-between">
-                    <span>Horario</span>
+                    <span>{t("Horario")}</span>
                     <span className="font-semibold text-foreground">
                       {dayLabel} - {formatAppointmentWindow(appointment)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span>Empresa</span>
+                    <span>{t("Empresa")}</span>
                     <span className="font-semibold text-foreground">
                       {companyDisplayName}
                     </span>
@@ -1736,11 +1758,12 @@ export default function AppointmentDetail() {
 
               <div className="rounded-2xl border border-border bg-white p-3">
                 <p className="text-xs font-semibold text-foreground">
-                  Oportunidades percebidas durante a visita
+                  {t("Oportunidades percebidas durante a visita")}
                 </p>
                 <p className="mt-1 text-[11px] text-foreground-muted">
-                  Selecione oportunidades percebidas durante a visita
-                  (opcional).
+                  {t(
+                    "Selecione oportunidades percebidas durante a visita (opcional).",
+                  )}
                 </p>
                 <div className="mt-3 max-h-40 overflow-y-auto pr-1">
                   <div className="grid gap-2">
@@ -1775,17 +1798,19 @@ export default function AppointmentDetail() {
 
               <div className="rounded-2xl border border-border bg-white p-3">
                 <p className="text-xs font-semibold text-foreground">
-                  Observacoes do check-out
+                  {t("Observacoes do check-out")}
                 </p>
                 <p className="mt-1 text-[11px] text-foreground-muted">
-                  Registre detalhes relevantes da visita (opcional).
+                  {t("Registre detalhes relevantes da visita (opcional).")}
                 </p>
                 <textarea
                   value={checkoutObservation}
                   onChange={(event) =>
                     setCheckoutObservation(event.target.value)
                   }
-                  placeholder="Ex: Cliente solicitou retorno em 15 dias."
+                  placeholder={t(
+                    "Ex: Cliente solicitou retorno em 15 dias.",
+                  )}
                   className="mt-3 w-full resize-none rounded-2xl border border-border bg-white px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-accent/40"
                   rows={3}
                   disabled={isCheckoutBusy}
@@ -1794,7 +1819,7 @@ export default function AppointmentDetail() {
 
               {geo.isCapturing && geoIntent === "check_out" ? (
                 <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
-                  Capturando localizacao. Aguarde alguns segundos...
+                  {t("Capturando localizacao. Aguarde alguns segundos...")}
                 </div>
               ) : null}
               {photoStatus ? (
@@ -1809,8 +1834,10 @@ export default function AppointmentDetail() {
                   </p>
                   <p className="mt-1 text-foreground-soft">
                     {geo.error.code === "PERMISSION_DENIED"
-                      ? "Permita localizacao no navegador para concluir o registro."
-                      : "Voce pode tentar novamente ou cancelar."}
+                      ? t(
+                          "Permita localizacao no navegador para concluir o registro.",
+                        )
+                      : t("Voce pode tentar novamente ou cancelar.")}
                   </p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     <button
@@ -1818,14 +1845,14 @@ export default function AppointmentDetail() {
                       onClick={handleRetryCheckoutGeo}
                       className="rounded-full border border-border bg-white px-3 py-1 text-[10px] font-semibold text-foreground"
                     >
-                      Tentar novamente
+                      {t("Tentar novamente")}
                     </button>
                     <button
                       type="button"
                       onClick={handleCancelGeo}
                       className="rounded-full border border-border bg-white px-3 py-1 text-[10px] font-semibold text-foreground-soft"
                     >
-                      Cancelar
+                      {t("Cancelar")}
                     </button>
                   </div>
                 </div>
@@ -1843,7 +1870,7 @@ export default function AppointmentDetail() {
                     : "text-foreground-soft"
                 }`}
               >
-                Cancelar
+                {t("Cancelar")}
               </button>
               <button
                 type="button"
@@ -1855,7 +1882,7 @@ export default function AppointmentDetail() {
                     : "cursor-not-allowed bg-surface-muted text-foreground-muted"
                 }`}
               >
-                Confirmar check-out
+                {t("Confirmar check-out")}
               </button>
             </div>
           </div>
@@ -1872,16 +1899,18 @@ export default function AppointmentDetail() {
           >
             <div className="border-b border-border px-5 py-4">
               <h3 className="text-base font-semibold text-foreground">
-                Justificar ausencia
+                {t("Justificar ausencia")}
               </h3>
               <p className="mt-1 text-xs text-foreground-muted">
-                Selecione o motivo e confirme o registro.
+                {t("Selecione o motivo e confirme o registro.")}
               </p>
             </div>
 
             <div className="space-y-4 px-5 py-4">
               <div className="rounded-2xl border border-border bg-surface-muted p-3">
-                <p className="text-xs font-semibold text-foreground">Motivo</p>
+                <p className="text-xs font-semibold text-foreground">
+                  {t("Motivo")}
+                </p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {absenceOptions.map((reason) => (
                     <button
@@ -1901,7 +1930,7 @@ export default function AppointmentDetail() {
                 <textarea
                   value={absenceNote}
                   onChange={(event) => setAbsenceNote(event.target.value)}
-                  placeholder="Descreva o motivo..."
+                  placeholder={t("Descreva o motivo...")}
                   className="mt-3 w-full resize-none rounded-2xl border border-border bg-white px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-accent/40"
                   rows={3}
                 />
@@ -1924,7 +1953,7 @@ export default function AppointmentDetail() {
                     : "text-foreground-soft"
                 }`}
               >
-                Cancelar
+                {t("Cancelar")}
               </button>
               <button
                 type="button"
@@ -1936,7 +1965,7 @@ export default function AppointmentDetail() {
                     : "cursor-not-allowed bg-surface-muted text-foreground-muted"
                 }`}
               >
-                Registrar ausencia
+                {t("Registrar ausencia")}
               </button>
             </div>
           </div>
@@ -1945,7 +1974,7 @@ export default function AppointmentDetail() {
       <CameraCaptureModal
         open={isCameraOpen}
         title={cameraTitle}
-        subtitle="Alinhe a camera e capture a foto."
+        subtitle={t("Alinhe a camera e capture a foto.")}
         onClose={() => setCameraIntent(null)}
         onConfirm={handleCameraConfirm}
         onError={(message) => setError(message)}
@@ -1961,10 +1990,10 @@ export default function AppointmentDetail() {
           >
             <div className="border-b border-border px-5 py-4">
               <h3 className="text-base font-semibold text-foreground">
-                Acoes do agendamento
+                {t("Acoes do agendamento")}
               </h3>
               <p className="mt-1 text-xs text-foreground-muted">
-                Sincroniza com o Supabase.
+                {t("Sincroniza com o Supabase.")}
               </p>
             </div>
 
@@ -1983,8 +2012,8 @@ export default function AppointmentDetail() {
                   }`}
                 >
                   {isCheckInCapturing
-                    ? "Capturando localizacao..."
-                    : "Fazer check-in"}
+                    ? t("Capturando localizacao...")
+                    : t("Fazer check-in")}
                 </button>
                 <button
                   type="button"
@@ -1999,8 +2028,8 @@ export default function AppointmentDetail() {
                   }`}
                 >
                   {isCheckOutCapturing
-                    ? "Capturando localizacao..."
-                    : "Fazer check-out"}
+                    ? t("Capturando localizacao...")
+                    : t("Fazer check-out")}
                 </button>
                 <button
                   type="button"
@@ -2012,11 +2041,11 @@ export default function AppointmentDetail() {
                       : "cursor-not-allowed bg-surface-muted text-foreground-muted"
                   }`}
                 >
-                  Justificar ausencia
+                  {t("Justificar ausencia")}
                 </button>
                 {geo.isCapturing ? (
                   <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
-                    Capturando localizacao. Aguarde alguns segundos...
+                    {t("Capturando localizacao. Aguarde alguns segundos...")}
                   </div>
                 ) : null}
                 {photoStatus ? (
@@ -2031,8 +2060,10 @@ export default function AppointmentDetail() {
                     </p>
                     <p className="mt-1 text-foreground-soft">
                       {geo.error.code === "PERMISSION_DENIED"
-                        ? "Permita localizacao no navegador para concluir o registro."
-                        : "Voce pode tentar novamente ou cancelar."}
+                        ? t(
+                            "Permita localizacao no navegador para concluir o registro.",
+                          )
+                        : t("Voce pode tentar novamente ou cancelar.")}
                     </p>
                     <div className="mt-2 flex flex-wrap gap-2">
                       <button
@@ -2040,14 +2071,14 @@ export default function AppointmentDetail() {
                         onClick={handleRetryGeo}
                         className="rounded-full border border-border bg-white px-3 py-1 text-[10px] font-semibold text-foreground"
                       >
-                        Tentar novamente
+                        {t("Tentar novamente")}
                       </button>
                       <button
                         type="button"
                         onClick={handleCancelGeo}
                         className="rounded-full border border-border bg-white px-3 py-1 text-[10px] font-semibold text-foreground-soft"
                       >
-                        Cancelar
+                        {t("Cancelar")}
                       </button>
                     </div>
                   </div>
@@ -2061,7 +2092,7 @@ export default function AppointmentDetail() {
                 onClick={handleCloseActions}
                 className="rounded-full border border-border px-4 py-2 text-xs font-semibold text-foreground-soft"
               >
-                Fechar
+                {t("Fechar")}
               </button>
             </div>
           </div>

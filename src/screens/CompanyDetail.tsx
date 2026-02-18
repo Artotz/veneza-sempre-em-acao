@@ -23,6 +23,7 @@ import {
   getCompaniesSnapshot,
   saveCompaniesSnapshot,
 } from "../storage/offlineSchedule";
+import { t } from "../i18n";
 
 const buildDayKey = (date: Date) =>
   `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
@@ -71,7 +72,7 @@ export default function CompanyDetail() {
     const loadCompany = async () => {
       if (authLoading) return;
       if (!id) {
-        setCompanyError("Empresa nao encontrada.");
+        setCompanyError(t("Empresa nao encontrada."));
         setCompanyLoading(false);
         return;
       }
@@ -86,7 +87,7 @@ export default function CompanyDetail() {
 
       const userEmail = user?.email?.trim();
       if (!userEmail) {
-        setCompanyError("Usuario nao autenticado.");
+        setCompanyError(t("Usuario nao autenticado."));
         setCompanyLoading(false);
         return;
       }
@@ -106,7 +107,7 @@ export default function CompanyDetail() {
 
       const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
       if (isOffline) {
-        setCompanyError("Sem conexao e sem cache local.");
+        setCompanyError(t("Sem conexao e sem cache local."));
         setCompanyLoading(false);
         return;
       }
@@ -130,7 +131,7 @@ export default function CompanyDetail() {
       }
 
       if (!data) {
-        setCompanyError("Empresa nao encontrada.");
+        setCompanyError(t("Empresa nao encontrada."));
         setCompanyLoading(false);
         return;
       }
@@ -205,28 +206,28 @@ export default function CompanyDetail() {
     () => [
       {
         status: "agendado" as const,
-        label: "Agendados",
+        label: t("Agendados"),
         count: summary.agendado,
         baseClass: "bg-warning/15 text-warning",
         ringClass: "ring-warning/30",
       },
       {
         status: "em_execucao" as const,
-        label: "Em execucao",
+        label: t("Em execucao"),
         count: summary.em_execucao,
         baseClass: "bg-info/15 text-info",
         ringClass: "ring-info/30",
       },
       {
         status: "concluido" as const,
-        label: "Concluidos",
+        label: t("Concluidos"),
         count: summary.concluido,
         baseClass: "bg-success/15 text-success",
         ringClass: "ring-success/30",
       },
       {
         status: "cancelado" as const,
-        label: "Cancelados",
+        label: t("Cancelados"),
         count: summary.cancelado,
         baseClass: "bg-danger/15 text-danger",
         ringClass: "ring-danger/30",
@@ -236,7 +237,7 @@ export default function CompanyDetail() {
   );
 
   const companyDisplayName =
-    company?.name ?? orderedAppointments[0]?.companyName ?? "Empresa";
+    company?.name ?? orderedAppointments[0]?.companyName ?? t("Empresa");
 
   const handleOpenAppointment = (appointmentId: string) => {
     navigate(`/apontamentos/${appointmentId}`);
@@ -244,10 +245,13 @@ export default function CompanyDetail() {
 
   if (!id) {
     return (
-      <AppShell title="Empresa" subtitle="Empresa nao encontrada.">
+      <AppShell
+        title={t("Empresa")}
+        subtitle={t("Empresa nao encontrada.")}
+      >
         <EmptyState
-          title="Empresa nao encontrada"
-          description="Verifique o link ou escolha outra empresa."
+          title={t("Empresa nao encontrada")}
+          description={t("Verifique o link ou escolha outra empresa.")}
         />
         {/* <Link
           to="/empresas"
@@ -262,7 +266,7 @@ export default function CompanyDetail() {
   return (
     <AppShell
       title={companyDisplayName}
-      subtitle="Detalhes da empresa e apontamentos do mes."
+      subtitle={t("Detalhes da empresa e apontamentos do mes.")}
       rightSlot={formatMonthYear(new Date())}
     >
       <div className="space-y-4">
@@ -274,7 +278,7 @@ export default function CompanyDetail() {
         </Link> */}
 
         <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
-          <SectionHeader title="Dados da empresa" />
+          <SectionHeader title={t("Dados da empresa")} />
           {companyLoading ? (
             <div className="space-y-2">
               <div className="h-4 w-1/2 animate-pulse rounded-full bg-surface-muted" />
@@ -283,28 +287,38 @@ export default function CompanyDetail() {
             </div>
           ) : companyError ? (
             <EmptyState
-              title="Nao foi possivel carregar"
+              title={t("Nao foi possivel carregar")}
               description={companyError}
             />
           ) : company ? (
             <div className="space-y-2">
               <div className="space-y-1">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-foreground-soft">
-                  {company.document ?? "Sem documento"}
+                  {company.document ?? t("Sem documento")}
                 </p>
                 <p className="text-lg font-semibold text-foreground">
                   {company.name}
                 </p>
                 {[
                   company.state,
-                  company.csa ? `CSA ${company.csa}` : null,
-                  company.segment ? `Segmento ${company.segment}` : null,
+                  company.csa
+                    ? t("CSA {{csa}}", { csa: company.csa })
+                    : null,
+                  company.segment
+                    ? t("Segmento {{segment}}", { segment: company.segment })
+                    : null,
                 ].filter(Boolean).length ? (
                   <p className="text-sm text-foreground-muted">
                     {[
                       company.state,
-                      company.csa ? `CSA ${company.csa}` : null,
-                      company.segment ? `Segmento ${company.segment}` : null,
+                      company.csa
+                        ? t("CSA {{csa}}", { csa: company.csa })
+                        : null,
+                      company.segment
+                        ? t("Segmento {{segment}}", {
+                            segment: company.segment,
+                          })
+                        : null,
                     ]
                       .filter(Boolean)
                       .join(" - ")}
@@ -314,23 +328,33 @@ export default function CompanyDetail() {
 
               <div className="space-y-1 text-sm text-foreground-muted">
                 {company.clientClass ? (
-                  <p>Classe: {company.clientClass}</p>
+                  <p>
+                    {t("Classe: {{value}}", { value: company.clientClass })}
+                  </p>
                 ) : null}
                 {company.carteiraDef ? (
-                  <p>Carteira: {company.carteiraDef}</p>
+                  <p>
+                    {t("Carteira: {{value}}", { value: company.carteiraDef })}
+                  </p>
                 ) : null}
                 {company.carteiraDef2 ? (
-                  <p>Carteira 2: {company.carteiraDef2}</p>
+                  <p>
+                    {t("Carteira 2: {{value}}", {
+                      value: company.carteiraDef2,
+                    })}
+                  </p>
                 ) : null}
                 {company.validacao ? (
-                  <p>Validacao: {company.validacao}</p>
+                  <p>
+                    {t("Validacao: {{value}}", { value: company.validacao })}
+                  </p>
                 ) : null}
               </div>
 
               <div className="grid gap-2 text-xs sm:grid-cols-2">
                 <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
-                    Valor Cot (3m)
+                    {t("Valor Cot (3m)")}
                   </p>
                   <p className="text-sm font-semibold text-foreground">
                     {formatCurrencyBRL(company.vlrUltimos3Meses)}
@@ -338,7 +362,7 @@ export default function CompanyDetail() {
                 </div>
                 <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
-                    Qtd Cot (3m)
+                    {t("Qtd Cot (3m)")}
                   </p>
                   <p className="text-sm font-semibold text-foreground">
                     {formatQuantity(company.qtdUltimos3Meses)}
@@ -348,8 +372,8 @@ export default function CompanyDetail() {
             </div>
           ) : (
             <EmptyState
-              title="Empresa nao encontrada"
-              description="Verifique o link ou escolha outra empresa."
+              title={t("Empresa nao encontrada")}
+              description={t("Verifique o link ou escolha outra empresa.")}
             />
           )}
         </section>
@@ -359,13 +383,13 @@ export default function CompanyDetail() {
           onClick={() => navigate(`/empresas/${id}/novo-apontamento`)}
           className="w-full rounded-2xl bg-foreground px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-foreground/90"
         >
-          Criar apontamento
+          {t("Criar apontamento")}
         </button>
 
         <section className="space-y-3">
           <SectionHeader
-            title="Apontamentos"
-            rightSlot={`${orderedAppointments.length} ag.`}
+            title={t("Apontamentos")}
+            rightSlot={t("{{count}} ag.", { count: orderedAppointments.length })}
           />
 
           {state.loading ? (
@@ -375,16 +399,18 @@ export default function CompanyDetail() {
             </div>
           ) : state.error && orderedAppointments.length === 0 ? (
             <EmptyState
-              title="Nao foi possivel carregar"
+              title={t("Nao foi possivel carregar")}
               description={state.error}
             />
           ) : (
             <div className="space-y-3">
               <div className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
                 <SectionHeader
-                  title="Filtros do mes"
-                  subtitle="Status e sugestoes."
-                  rightSlot={`${filteredAppointments.length} ag.`}
+                  title={t("Filtros do mes")}
+                  subtitle={t("Status e sugestoes.")}
+                  rightSlot={t("{{count}} ag.", {
+                    count: filteredAppointments.length,
+                  })}
                 />
                 <div className="flex flex-wrap gap-2 text-[11px] font-semibold">
                   {pillOptions.map((pill) => {
@@ -419,7 +445,7 @@ export default function CompanyDetail() {
                       showSuggestions ? "ring-2 ring-accent/30" : ""
                     }`}
                   >
-                    Sugestoes: {suggestionCount}
+                    {t("Sugestoes")}: {suggestionCount}
                   </button>
                 </div>
               </div>
@@ -460,13 +486,17 @@ export default function CompanyDetail() {
                 })
               ) : (
                 <EmptyState
-                  title="Sem apontamentos"
+                  title={t("Sem apontamentos")}
                   description={
                     orderedAppointments.length === 0
-                      ? "Nenhum apontamento encontrado para este mes."
+                      ? t("Nenhum apontamento encontrado para este mes.")
                       : statusFilters.length === 0 && !showSuggestions
-                        ? "Nenhum filtro ativo. Ligue ao menos um status acima."
-                        : "Nenhum apontamento encontrado para os filtros ativos."
+                        ? t(
+                            "Nenhum filtro ativo. Ligue ao menos um status acima.",
+                          )
+                        : t(
+                            "Nenhum apontamento encontrado para os filtros ativos.",
+                          )
                   }
                 />
               )}

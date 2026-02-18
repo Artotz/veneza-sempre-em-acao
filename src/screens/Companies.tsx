@@ -12,6 +12,7 @@ import {
   getCompaniesSnapshot,
   saveCompaniesSnapshot,
 } from "../storage/offlineSchedule";
+import { t } from "../i18n";
 
 export default function Companies() {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
@@ -48,7 +49,7 @@ export default function Companies() {
     const userEmail = user?.email?.trim();
     if (!userEmail) {
       setCompanies([]);
-      setError("Usuario nao autenticado.");
+      setError(t("Usuario nao autenticado."));
       setLoading(false);
       return () => {
         active = false;
@@ -68,7 +69,7 @@ export default function Companies() {
           if (!active) return;
           if (!cached) {
             setCompanies([]);
-            setError("Sem conexao e sem cache local.");
+            setError(t("Sem conexao e sem cache local."));
             setLoading(false);
             return;
           }
@@ -136,19 +137,22 @@ export default function Companies() {
 
   return (
     <AppShell
-      title="Empresas"
-      subtitle="Selecione uma empresa para criar apontamentos."
+      title={t("Empresas")}
+      subtitle={t("Selecione uma empresa para criar apontamentos.")}
     >
       <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
-        <SectionHeader title="Busca rapida" subtitle="Nome ou documento." />
+        <SectionHeader
+          title={t("Busca rapida")}
+          subtitle={t("Nome ou documento.")}
+        />
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Buscar empresa..."
+          placeholder={t("Buscar empresa...")}
           className="w-full rounded-2xl border border-border bg-surface-muted px-4 py-3 text-sm text-foreground outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
         />
         <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
-          <span className="text-foreground-soft">Ordenar por:</span>
+          <span className="text-foreground-soft">{t("Ordenar por:")}</span>
           <button
             type="button"
             onClick={() => setSortBy("valor")}
@@ -159,7 +163,7 @@ export default function Companies() {
                 : "bg-surface-muted text-foreground-soft"
             }`}
           >
-            Valor Cot (3m)
+            {t("Valor Cot (3m)")}
           </button>
           <button
             type="button"
@@ -171,7 +175,7 @@ export default function Companies() {
                 : "bg-surface-muted text-foreground-soft"
             }`}
           >
-            Quantidade Cot (3m)
+            {t("Quantidade Cot (3m)")}
           </button>
         </div>
       </section>
@@ -184,7 +188,7 @@ export default function Companies() {
             <div className="h-24 animate-pulse rounded-3xl bg-surface-muted" />
           </div>
         ) : error ? (
-          <EmptyState title="Nao foi possivel carregar" description={error} />
+          <EmptyState title={t("Nao foi possivel carregar")} description={error} />
         ) : sortedCompanies.length ? (
           sortedCompanies.map((company) => (
             <div
@@ -193,17 +197,22 @@ export default function Companies() {
             >
               <div className="space-y-1">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-foreground-soft">
-                  {company.document ?? "Sem documento"}
+                  {company.document ?? t("Sem documento")}
                 </p>
                 <h3 className="text-lg font-semibold text-foreground">
                   {company.name}
                 </h3>
                 {[
                   company.state,
-                  company.csa ? `CSA ${company.csa}` : null,
+                  company.csa ? t("CSA {{csa}}", { csa: company.csa }) : null,
                 ].filter(Boolean).length ? (
                   <p className="text-sm text-foreground-muted">
-                    {[company.state, company.csa ? `CSA ${company.csa}` : null]
+                    [
+                      company.state,
+                      company.csa
+                        ? t("CSA {{csa}}", { csa: company.csa })
+                        : null,
+                    ]
                       .filter(Boolean)
                       .join(" - ")}
                   </p>
@@ -213,7 +222,7 @@ export default function Companies() {
               <div className="grid gap-2 text-xs sm:grid-cols-2">
                 <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
-                    Valor Cot (3m)
+                    {t("Valor Cot (3m)")}
                   </p>
                   <p className="text-sm font-semibold text-foreground">
                     {formatCurrencyBRL(company.vlrUltimos3Meses)}
@@ -221,7 +230,7 @@ export default function Companies() {
                 </div>
                 <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
-                    Qtd Cot (3m)
+                    {t("Qtd Cot (3m)")}
                   </p>
                   <p className="text-sm font-semibold text-foreground">
                     {formatQuantity(company.qtdUltimos3Meses)}
@@ -235,7 +244,7 @@ export default function Companies() {
                   onClick={() => navigate(`/empresas/${company.id}`)}
                   className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm font-semibold text-foreground shadow-sm transition hover:bg-surface-muted"
                 >
-                  Ver empresa
+                  {t("Ver empresa")}
                 </button>
                 <button
                   type="button"
@@ -244,15 +253,15 @@ export default function Companies() {
                   }
                   className="w-full rounded-2xl bg-foreground px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-foreground/90"
                 >
-                  Criar apontamento
+                  {t("Criar apontamento")}
                 </button>
               </div>
             </div>
           ))
         ) : (
           <EmptyState
-            title="Nenhuma empresa encontrada"
-            description="Ajuste a busca ou tente novamente."
+            title={t("Nenhuma empresa encontrada")}
+            description={t("Ajuste a busca ou tente novamente.")}
           />
         )}
       </section>

@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/useAuth";
+import { t } from "../i18n";
 
 export function RequireAuth({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -9,7 +10,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!loading && !user) {
-      const message = encodeURIComponent("Faca login para continuar.");
+      const message = encodeURIComponent(t("Faca login para continuar."));
       const redirect = `${location.pathname}${location.search}`;
       navigate(`/login?message=${message}&redirect=${encodeURIComponent(redirect)}`, {
         replace: true,
@@ -20,7 +21,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   if (loading || !user) {
     return (
       <div className="flex min-h-[calc(100vh-120px)] items-center justify-center px-4 py-10 text-sm text-foreground-muted">
-        Carregando...
+        {t("Carregando...")}
       </div>
     );
   }

@@ -1,15 +1,15 @@
 import { Link, NavLink } from "react-router-dom";
 import { useOnlineStatus } from "../hooks/useOnlineStatus";
-
-const navItems = [
-  { to: "/cronograma/dia", label: "Dia" },
-  { to: "/cronograma/semana", label: "Semana" },
-  { to: "/cronograma/mes", label: "Mes" },
-  { to: "/cronograma/lista", label: "Lista" },
-];
+import { t } from "../i18n";
 
 export const BottomNav = () => {
   const isOnline = useOnlineStatus();
+  const navItems = [
+    { to: "/cronograma/dia", label: t("Dia") },
+    { to: "/cronograma/semana", label: t("Semana") },
+    { to: "/cronograma/mes", label: t("Mes") },
+    { to: "/cronograma/lista", label: t("Lista") },
+  ];
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-white/90 backdrop-blur">
@@ -18,7 +18,7 @@ export const BottomNav = () => {
           <div className="mx-auto w-full max-w-xl px-4 pb-2">
             <div className="flex items-center justify-center gap-2 rounded-2xl border border-red-700 bg-red-600 px-3 py-2 text-xs font-semibold text-white shadow-sm">
               <span className="h-2 w-2 rounded-full bg-white" />
-              Sem internet.
+              {t("Sem internet.")}
             </div>
           </div>
         </div>
@@ -44,7 +44,7 @@ export const BottomNav = () => {
           ))}
           <Link
             to="/apontamentos/novo"
-            aria-label="Novo apontamento"
+            aria-label={t("Novo apontamento")}
             className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-foreground text-white shadow-lg transition hover:bg-foreground/90"
           >
             <span className="text-2xl leading-none">+</span>

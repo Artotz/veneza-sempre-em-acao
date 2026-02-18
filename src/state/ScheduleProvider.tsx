@@ -32,6 +32,7 @@ import {
   saveTodayAppointments,
   type PendingScheduleAction,
 } from "../storage/offlineSchedule";
+import { t } from "../i18n";
 
 type ScheduleAction =
   | {
@@ -316,7 +317,7 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
       if (!userEmail) {
         dispatch({
           type: "error",
-          payload: "Email do usuario nao encontrado.",
+          payload: t("Email do usuario nao encontrado."),
         });
         return;
       }
@@ -368,7 +369,7 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
         if (!appointmentsWithPending.length && !baseCompanies.length) {
           dispatch({
             type: "error",
-            payload: "Sem conexao e sem cache local.",
+            payload: t("Sem conexao e sem cache local."),
           });
           return;
         }
@@ -454,7 +455,7 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
         if (!activeRef.active) return;
         dispatch({
           type: "error",
-          payload: "Nao foi possivel carregar o cronograma.",
+          payload: t("Nao foi possivel carregar o cronograma."),
         });
       }
     },
