@@ -11,7 +11,6 @@ import {
   buildMonthWeeks,
   formatMonthParam,
   formatMonthYear,
-  formatTime,
   isSameDay,
   parseMonthParam,
 } from "../lib/date";
@@ -22,10 +21,11 @@ import { useSchedule } from "../state/useSchedule";
 const clamp = (value: number, min: number, max: number) =>
   Math.min(Math.max(value, min), max);
 
-const DEFAULT_MIN_HOUR = 6;
-const DEFAULT_MAX_HOUR = 20;
+const DEFAULT_MIN_HOUR = 0;
+const DEFAULT_MAX_HOUR = 24;
 const SLOT_MINUTES = 30;
-const HOUR_HEIGHT = 64;
+const HOUR_HEIGHT = 28;
+const GRID_PADDING = 8;
 
 const statusCardStyle: Record<AppointmentStatus, string> = {
   agendado: "border-warning/30 bg-warning/15 text-warning",
@@ -113,43 +113,10 @@ export default function WeekView() {
   }, [state.appointments, week]);
 
   const weekAppointments = dayGroups.flat();
-  const timeRange = useMemo(() => {
-    if (!weekAppointments.length) {
-      return { minHour: DEFAULT_MIN_HOUR, maxHour: DEFAULT_MAX_HOUR };
-    }
-    let minHour = Number.POSITIVE_INFINITY;
-    let maxHour = Number.NEGATIVE_INFINITY;
-    weekAppointments.forEach((appointment) => {
-      const start = new Date(appointment.startAt);
-      const end = new Date(appointment.endAt);
-      if (
-        Number.isNaN(start.getTime()) ||
-        Number.isNaN(end.getTime())
-      ) {
-        return;
-      }
-      const startHour = start.getHours() + start.getMinutes() / 60;
-      const endHour = end.getHours() + end.getMinutes() / 60;
-      minHour = Math.min(minHour, startHour);
-      maxHour = Math.max(maxHour, endHour);
-    });
-    if (!Number.isFinite(minHour) || !Number.isFinite(maxHour)) {
-      return { minHour: DEFAULT_MIN_HOUR, maxHour: DEFAULT_MAX_HOUR };
-    }
-    const computedMin = Math.floor(minHour);
-    const computedMax = Math.ceil(maxHour);
-    const clampedMin = clamp(
-      Math.min(computedMin, DEFAULT_MIN_HOUR),
-      0,
-      23,
-    );
-    const clampedMax = clamp(
-      Math.max(computedMax, DEFAULT_MAX_HOUR),
-      clampedMin + 1,
-      24,
-    );
-    return { minHour: clampedMin, maxHour: clampedMax };
-  }, [weekAppointments]);
+  const timeRange = useMemo(
+    () => ({ minHour: DEFAULT_MIN_HOUR, maxHour: DEFAULT_MAX_HOUR }),
+    [],
+  );
   const slotMarkers = useMemo(() => {
     const totalMinutes = (timeRange.maxHour - timeRange.minHour) * 60;
     const totalSlots = Math.ceil(totalMinutes / SLOT_MINUTES);
@@ -170,7 +137,7 @@ export default function WeekView() {
     });
   }, [timeRange.maxHour, timeRange.minHour]);
   const gridHeight =
-    (timeRange.maxHour - timeRange.minHour) * HOUR_HEIGHT;
+    (timeRange.maxHour - timeRange.minHour) * HOUR_HEIGHT + GRID_PADDING * 2;
   const pixelsPerMinute = HOUR_HEIGHT / 60;
   const getAppointmentStyle = useCallback(
     (appointment: (typeof weekAppointments)[number]) => {
@@ -189,7 +156,9 @@ export default function WeekView() {
       const clampedStart = Math.max(startMinutes, rangeStartMinutes);
       const clampedEnd = Math.min(endMinutes, rangeEndMinutes);
       if (clampedEnd <= clampedStart) return null;
-      const top = (clampedStart - rangeStartMinutes) * pixelsPerMinute;
+      const top =
+        GRID_PADDING +
+        (clampedStart - rangeStartMinutes) * pixelsPerMinute;
       const height = Math.max(
         (clampedEnd - clampedStart) * pixelsPerMinute,
         18,
@@ -266,10 +235,10 @@ export default function WeekView() {
                   subtitle="Dias lado a lado com escala horaria."
                 />
                 <div className="overflow-hidden rounded-2xl border border-border">
-                  <div className="max-h-[70vh] overflow-auto">
-                    <div className="min-w-[900px]">
-                      <div className="sticky top-0 z-10 grid grid-cols-[64px_repeat(7,minmax(0,1fr))] border-b border-border/60 bg-surface-muted/90 text-[10px] font-semibold uppercase text-foreground-muted backdrop-blur">
-                        <div className="flex items-center justify-center border-r border-border/60 px-2 py-2">
+                  <div className="overflow-hidden">
+                    <div className="min-w-0">
+                      <div className="sticky top-0 z-10 grid grid-cols-[48px_repeat(7,minmax(0,1fr))] border-b border-border/60 bg-surface-muted/90 text-[9px] font-semibold uppercase text-foreground-muted backdrop-blur">
+                        <div className="flex items-center justify-center border-r border-border/60 px-1 py-1.5">
                           Hora
                         </div>
                         {week.days.map((day) => {
@@ -277,23 +246,23 @@ export default function WeekView() {
                           return (
                             <div
                               key={day.id}
-                              className={`flex flex-col items-center justify-center gap-0.5 px-2 py-2 ${
+                              className={`flex flex-col items-center justify-center gap-0.5 px-1 py-1.5 ${
                                 isToday
                                   ? "bg-accent/15 text-foreground"
                                   : "text-foreground-muted"
                               }`}
                             >
-                              <span className="text-[10px]">
+                              <span className="text-[9px]">
                                 {day.short.toLowerCase()}
                               </span>
-                              <span className="text-[11px] font-semibold text-foreground">
+                              <span className="text-[10px] font-semibold text-foreground">
                                 {day.date.getDate()}
                               </span>
                             </div>
                           );
                         })}
                       </div>
-                      <div className="grid grid-cols-[64px_repeat(7,minmax(0,1fr))]">
+                      <div className="grid grid-cols-[48px_repeat(7,minmax(0,1fr))]">
                         <div
                           className="relative border-r border-border/60 bg-surface-muted/40"
                           style={{ height: gridHeight }}
@@ -307,11 +276,13 @@ export default function WeekView() {
                                   : "border-t border-border/20"
                               }`}
                               style={{
-                                top: slot.minutesFromStart * pixelsPerMinute,
+                                top:
+                                  GRID_PADDING +
+                                  slot.minutesFromStart * pixelsPerMinute,
                               }}
                             >
                               {slot.isHour ? (
-                                <span className="absolute -top-2 right-2 bg-surface-muted/80 px-1 text-[10px] font-semibold text-foreground-muted">
+                                <span className="absolute -top-2 right-1 bg-surface-muted/80 px-1 text-[9px] font-semibold text-foreground-muted">
                                   {slot.label}
                                 </span>
                               ) : null}
@@ -339,6 +310,7 @@ export default function WeekView() {
                                   }`}
                                   style={{
                                     top:
+                                      GRID_PADDING +
                                       slot.minutesFromStart * pixelsPerMinute,
                                   }}
                                 />
@@ -359,20 +331,11 @@ export default function WeekView() {
                                     onClick={() =>
                                       handleOpenAppointment(appointment.id)
                                     }
-                                    className={`absolute left-1 right-1 flex flex-col gap-1 overflow-hidden rounded-md border px-2 py-1 text-left text-[10px] font-semibold transition hover:shadow-sm ${statusCardStyle[status]}`}
+                                    className={`absolute left-0.5 right-0.5 flex flex-col gap-0.5 overflow-hidden rounded-md border px-1 py-0.5 text-left text-[9px] font-semibold transition hover:shadow-sm ${statusCardStyle[status]}`}
                                     style={style}
                                   >
-                                    <span className="text-[9px] uppercase tracking-[0.08em]">
-                                      {formatTime(
-                                        new Date(appointment.startAt),
-                                      )}{" "}
-                                      -{" "}
-                                      {formatTime(
-                                        new Date(appointment.endAt),
-                                      )}
-                                    </span>
                                     <span
-                                      className="text-[10px] leading-tight"
+                                      className="text-[9px] leading-tight"
                                       style={{
                                         display: "-webkit-box",
                                         WebkitLineClamp: 2,
