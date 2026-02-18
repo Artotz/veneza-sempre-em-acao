@@ -49,10 +49,9 @@ export default function CompanyDetail() {
   const [company, setCompany] = useState<Company | null>(null);
   const [companyLoading, setCompanyLoading] = useState(true);
   const [companyError, setCompanyError] = useState<string | null>(null);
-  const [statusFilters, setStatusFilters] = useState<AppointmentStatus[]>(() => [
-    "agendado",
-    "em_execucao",
-  ]);
+  const [statusFilters, setStatusFilters] = useState<AppointmentStatus[]>(
+    () => ["agendado", "em_execucao"],
+  );
   const [showSuggestions, setShowSuggestions] = useState(false);
 
   const weeks = useMemo(() => buildMonthWeeks(new Date()), []);
@@ -250,12 +249,12 @@ export default function CompanyDetail() {
           title="Empresa nao encontrada"
           description="Verifique o link ou escolha outra empresa."
         />
-        <Link
+        {/* <Link
           to="/empresas"
           className="mt-4 inline-flex items-center justify-center rounded-full border border-border px-4 py-2 text-xs font-semibold text-foreground-soft"
         >
           Voltar para empresas
-        </Link>
+        </Link> */}
       </AppShell>
     );
   }
@@ -267,12 +266,12 @@ export default function CompanyDetail() {
       rightSlot={formatMonthYear(new Date())}
     >
       <div className="space-y-4">
-        <Link
+        {/* <Link
           to="/empresas"
           className="inline-flex items-center gap-2 text-xs font-semibold text-foreground-soft"
         >
           Voltar para empresas
-        </Link>
+        </Link> */}
 
         <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
           <SectionHeader title="Dados da empresa" />
@@ -397,7 +396,9 @@ export default function CompanyDetail() {
                         onClick={() =>
                           setStatusFilters((current) =>
                             current.includes(pill.status)
-                              ? current.filter((status) => status !== pill.status)
+                              ? current.filter(
+                                  (status) => status !== pill.status,
+                                )
                               : [...current, pill.status],
                           )
                         }

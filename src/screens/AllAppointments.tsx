@@ -189,7 +189,7 @@ export default function AllAppointments() {
 
   return (
     <AppShell
-      title="Lista geral"
+      title="Lista"
       subtitle="Todos os agendamentos em sequencia unica, sem agrupamento por data."
       rightSlot={formatMonthYear(new Date())}
     >

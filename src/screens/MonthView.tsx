@@ -86,7 +86,7 @@ export default function MonthView() {
 
   return (
     <AppShell
-      title="Visao mensal"
+      title="Mês"
       subtitle="Grade mensal em 7 colunas, com acesso rapido por dia."
       rightSlot={monthLabel}
     >

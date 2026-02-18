@@ -237,7 +237,7 @@ export default function DayView() {
 
   return (
     <AppShell
-      title="Dia ativo"
+      title="Dia"
       subtitle="Agendamentos do dia selecionado, ordenados por horario."
       rightSlot={formatMonthYear(selectedMonth)}
     >
@@ -327,7 +327,9 @@ export default function DayView() {
                           onClick={() =>
                             setStatusFilters((current) =>
                               current.includes(pill.status)
-                                ? current.filter((status) => status !== pill.status)
+                                ? current.filter(
+                                    (status) => status !== pill.status,
+                                  )
                                 : [...current, pill.status],
                             )
                           }
@@ -360,7 +362,8 @@ export default function DayView() {
                         appointment.companyName ??
                         selectors.getCompany(appointment.companyId)?.name ??
                         "Empresa";
-                      const appointmentDetail = getAppointmentTitle(appointment);
+                      const appointmentDetail =
+                        getAppointmentTitle(appointment);
                       const snapshot = appointment.addressSnapshot;
                       const detailLabel = snapshot
                         ? `${appointmentDetail} - ${snapshot}`
