@@ -67,17 +67,17 @@ export const CheckInOutMap = ({
   appointments,
   getLabel,
   heightClass = "h-64",
-  emptyMessage = t("Sem coordenadas para exibir no mapa."),
-  emptyFilteredMessage = t("Nenhum pino visivel com os filtros atuais."),
+  emptyMessage = t("ui.sem_coordenadas_para_exibir_no_mapa"),
+  emptyFilteredMessage = t("ui.nenhum_pino_visivel_com_os_filtros_atuais"),
 }: CheckInOutMapProps) => {
   const [showCheckInMarker, setShowCheckInMarker] = useState(true);
   const [showCheckOutMarker, setShowCheckOutMarker] = useState(true);
 
   const mapPoints = useMemo(() => {
     const formatDateTimeLabel = (value?: string | null) => {
-      if (!value) return t("Data/hora nao registrada");
+      if (!value) return t("ui.data_hora_nao_registrada");
       const parsed = new Date(value);
-      if (Number.isNaN(parsed.getTime())) return t("Data/hora invalida");
+      if (Number.isNaN(parsed.getTime())) return t("ui.data_hora_invalida");
       return `${formatDateShort(parsed)} - ${formatTime(parsed)}`;
     };
 
@@ -94,7 +94,7 @@ export const CheckInOutMap = ({
       const lngNumber = Number(lng);
       if (!Number.isFinite(latNumber) || !Number.isFinite(lngNumber)) return;
       const fallbackLabel =
-        kind === "checkin" ? t("Check-in") : t("Check-out");
+        kind === "checkin" ? t("ui.check_in") : t("ui.check_out");
       points.push({
         id: `${appointment.id}-${kind}`,
         label: getLabel ? getLabel(appointment, kind) : fallbackLabel,
@@ -148,7 +148,7 @@ export const CheckInOutMap = ({
               : "border-border bg-white text-foreground-soft"
           }`}
         >
-          {t("Check-in")}
+          {t("ui.check_in")}
         </button>
         <button
           type="button"
@@ -159,7 +159,7 @@ export const CheckInOutMap = ({
               : "border-border bg-white text-foreground-soft"
           }`}
         >
-          {t("Check-out")}
+          {t("ui.check_out")}
         </button>
       </div>
 

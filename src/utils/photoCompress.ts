@@ -28,7 +28,7 @@ const createCanvas = (width: number, height: number) => {
   }
 
   if (typeof document === "undefined") {
-    throw new Error(t("Canvas indisponivel neste ambiente."));
+    throw new Error(t("ui.canvas_indisponivel_neste_ambiente"));
   }
 
   const canvas = document.createElement("canvas");
@@ -50,7 +50,7 @@ const canvasToBlob = async (
     canvas.toBlob(
       (blob: Blob | null) => {
         if (!blob) {
-          reject(new Error(t("Nao foi possivel gerar a imagem comprimida.")));
+          reject(new Error(t("ui.nao_foi_possivel_gerar_a_imagem_comprimida")));
           return;
         }
         resolve(blob);
@@ -91,7 +91,7 @@ const loadImageElement = (input: Blob) =>
 
     img.onerror = () => {
       cleanup();
-      reject(new Error(t("Nao foi possivel processar a imagem.")));
+      reject(new Error(t("ui.nao_foi_possivel_processar_a_imagem")));
     };
 
     img.src = url;
@@ -156,7 +156,7 @@ export const compressImage = async (
   }
 
   if (!width || !height) {
-    throw new Error(t("Nao foi possivel ler o tamanho da imagem."));
+    throw new Error(t("ui.nao_foi_possivel_ler_o_tamanho_da_imagem"));
   }
 
   const scale = Math.min(maxW / width, maxH / height, 1);
@@ -167,7 +167,7 @@ export const compressImage = async (
   const context = get2dContext(canvas);
   if (!context) {
     cleanup?.();
-    throw new Error(t("Nao foi possivel processar a imagem."));
+    throw new Error(t("ui.nao_foi_possivel_processar_a_imagem"));
   }
 
   context.imageSmoothingEnabled = true;
@@ -182,5 +182,5 @@ export const compressImage = async (
   const jpeg = await tryEncode(canvas, "image/jpeg", quality);
   if (jpeg) return jpeg;
 
-  throw new Error(t("Nao foi possivel comprimir a imagem."));
+  throw new Error(t("ui.nao_foi_possivel_comprimir_a_imagem"));
 };

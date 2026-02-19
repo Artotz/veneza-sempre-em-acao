@@ -59,7 +59,7 @@ export const formatAppointmentWindow = (appointment: Appointment) => {
 export const getAppointmentTitle = (appointment: Appointment) => {
   const explicit = appointment.appointmentTitle?.trim();
   if (explicit) return explicit;
-  return t("Apontamento - {{window}}", {
+  return t("ui.apontamento_window", {
     window: formatAppointmentWindow(appointment),
   });
 };

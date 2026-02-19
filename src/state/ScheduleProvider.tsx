@@ -317,7 +317,7 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
       if (!userEmail) {
         dispatch({
           type: "error",
-          payload: t("Email do usuario nao encontrado."),
+          payload: t("ui.email_do_usuario_nao_encontrado"),
         });
         return;
       }
@@ -369,7 +369,7 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
         if (!appointmentsWithPending.length && !baseCompanies.length) {
           dispatch({
             type: "error",
-            payload: t("Sem conexao e sem cache local."),
+            payload: t("ui.sem_conexao_e_sem_cache_local"),
           });
           return;
         }
@@ -455,7 +455,7 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
         if (!activeRef.active) return;
         dispatch({
           type: "error",
-          payload: t("Nao foi possivel carregar o cronograma."),
+          payload: t("ui.nao_foi_possivel_carregar_o_cronograma"),
         });
       }
     },

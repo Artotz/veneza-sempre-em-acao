@@ -10,7 +10,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!loading && !user) {
-      const message = encodeURIComponent(t("Faca login para continuar."));
+      const message = encodeURIComponent(t("ui.faca_login_para_continuar"));
       const redirect = `${location.pathname}${location.search}`;
       navigate(`/login?message=${message}&redirect=${encodeURIComponent(redirect)}`, {
         replace: true,
@@ -21,7 +21,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   if (loading || !user) {
     return (
       <div className="flex min-h-[calc(100vh-120px)] items-center justify-center px-4 py-10 text-sm text-foreground-muted">
-        {t("Carregando...")}
+        {t("ui.carregando")}
       </div>
     );
   }

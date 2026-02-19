@@ -41,7 +41,7 @@ export const DateSelector = (props: DateSelectorProps) => {
     <div className="space-y-3">
       <div className="space-y-2">
         <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
-          {t("Mes")}
+          {t("ui.mes")}
         </div>
         <MonthSelector
           months={props.months}
@@ -53,7 +53,7 @@ export const DateSelector = (props: DateSelectorProps) => {
       {props.mode !== "month" ? (
         <div className="space-y-2">
           <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
-            {t("Semana")}
+            {t("ui.semana")}
           </div>
           <WeekSelector
             weeks={props.weeks}
@@ -66,7 +66,7 @@ export const DateSelector = (props: DateSelectorProps) => {
       {props.mode === "day-week-month" ? (
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
-            <span>{t("Dia")}</span>
+            <span>{t("ui.dia")}</span>
             {/* {props.dayRightSlot ? (
               <span className="normal-case tracking-normal text-foreground-muted">
                 {props.dayRightSlot}

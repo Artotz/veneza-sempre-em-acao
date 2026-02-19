@@ -49,7 +49,7 @@ export default function Companies() {
     const userEmail = user?.email?.trim();
     if (!userEmail) {
       setCompanies([]);
-      setError(t("Usuario nao autenticado."));
+      setError(t("ui.usuario_nao_autenticado"));
       setLoading(false);
       return () => {
         active = false;
@@ -69,7 +69,7 @@ export default function Companies() {
           if (!active) return;
           if (!cached) {
             setCompanies([]);
-            setError(t("Sem conexao e sem cache local."));
+            setError(t("ui.sem_conexao_e_sem_cache_local"));
             setLoading(false);
             return;
           }
@@ -137,22 +137,22 @@ export default function Companies() {
 
   return (
     <AppShell
-      title={t("Empresas")}
-      subtitle={t("Selecione uma empresa para criar apontamentos.")}
+      title={t("ui.empresas")}
+      subtitle={t("ui.selecione_uma_empresa_para_criar_apontamentos")}
     >
       <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
         <SectionHeader
-          title={t("Busca rapida")}
-          subtitle={t("Nome ou documento.")}
+          title={t("ui.busca_rapida")}
+          subtitle={t("ui.nome_ou_documento")}
         />
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder={t("Buscar empresa...")}
+          placeholder={t("ui.buscar_empresa")}
           className="w-full rounded-2xl border border-border bg-surface-muted px-4 py-3 text-sm text-foreground outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
         />
         <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
-          <span className="text-foreground-soft">{t("Ordenar por:")}</span>
+          <span className="text-foreground-soft">{t("ui.ordenar_por")}</span>
           <button
             type="button"
             onClick={() => setSortBy("valor")}
@@ -163,7 +163,7 @@ export default function Companies() {
                 : "bg-surface-muted text-foreground-soft"
             }`}
           >
-            {t("Valor Cot (3m)")}
+            {t("ui.valor_cot_3m")}
           </button>
           <button
             type="button"
@@ -175,7 +175,7 @@ export default function Companies() {
                 : "bg-surface-muted text-foreground-soft"
             }`}
           >
-            {t("Quantidade Cot (3m)")}
+            {t("ui.quantidade_cot_3m")}
           </button>
         </div>
       </section>
@@ -188,7 +188,7 @@ export default function Companies() {
             <div className="h-24 animate-pulse rounded-3xl bg-surface-muted" />
           </div>
         ) : error ? (
-          <EmptyState title={t("Nao foi possivel carregar")} description={error} />
+          <EmptyState title={t("ui.nao_foi_possivel_carregar")} description={error} />
         ) : sortedCompanies.length ? (
           sortedCompanies.map((company) => (
             <div
@@ -197,20 +197,20 @@ export default function Companies() {
             >
               <div className="space-y-1">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-foreground-soft">
-                  {company.document ?? t("Sem documento")}
+                  {company.document ?? t("ui.sem_documento")}
                 </p>
                 <h3 className="text-lg font-semibold text-foreground">
                   {company.name}
                 </h3>
                 {[
                   company.state,
-                  company.csa ? t("CSA {{csa}}", { csa: company.csa }) : null,
+                  company.csa ? t("ui.csa_csa", { csa: company.csa }) : null,
                 ].filter(Boolean).length ? (
                   <p className="text-sm text-foreground-muted">
                     {[
                       company.state,
                       company.csa
-                        ? t("CSA {{csa}}", { csa: company.csa })
+                        ? t("ui.csa_csa", { csa: company.csa })
                         : null,
                     ]
                       .filter(Boolean)
@@ -222,7 +222,7 @@ export default function Companies() {
               <div className="grid gap-2 text-xs sm:grid-cols-2">
                 <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
-                    {t("Valor Cot (3m)")}
+                    {t("ui.valor_cot_3m")}
                   </p>
                   <p className="text-sm font-semibold text-foreground">
                     {formatCurrencyBRL(company.vlrUltimos3Meses)}
@@ -230,7 +230,7 @@ export default function Companies() {
                 </div>
                 <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
-                    {t("Qtd Cot (3m)")}
+                    {t("ui.qtd_cot_3m")}
                   </p>
                   <p className="text-sm font-semibold text-foreground">
                     {formatQuantity(company.qtdUltimos3Meses)}
@@ -244,7 +244,7 @@ export default function Companies() {
                   onClick={() => navigate(`/empresas/${company.id}`)}
                   className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm font-semibold text-foreground shadow-sm transition hover:bg-surface-muted"
                 >
-                  {t("Ver empresa")}
+                  {t("ui.ver_empresa")}
                 </button>
                 <button
                   type="button"
@@ -253,15 +253,15 @@ export default function Companies() {
                   }
                   className="w-full rounded-2xl bg-foreground px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-foreground/90"
                 >
-                  {t("Criar apontamento")}
+                  {t("ui.criar_apontamento")}
                 </button>
               </div>
             </div>
           ))
         ) : (
           <EmptyState
-            title={t("Nenhuma empresa encontrada")}
-            description={t("Ajuste a busca ou tente novamente.")}
+            title={t("ui.nenhuma_empresa_encontrada")}
+            description={t("ui.ajuste_a_busca_ou_tente_novamente")}
           />
         )}
       </section>

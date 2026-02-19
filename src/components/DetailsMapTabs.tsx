@@ -12,14 +12,14 @@ type DetailsMapTabsProps = {
 export const DetailsMapTabs = ({
   value,
   onChange,
-  detailsLabel = t("Detalhes"),
-  mapLabel = t("Mapa"),
+  detailsLabel = t("ui.detalhes"),
+  mapLabel = t("ui.mapa"),
 }: DetailsMapTabsProps) => {
   return (
     <div
       className="rounded-2xl border border-border bg-surface-muted p-1"
       role="tablist"
-      aria-label={t("Alternar visualizacao")}
+      aria-label={t("ui.alternar_visualizacao")}
     >
       <div className="grid grid-cols-2 gap-1">
         <button

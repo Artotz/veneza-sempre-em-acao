@@ -29,7 +29,7 @@ export const AppShell = ({
         <div className="relative px-5 pb-6 pt-3">
           <div className="flex items-start justify-between gap-3 mb-5">
             <p className="text-[11px] pt-[6px] uppercase tracking-[0.2em] text-foreground-soft">
-              {t("Cronograma")}
+              {t("ui.cronograma")}
             </p>
             {headerRightSlot ? (
               userEmail ? (

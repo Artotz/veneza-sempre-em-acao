@@ -192,7 +192,7 @@ export const buildMonthWeeks = (referenceDate: Date, weeksCount?: number) => {
     return {
       index,
       id: `week-${index + 1}`,
-      label: t("Semana {{index}}", { index: index + 1 }),
+      label: t("ui.semana_index", { index: index + 1 }),
       startAt,
       endAt,
       days,

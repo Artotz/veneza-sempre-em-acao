@@ -186,28 +186,28 @@ export default function DayView() {
     () => [
       {
         status: "agendado" as const,
-        label: t("Agendados"),
+        label: t("ui.agendados"),
         count: daySummary.agendado,
         baseClass: "bg-warning/15 text-warning",
         ringClass: "ring-warning/30",
       },
       {
         status: "em_execucao" as const,
-        label: t("Em execucao"),
+        label: t("ui.em_execucao"),
         count: daySummary.em_execucao,
         baseClass: "bg-info/15 text-info",
         ringClass: "ring-info/30",
       },
       {
         status: "concluido" as const,
-        label: t("Concluidos"),
+        label: t("ui.concluidos"),
         count: daySummary.concluido,
         baseClass: "bg-success/15 text-success",
         ringClass: "ring-success/30",
       },
       {
         status: "cancelado" as const,
-        label: t("Cancelados"),
+        label: t("ui.cancelados"),
         count: daySummary.cancelado,
         baseClass: "bg-danger/15 text-danger",
         ringClass: "ring-danger/30",
@@ -230,9 +230,9 @@ export default function DayView() {
       const companyName =
         appointment.companyName ??
         selectors.getCompany(appointment.companyId)?.name ??
-        t("Empresa");
+        t("ui.empresa");
       return `${companyName} - ${
-        kind === "checkin" ? t("Check-in") : t("Check-out")
+        kind === "checkin" ? t("ui.check_in") : t("ui.check_out")
       }`;
     },
     [selectors],
@@ -240,9 +240,9 @@ export default function DayView() {
 
   return (
     <AppShell
-      title={t("Dia")}
+      title={t("ui.dia")}
       subtitle={t(
-        "Agendamentos do dia selecionado, ordenados por horario.",
+        "ui.agendamentos_do_dia_selecionado_ordenados_por_horario",
       )}
       rightSlot={formatMonthYear(selectedMonth)}
     >
@@ -272,7 +272,7 @@ export default function DayView() {
             dayRightSlot={
               state.loading
                 ? null
-                : t("Pendentes na semana: {{count}}", {
+                : t("ui.pendentes_na_semana_count", {
                     count: pendingWeekCount,
                   })
             }
@@ -289,7 +289,7 @@ export default function DayView() {
           </div>
         ) : state.error ? (
           <EmptyState
-            title={t("Nao foi possivel carregar")}
+            title={t("ui.nao_foi_possivel_carregar")}
             description={state.error}
           />
         ) : (
@@ -304,12 +304,12 @@ export default function DayView() {
                       </p>
                       {isActiveDayToday ? (
                         <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-semibold text-foreground">
-                          {t("Hoje")}
+                          {t("ui.hoje")}
                         </span>
                       ) : null}
                     </div>
                     <p className="text-xs text-foreground-muted">
-                      {t("{{label}} - {{count}} agendamentos", {
+                      {t("ui.agendamentos_label_count", {
                         label: activeDay.label,
                         count: activeDayAppointments.length,
                       })}
@@ -324,9 +324,9 @@ export default function DayView() {
 
                 <div className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
                   <SectionHeader
-                    title={t("Filtros do dia")}
-                    subtitle={t("Status e sugestoes.")}
-                    rightSlot={t("{{count}} ag.", {
+                    title={t("ui.filtros_do_dia")}
+                    subtitle={t("ui.status_e_sugestoes")}
+                    rightSlot={t("ui.ag_count", {
                       count: filteredAppointments.length,
                     })}
                   />
@@ -363,7 +363,7 @@ export default function DayView() {
                         showSuggestions ? "ring-2 ring-accent/30" : ""
                       }`}
                     >
-                      {t("Sugestoes")}: {suggestionCount}
+                      {t("ui.sugestoes")}: {suggestionCount}
                     </button>
                   </div>
                 </div>
@@ -374,7 +374,7 @@ export default function DayView() {
                       const company =
                         appointment.companyName ??
                         selectors.getCompany(appointment.companyId)?.name ??
-                        t("Empresa");
+                        t("ui.empresa");
                       const appointmentDetail =
                         getAppointmentTitle(appointment);
                       const snapshot = appointment.addressSnapshot;
@@ -406,16 +406,16 @@ export default function DayView() {
                     })
                   ) : (
                     <EmptyState
-                      title={t("Sem agendamentos")}
+                      title={t("ui.sem_agendamentos")}
                       description={
                         !hasDayAppointments
-                          ? t("Selecione outro dia para ver a agenda.")
+                          ? t("ui.selecione_outro_dia_para_ver_a_agenda")
                           : statusFilters.length === 0
                             ? t(
-                                "Nenhum filtro ativo. Ligue ao menos um status acima.",
+                                "ui.nenhum_filtro_ativo_ligue_ao_menos_um_status_acima",
                               )
                             : t(
-                                "Nenhum agendamento encontrado para os filtros ativos.",
+                                "ui.nenhum_agendamento_encontrado_para_os_filtros_ativos",
                               )
                       }
                     />
@@ -431,16 +431,16 @@ export default function DayView() {
             ) : (
               <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
                 <SectionHeader
-                  title={t("Mapa do dia")}
+                  title={t("ui.mapa_do_dia")}
                   subtitle={t(
-                    "Check-ins e check-outs registrados no dia selecionado.",
+                    "ui.check_ins_e_check_outs_registrados_no_dia_selecionado",
                   )}
                 />
                 <CheckInOutMap
                   appointments={activeDayAppointments}
                   getLabel={getMapLabel}
                   emptyMessage={t(
-                    "Sem check-ins ou check-outs para exibir no dia.",
+                    "ui.sem_check_ins_ou_check_outs_para_exibir_no_dia",
                   )}
                 />
               </section>

@@ -181,9 +181,9 @@ export default function WeekView() {
       const companyName =
         appointment.companyName ??
         selectors.getCompany(appointment.companyId)?.name ??
-        t("Empresa");
+        t("ui.empresa");
       return `${companyName} - ${
-        kind === "checkin" ? t("Check-in") : t("Check-out")
+        kind === "checkin" ? t("ui.check_in") : t("ui.check_out")
       }`;
     },
     [selectors],
@@ -191,8 +191,8 @@ export default function WeekView() {
 
   return (
     <AppShell
-      title={t("Semana")}
-      subtitle={t("Visao simultanea dos 7 dias com cards compactos.")}
+      title={t("ui.semana")}
+      subtitle={t("ui.visao_simultanea_dos_7_dias_com_cards_compactos")}
       rightSlot={formatMonthYear(selectedMonth)}
     >
       <div className="space-y-5">
@@ -226,7 +226,7 @@ export default function WeekView() {
           </div>
         ) : state.error ? (
           <EmptyState
-            title={t("Nao foi possivel carregar")}
+            title={t("ui.nao_foi_possivel_carregar")}
             description={state.error}
           />
         ) : (
@@ -234,15 +234,15 @@ export default function WeekView() {
             {activeTab === "details" ? (
               <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
                 <SectionHeader
-                  title={t("Agenda da semana")}
-                  subtitle={t("Dias lado a lado com escala horaria.")}
+                  title={t("ui.agenda_da_semana")}
+                  subtitle={t("ui.dias_lado_a_lado_com_escala_horaria")}
                 />
                 <div className="overflow-hidden rounded-2xl border border-border">
                   <div className="overflow-hidden">
                     <div className="min-w-0">
                       <div className="sticky top-0 z-10 grid grid-cols-[48px_repeat(7,minmax(0,1fr))] border-b border-border/60 bg-surface-muted/90 text-[9px] font-semibold uppercase text-foreground-muted backdrop-blur">
                         <div className="flex items-center justify-center border-r border-border/60 px-1 py-1.5">
-                          {t("Hora")}
+                          {t("ui.hora")}
                         </div>
                         {week.days.map((day) => {
                           const isToday = isSameDay(day.date, today);
@@ -323,7 +323,7 @@ export default function WeekView() {
                                   appointment.companyName ??
                                   selectors.getCompany(appointment.companyId)
                                     ?.name ??
-                                  t("Empresa");
+                                  t("ui.empresa");
                                 const status = getAppointmentStatus(appointment);
                                 const style = getAppointmentStyle(appointment);
                                 if (!style) return null;
@@ -361,14 +361,14 @@ export default function WeekView() {
             ) : (
               <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
                 <SectionHeader
-                  title={t("Mapa da semana")}
-                  subtitle={t("Check-ins e check-outs registrados na semana.")}
+                  title={t("ui.mapa_da_semana")}
+                  subtitle={t("ui.check_ins_e_check_outs_registrados_na_semana")}
                 />
                 <CheckInOutMap
                   appointments={weekAppointments}
                   getLabel={getMapLabel}
                   emptyMessage={t(
-                    "Sem check-ins ou check-outs para exibir na semana.",
+                    "ui.sem_check_ins_ou_check_outs_para_exibir_na_semana",
                   )}
                 />
               </section>

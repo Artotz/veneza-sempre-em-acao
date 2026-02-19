@@ -1,15 +1,13 @@
-import ptBR from "./pt-BR";
+import resources from "./pt-BR";
 
-export type Locale = "pt-BR";
+export type Locale = keyof typeof resources;
 
 type MessageValues = Record<string, string | number>;
-type Messages = Record<string, string>;
+type Messages = Record<string, unknown>;
 
-const messagesByLocale: Record<Locale, Messages> = {
-  "pt-BR": ptBR,
-};
+const messagesByLocale: Record<Locale, Messages> = resources;
 
-let currentLocale: Locale = "pt-BR";
+let currentLocale: Locale = "pt";
 
 export const setLocale = (locale: Locale) => {
   currentLocale = locale;
@@ -28,8 +26,18 @@ const applyVariables = (message: string, values?: MessageValues) => {
   });
 };
 
+const getNestedMessage = (messages: Messages, key: string) => {
+  const parts = key.split(".");
+  let current: unknown = messages;
+  for (const part of parts) {
+    if (!current || typeof current !== "object") return undefined;
+    current = (current as Record<string, unknown>)[part];
+  }
+  return typeof current === "string" ? current : undefined;
+};
+
 export const t = (key: string, values?: MessageValues) => {
-  const messages = messagesByLocale[currentLocale] ?? {};
-  const message = messages[key] ?? key;
+  const messages = messagesByLocale[currentLocale]?.translation ?? {};
+  const message = getNestedMessage(messages, key) ?? key;
   return applyVariables(message, values);
 };

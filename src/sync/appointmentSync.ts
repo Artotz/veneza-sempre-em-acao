@@ -36,7 +36,7 @@ export const syncAppointment = async (
   params: SyncAppointmentParams
 ): Promise<SyncAppointmentResult> => {
   if (typeof navigator !== "undefined" && !navigator.onLine) {
-    throw new Error(t("Sem internet."));
+    throw new Error(t("ui.sem_internet"));
   }
 
   const supabase = createSupabaseBrowserClient();
@@ -66,7 +66,7 @@ export const syncAppointment = async (
 
     const mapped = data ? mapAppointment(data) : null;
     if (!mapped) {
-      throw new Error(t("Nao foi possivel criar o apontamento."));
+      throw new Error(t("ui.nao_foi_possivel_criar_o_apontamento"));
     }
 
     const newId = mapped.id;

@@ -132,8 +132,8 @@ export const mapAppointment = (row: AppointmentRow): Appointment => {
 };
 
 export const absenceReasonLabels: Record<string, string> = {
-  client_requested_reschedule: t("Cliente solicitou remarcacao"),
-  address_closed: t("Endereco fechado"),
-  equipment_unavailable: t("Equipamento indisponivel"),
-  other: t("Outro"),
+  client_requested_reschedule: t("ui.cliente_solicitou_remarcacao"),
+  address_closed: t("ui.endereco_fechado"),
+  equipment_unavailable: t("ui.equipamento_indisponivel"),
+  other: t("ui.outro"),
 };

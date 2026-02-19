@@ -17,9 +17,9 @@ export default function UserProfile() {
   const [error, setError] = useState<string | null>(null);
 
   const info = useMemo<InfoRow[]>(() => {
-    const email = user?.email ?? t("Nao informado");
+    const email = user?.email ?? t("ui.nao_informado");
 
-    return [{ label: t("Email"), value: email }];
+    return [{ label: t("ui.email"), value: email }];
   }, [user]);
 
   const handleSignOut = async () => {
@@ -38,11 +38,11 @@ export default function UserProfile() {
   };
 
   return (
-    <AppShell title={t("Perfil")}>
+    <AppShell title={t("labels.page.profile")}>
       <div className="space-y-4">
         <section className="rounded-3xl border border-border bg-white p-5 shadow-sm">
           <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-foreground-soft">
-            {t("Dados basicos")}
+            {t("ui.dados_basicos")}
           </p>
           <div className="mt-4 space-y-3">
             {info.map((row) => (
@@ -71,7 +71,7 @@ export default function UserProfile() {
           disabled={isSigningOut}
           className="w-full rounded-2xl bg-foreground px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-foreground/90 disabled:cursor-not-allowed disabled:opacity-70"
         >
-          {isSigningOut ? t("Saindo...") : t("Sair")}
+          {isSigningOut ? t("ui.saindo") : t("ui.sair")}
         </button>
       </div>
     </AppShell>

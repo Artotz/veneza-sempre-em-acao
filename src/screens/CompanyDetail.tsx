@@ -72,7 +72,7 @@ export default function CompanyDetail() {
     const loadCompany = async () => {
       if (authLoading) return;
       if (!id) {
-        setCompanyError(t("Empresa nao encontrada."));
+        setCompanyError(t("ui.empresa_nao_encontrada_2"));
         setCompanyLoading(false);
         return;
       }
@@ -87,7 +87,7 @@ export default function CompanyDetail() {
 
       const userEmail = user?.email?.trim();
       if (!userEmail) {
-        setCompanyError(t("Usuario nao autenticado."));
+        setCompanyError(t("ui.usuario_nao_autenticado"));
         setCompanyLoading(false);
         return;
       }
@@ -107,7 +107,7 @@ export default function CompanyDetail() {
 
       const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
       if (isOffline) {
-        setCompanyError(t("Sem conexao e sem cache local."));
+        setCompanyError(t("ui.sem_conexao_e_sem_cache_local"));
         setCompanyLoading(false);
         return;
       }
@@ -131,7 +131,7 @@ export default function CompanyDetail() {
       }
 
       if (!data) {
-        setCompanyError(t("Empresa nao encontrada."));
+        setCompanyError(t("ui.empresa_nao_encontrada_2"));
         setCompanyLoading(false);
         return;
       }
@@ -206,28 +206,28 @@ export default function CompanyDetail() {
     () => [
       {
         status: "agendado" as const,
-        label: t("Agendados"),
+        label: t("ui.agendados"),
         count: summary.agendado,
         baseClass: "bg-warning/15 text-warning",
         ringClass: "ring-warning/30",
       },
       {
         status: "em_execucao" as const,
-        label: t("Em execucao"),
+        label: t("ui.em_execucao"),
         count: summary.em_execucao,
         baseClass: "bg-info/15 text-info",
         ringClass: "ring-info/30",
       },
       {
         status: "concluido" as const,
-        label: t("Concluidos"),
+        label: t("ui.concluidos"),
         count: summary.concluido,
         baseClass: "bg-success/15 text-success",
         ringClass: "ring-success/30",
       },
       {
         status: "cancelado" as const,
-        label: t("Cancelados"),
+        label: t("ui.cancelados"),
         count: summary.cancelado,
         baseClass: "bg-danger/15 text-danger",
         ringClass: "ring-danger/30",
@@ -237,7 +237,7 @@ export default function CompanyDetail() {
   );
 
   const companyDisplayName =
-    company?.name ?? orderedAppointments[0]?.companyName ?? t("Empresa");
+    company?.name ?? orderedAppointments[0]?.companyName ?? t("ui.empresa");
 
   const handleOpenAppointment = (appointmentId: string) => {
     navigate(`/apontamentos/${appointmentId}`);
@@ -246,12 +246,12 @@ export default function CompanyDetail() {
   if (!id) {
     return (
       <AppShell
-        title={t("Empresa")}
-        subtitle={t("Empresa nao encontrada.")}
+        title={t("ui.empresa")}
+        subtitle={t("ui.empresa_nao_encontrada_2")}
       >
         <EmptyState
-          title={t("Empresa nao encontrada")}
-          description={t("Verifique o link ou escolha outra empresa.")}
+          title={t("ui.empresa_nao_encontrada")}
+          description={t("ui.verifique_o_link_ou_escolha_outra_empresa")}
         />
         {/* <Link
           to="/empresas"
@@ -266,7 +266,7 @@ export default function CompanyDetail() {
   return (
     <AppShell
       title={companyDisplayName}
-      subtitle={t("Detalhes da empresa e apontamentos do mes.")}
+      subtitle={t("ui.detalhes_da_empresa_e_apontamentos_do_mes")}
       rightSlot={formatMonthYear(new Date())}
     >
       <div className="space-y-4">
@@ -278,7 +278,7 @@ export default function CompanyDetail() {
         </Link> */}
 
         <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
-          <SectionHeader title={t("Dados da empresa")} />
+          <SectionHeader title={t("ui.dados_da_empresa")} />
           {companyLoading ? (
             <div className="space-y-2">
               <div className="h-4 w-1/2 animate-pulse rounded-full bg-surface-muted" />
@@ -287,14 +287,14 @@ export default function CompanyDetail() {
             </div>
           ) : companyError ? (
             <EmptyState
-              title={t("Nao foi possivel carregar")}
+              title={t("ui.nao_foi_possivel_carregar")}
               description={companyError}
             />
           ) : company ? (
             <div className="space-y-2">
               <div className="space-y-1">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-foreground-soft">
-                  {company.document ?? t("Sem documento")}
+                  {company.document ?? t("ui.sem_documento")}
                 </p>
                 <p className="text-lg font-semibold text-foreground">
                   {company.name}
@@ -302,20 +302,20 @@ export default function CompanyDetail() {
                 {[
                   company.state,
                   company.csa
-                    ? t("CSA {{csa}}", { csa: company.csa })
+                    ? t("ui.csa_csa", { csa: company.csa })
                     : null,
                   company.segment
-                    ? t("Segmento {{segment}}", { segment: company.segment })
+                    ? t("ui.segmento_segment", { segment: company.segment })
                     : null,
                 ].filter(Boolean).length ? (
                   <p className="text-sm text-foreground-muted">
                     {[
                       company.state,
                       company.csa
-                        ? t("CSA {{csa}}", { csa: company.csa })
+                        ? t("ui.csa_csa", { csa: company.csa })
                         : null,
                       company.segment
-                        ? t("Segmento {{segment}}", {
+                        ? t("ui.segmento_segment", {
                             segment: company.segment,
                           })
                         : null,
@@ -329,24 +329,24 @@ export default function CompanyDetail() {
               <div className="space-y-1 text-sm text-foreground-muted">
                 {company.clientClass ? (
                   <p>
-                    {t("Classe: {{value}}", { value: company.clientClass })}
+                    {t("ui.classe_value", { value: company.clientClass })}
                   </p>
                 ) : null}
                 {company.carteiraDef ? (
                   <p>
-                    {t("Carteira: {{value}}", { value: company.carteiraDef })}
+                    {t("ui.carteira_value", { value: company.carteiraDef })}
                   </p>
                 ) : null}
                 {company.carteiraDef2 ? (
                   <p>
-                    {t("Carteira 2: {{value}}", {
+                    {t("ui.carteira_2_value", {
                       value: company.carteiraDef2,
                     })}
                   </p>
                 ) : null}
                 {company.validacao ? (
                   <p>
-                    {t("Validacao: {{value}}", { value: company.validacao })}
+                    {t("ui.validacao_value", { value: company.validacao })}
                   </p>
                 ) : null}
               </div>
@@ -354,7 +354,7 @@ export default function CompanyDetail() {
               <div className="grid gap-2 text-xs sm:grid-cols-2">
                 <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
-                    {t("Valor Cot (3m)")}
+                    {t("ui.valor_cot_3m")}
                   </p>
                   <p className="text-sm font-semibold text-foreground">
                     {formatCurrencyBRL(company.vlrUltimos3Meses)}
@@ -362,7 +362,7 @@ export default function CompanyDetail() {
                 </div>
                 <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
-                    {t("Qtd Cot (3m)")}
+                    {t("ui.qtd_cot_3m")}
                   </p>
                   <p className="text-sm font-semibold text-foreground">
                     {formatQuantity(company.qtdUltimos3Meses)}
@@ -372,8 +372,8 @@ export default function CompanyDetail() {
             </div>
           ) : (
             <EmptyState
-              title={t("Empresa nao encontrada")}
-              description={t("Verifique o link ou escolha outra empresa.")}
+              title={t("ui.empresa_nao_encontrada")}
+              description={t("ui.verifique_o_link_ou_escolha_outra_empresa")}
             />
           )}
         </section>
@@ -383,13 +383,13 @@ export default function CompanyDetail() {
           onClick={() => navigate(`/empresas/${id}/novo-apontamento`)}
           className="w-full rounded-2xl bg-foreground px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-foreground/90"
         >
-          {t("Criar apontamento")}
+          {t("ui.criar_apontamento")}
         </button>
 
         <section className="space-y-3">
           <SectionHeader
-            title={t("Apontamentos")}
-            rightSlot={t("{{count}} ag.", { count: orderedAppointments.length })}
+            title={t("ui.apontamentos")}
+            rightSlot={t("ui.ag_count", { count: orderedAppointments.length })}
           />
 
           {state.loading ? (
@@ -399,16 +399,16 @@ export default function CompanyDetail() {
             </div>
           ) : state.error && orderedAppointments.length === 0 ? (
             <EmptyState
-              title={t("Nao foi possivel carregar")}
+              title={t("ui.nao_foi_possivel_carregar")}
               description={state.error}
             />
           ) : (
             <div className="space-y-3">
               <div className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
                 <SectionHeader
-                  title={t("Filtros do mes")}
-                  subtitle={t("Status e sugestoes.")}
-                  rightSlot={t("{{count}} ag.", {
+                  title={t("ui.filtros_do_mes")}
+                  subtitle={t("ui.status_e_sugestoes")}
+                  rightSlot={t("ui.ag_count", {
                     count: filteredAppointments.length,
                   })}
                 />
@@ -445,7 +445,7 @@ export default function CompanyDetail() {
                       showSuggestions ? "ring-2 ring-accent/30" : ""
                     }`}
                   >
-                    {t("Sugestoes")}: {suggestionCount}
+                    {t("ui.sugestoes")}: {suggestionCount}
                   </button>
                 </div>
               </div>
@@ -486,16 +486,16 @@ export default function CompanyDetail() {
                 })
               ) : (
                 <EmptyState
-                  title={t("Sem apontamentos")}
+                  title={t("ui.sem_apontamentos")}
                   description={
                     orderedAppointments.length === 0
-                      ? t("Nenhum apontamento encontrado para este mes.")
+                      ? t("ui.nenhum_apontamento_encontrado_para_este_mes")
                       : statusFilters.length === 0 && !showSuggestions
                         ? t(
-                            "Nenhum filtro ativo. Ligue ao menos um status acima.",
+                            "ui.nenhum_filtro_ativo_ligue_ao_menos_um_status_acima",
                           )
                         : t(
-                            "Nenhum apontamento encontrado para os filtros ativos.",
+                            "ui.nenhum_apontamento_encontrado_para_os_filtros_ativos",
                           )
                   }
                 />

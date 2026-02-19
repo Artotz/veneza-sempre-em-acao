@@ -30,7 +30,7 @@ const waitForVideoReady = (video: HTMLVideoElement) =>
     const timeoutId = window.setTimeout(() => {
       if (settled) return;
       settled = true;
-      reject(new Error(t("Nao foi possivel iniciar a camera.")));
+      reject(new Error(t("ui.nao_foi_possivel_iniciar_a_camera")));
     }, 3000);
 
     const handleReady = () => {
@@ -44,7 +44,7 @@ const waitForVideoReady = (video: HTMLVideoElement) =>
       if (settled) return;
       settled = true;
       window.clearTimeout(timeoutId);
-      reject(new Error(t("Nao foi possivel iniciar a camera.")));
+      reject(new Error(t("ui.nao_foi_possivel_iniciar_a_camera")));
     };
 
     video.addEventListener("loadeddata", handleReady, { once: true });
@@ -56,7 +56,7 @@ const canvasToBlob = (canvas: HTMLCanvasElement) =>
     canvas.toBlob(
       (blob) => {
         if (!blob) {
-          reject(new Error(t("Nao foi possivel gerar a foto.")));
+          reject(new Error(t("ui.nao_foi_possivel_gerar_a_foto")));
           return;
         }
         resolve(blob);
@@ -68,8 +68,8 @@ const canvasToBlob = (canvas: HTMLCanvasElement) =>
 
 export const CameraCaptureModal = ({
   open,
-  title = t("Capturar foto"),
-  subtitle = t("Aponte a camera e tire a foto."),
+  title = t("ui.capturar_foto"),
+  subtitle = t("ui.aponte_a_camera_e_tire_a_foto"),
   onClose,
   onConfirm,
   onError,
@@ -117,7 +117,7 @@ export const CameraCaptureModal = ({
     stopStream();
 
     if (!navigator.mediaDevices?.getUserMedia) {
-      const message = t("Camera indisponivel.");
+      const message = t("ui.camera_indisponivel");
       setError(message);
       onError?.(message);
       setIsStarting(false);
@@ -144,7 +144,7 @@ export const CameraCaptureModal = ({
       const message =
         requestError instanceof Error
           ? requestError.message
-          : t("Nao foi possivel iniciar a camera.");
+          : t("ui.nao_foi_possivel_iniciar_a_camera");
       setError(message);
       onError?.(message);
     } finally {
@@ -170,7 +170,7 @@ export const CameraCaptureModal = ({
     try {
       const video = videoRef.current;
       if (!video) {
-        throw new Error(t("Camera indisponivel."));
+        throw new Error(t("ui.camera_indisponivel"));
       }
 
       await waitForVideoReady(video);
@@ -183,7 +183,7 @@ export const CameraCaptureModal = ({
 
       const context = canvas.getContext("2d");
       if (!context) {
-        throw new Error(t("Nao foi possivel acessar a camera."));
+        throw new Error(t("ui.nao_foi_possivel_acessar_a_camera"));
       }
 
       context.drawImage(video, 0, 0, width, height);
@@ -203,7 +203,7 @@ export const CameraCaptureModal = ({
       const message =
         captureError instanceof Error
           ? captureError.message
-          : t("Nao foi possivel capturar a foto.");
+          : t("ui.nao_foi_possivel_capturar_a_foto");
       setError(message);
       onError?.(message);
     } finally {
@@ -242,7 +242,7 @@ export const CameraCaptureModal = ({
             {previewUrl ? (
               <img
                 src={previewUrl}
-                alt={t("Preview da foto")}
+                alt={t("ui.preview_da_foto")}
                 className="h-64 w-full object-cover"
               />
             ) : (
@@ -255,7 +255,7 @@ export const CameraCaptureModal = ({
             )}
             {isStarting ? (
               <div className="absolute inset-0 flex items-center justify-center bg-black/30 text-xs font-semibold text-white">
-                {t("Abrindo camera...")}
+                {t("ui.abrindo_camera")}
               </div>
             ) : null}
           </div>
@@ -273,7 +273,7 @@ export const CameraCaptureModal = ({
             onClick={onClose}
             className="rounded-full border border-border px-4 py-2 text-xs font-semibold text-foreground-soft"
           >
-            {t("Fechar")}
+            {t("ui.fechar")}
           </button>
           <div className="flex flex-wrap gap-2">
             {shot ? (
@@ -282,7 +282,7 @@ export const CameraCaptureModal = ({
                 onClick={handleRetake}
                 className="rounded-full border border-border bg-white px-4 py-2 text-xs font-semibold text-foreground"
               >
-                {t("Nova foto")}
+                {t("ui.nova_foto")}
               </button>
             ) : (
               <button
@@ -295,7 +295,7 @@ export const CameraCaptureModal = ({
                     : "bg-accent text-white"
                 }`}
               >
-                {t("Tirar foto")}
+                {t("ui.tirar_foto")}
               </button>
             )}
             <button
@@ -308,7 +308,7 @@ export const CameraCaptureModal = ({
                   : "cursor-not-allowed bg-surface-muted text-foreground-muted"
               }`}
             >
-              {t("Usar foto")}
+              {t("ui.usar_foto")}
             </button>
           </div>
         </div>

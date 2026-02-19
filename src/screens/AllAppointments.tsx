@@ -139,28 +139,28 @@ export default function AllAppointments() {
     () => [
       {
         status: "agendado" as const,
-        label: t("Agendados"),
+        label: t("ui.agendados"),
         count: summary.agendado,
         baseClass: "bg-warning/15 text-warning",
         ringClass: "ring-warning/30",
       },
       {
         status: "em_execucao" as const,
-        label: t("Em execucao"),
+        label: t("ui.em_execucao"),
         count: summary.em_execucao,
         baseClass: "bg-info/15 text-info",
         ringClass: "ring-info/30",
       },
       {
         status: "concluido" as const,
-        label: t("Concluidos"),
+        label: t("ui.concluidos"),
         count: summary.concluido,
         baseClass: "bg-success/15 text-success",
         ringClass: "ring-success/30",
       },
       {
         status: "cancelado" as const,
-        label: t("Cancelados"),
+        label: t("ui.cancelados"),
         count: summary.cancelado,
         baseClass: "bg-danger/15 text-danger",
         ringClass: "ring-danger/30",
@@ -190,9 +190,9 @@ export default function AllAppointments() {
 
   return (
     <AppShell
-      title={t("Lista")}
+      title={t("ui.lista")}
       subtitle={t(
-        "Todos os agendamentos em sequencia unica, sem agrupamento por data.",
+        "ui.todos_os_agendamentos_em_sequencia_unica_sem_agrupamento_por_data",
       )}
       rightSlot={formatMonthYear(new Date())}
     >
@@ -200,8 +200,8 @@ export default function AllAppointments() {
         <DetailsMapTabs
           value={activeTab}
           onChange={handleTabChange}
-          detailsLabel={t("Agendamentos")}
-          mapLabel={t("Empresas")}
+          detailsLabel={t("ui.agendamentos")}
+          mapLabel={t("ui.empresas")}
         />
         {state.loading ? (
           <div className="space-y-4">
@@ -211,16 +211,16 @@ export default function AllAppointments() {
           </div>
         ) : state.error ? (
           <EmptyState
-            title={t("Nao foi possivel carregar")}
+            title={t("ui.nao_foi_possivel_carregar")}
             description={state.error}
           />
         ) : activeTab === "details" ? (
           <div className="space-y-4">
             <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
               <SectionHeader
-                title={t("Resumo geral")}
-                subtitle={t("Distribuicao por status.")}
-                rightSlot={t("{{count}} ag.", { count: summary.total })}
+                title={t("ui.resumo_geral")}
+                subtitle={t("ui.distribuicao_por_status")}
+                rightSlot={t("ui.ag_count", { count: summary.total })}
               />
               <div className="flex flex-wrap gap-2 text-[11px] font-semibold">
                 {pillOptions.map((pill) => {
@@ -253,7 +253,7 @@ export default function AllAppointments() {
                     showSuggestions ? "ring-2 ring-accent/30" : ""
                   }`}
                 >
-                  {t("Sugestoes")}: {suggestionCount}
+                  {t("ui.sugestoes")}: {suggestionCount}
                 </button>
               </div>
             </section>
@@ -263,7 +263,7 @@ export default function AllAppointments() {
                 filteredAppointments.map((appointment) => {
                   const company = selectors.getCompany(appointment.companyId);
                   const companyName =
-                    appointment.companyName ?? company?.name ?? t("Empresa");
+                    appointment.companyName ?? company?.name ?? t("ui.empresa");
                   const appointmentDetail = getAppointmentTitle(appointment);
                   const snapshot = appointment.addressSnapshot;
                   const detailLabel = snapshot
@@ -294,12 +294,12 @@ export default function AllAppointments() {
                 })
               ) : (
                 <EmptyState
-                  title={t("Sem agendamentos")}
+                  title={t("ui.sem_agendamentos")}
                   description={
                     statusFilters.length === 0 && !showSuggestions
-                      ? t("Nenhum filtro ativo. Ligue ao menos um status acima.")
+                      ? t("ui.nenhum_filtro_ativo_ligue_ao_menos_um_status_acima")
                       : t(
-                          "Nenhum agendamento encontrado para os filtros ativos.",
+                          "ui.nenhum_agendamento_encontrado_para_os_filtros_ativos",
                         )
                   }
                 />
@@ -316,20 +316,20 @@ export default function AllAppointments() {
           <div className="space-y-4">
             <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
               <SectionHeader
-                title={t("Busca rapida")}
-                subtitle={t("Nome ou documento.")}
-                rightSlot={t("{{count}} emp.", {
+                title={t("ui.busca_rapida")}
+                subtitle={t("ui.nome_ou_documento")}
+                rightSlot={t("ui.emp_count", {
                   count: filteredCompanies.length,
                 })}
               />
               <input
                 value={companyQuery}
                 onChange={(event) => setCompanyQuery(event.target.value)}
-                placeholder={t("Buscar empresa...")}
+                placeholder={t("ui.buscar_empresa")}
                 className="w-full rounded-2xl border border-border bg-surface-muted px-4 py-3 text-sm text-foreground outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
               />
               <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
-                <span className="text-foreground-soft">{t("Ordenar por:")}</span>
+                <span className="text-foreground-soft">{t("ui.ordenar_por")}</span>
                 <button
                   type="button"
                   onClick={() => setCompanySortBy("valor")}
@@ -340,7 +340,7 @@ export default function AllAppointments() {
                       : "bg-surface-muted text-foreground-soft"
                   }`}
                 >
-                  {t("Valor Cot (3m)")}
+                  {t("ui.valor_cot_3m")}
                 </button>
                 <button
                   type="button"
@@ -352,7 +352,7 @@ export default function AllAppointments() {
                       : "bg-surface-muted text-foreground-soft"
                   }`}
                 >
-                  {t("Quantidade Cot (3m)")}
+                  {t("ui.quantidade_cot_3m")}
                 </button>
               </div>
             </section>
@@ -366,7 +366,7 @@ export default function AllAppointments() {
                   >
                     <div className="space-y-1">
                       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-foreground-soft">
-                        {company.document ?? t("Sem documento")}
+                        {company.document ?? t("ui.sem_documento")}
                       </p>
                       <h3 className="text-lg font-semibold text-foreground">
                         {company.name}
@@ -374,14 +374,14 @@ export default function AllAppointments() {
                       {[
                         company.state,
                         company.csa
-                          ? t("CSA {{csa}}", { csa: company.csa })
+                          ? t("ui.csa_csa", { csa: company.csa })
                           : null,
                       ].filter(Boolean).length ? (
                         <p className="text-sm text-foreground-muted">
                           {[
                             company.state,
                             company.csa
-                              ? t("CSA {{csa}}", { csa: company.csa })
+                              ? t("ui.csa_csa", { csa: company.csa })
                               : null,
                           ]
                             .filter(Boolean)
@@ -393,7 +393,7 @@ export default function AllAppointments() {
                     <div className="grid gap-2 text-xs sm:grid-cols-2">
                       <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2">
                         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
-                          {t("Valor Cot (3m)")}
+                          {t("ui.valor_cot_3m")}
                         </p>
                         <p className="text-sm font-semibold text-foreground">
                           {formatCurrencyBRL(company.vlrUltimos3Meses)}
@@ -401,7 +401,7 @@ export default function AllAppointments() {
                       </div>
                       <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2">
                         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
-                          {t("Qtd Cot (3m)")}
+                          {t("ui.qtd_cot_3m")}
                         </p>
                         <p className="text-sm font-semibold text-foreground">
                           {formatQuantity(company.qtdUltimos3Meses)}
@@ -415,7 +415,7 @@ export default function AllAppointments() {
                         onClick={() => handleOpenCompany(company.id)}
                         className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm font-semibold text-foreground shadow-sm transition hover:bg-surface-muted"
                       >
-                        {t("Ver empresa")}
+                        {t("ui.ver_empresa")}
                       </button>
                       <button
                         type="button"
@@ -424,15 +424,15 @@ export default function AllAppointments() {
                         }
                         className="w-full rounded-2xl bg-foreground px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-foreground/90"
                       >
-                        {t("Criar apontamento")}
+                        {t("ui.criar_apontamento")}
                       </button>
                     </div>
                   </div>
                 ))
               ) : (
                 <EmptyState
-                  title={t("Nenhuma empresa encontrada")}
-                  description={t("Ajuste a busca ou tente novamente.")}
+                  title={t("ui.nenhuma_empresa_encontrada")}
+                  description={t("ui.ajuste_a_busca_ou_tente_novamente")}
                 />
               )}
             </section>

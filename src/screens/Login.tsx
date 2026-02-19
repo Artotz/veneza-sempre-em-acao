@@ -56,7 +56,7 @@ export default function Login() {
         message:
           error.message ||
           t(
-            "Nao foi possivel entrar com email e senha. Verifique os dados e tente novamente.",
+            "ui.nao_foi_possivel_entrar_com_email_e_senha_verifique_os_dados_e_tente_novamente",
           ),
       });
       return;
@@ -72,20 +72,20 @@ export default function Login() {
           <div className="flex flex-col justify-between gap-6">
             <div className="space-y-3">
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-white/70">
-                {t("PWA Cronograma")}
+                {t("ui.pwa_cronograma")}
               </p>
               {/* <h1 className="text-3xl font-semibold leading-tight">
-                {t("Acesse o painel seguro")}
+                {t("ui.acesse_o_painel_seguro")}
               </h1>
               <p className="text-sm text-white/80">
                 {t(
-                  "Entre com as credenciais do CRM para acessar empresas e agendamentos.",
+                  "ui.entre_com_as_credenciais_do_crm_para_acessar_empresas_e_agendamentos",
                 )}
               </p> */}
             </div>
             {/* <div className="rounded-2xl bg-white/10 p-4 text-sm text-white/90 shadow-inner">
               {t(
-                "Sessoes sao preservadas pelo Supabase. Faca login para continuar.",
+                "ui.sessoes_sao_preservadas_pelo_supabase_faca_login_para_continuar",
               )}
             </div> */}
           </div>
@@ -94,10 +94,10 @@ export default function Login() {
             <div className="space-y-4">
               <div>
                 <p className="text-sm font-semibold text-foreground">
-                  {t("Faca login")}
+                  {t("ui.faca_login")}
                 </p>
                 <p className="text-xs text-foreground-muted">
-                  {t("Entre com email e senha.")}
+                  {t("ui.entre_com_email_e_senha")}
                 </p>
               </div>
 
@@ -115,19 +115,19 @@ export default function Login() {
 
               <form className="space-y-4" onSubmit={handlePasswordSignIn}>
                 <label className="space-y-2 text-sm font-medium text-foreground">
-                  <span>{t("Email")}</span>
+                  <span>{t("ui.email")}</span>
                   <input
                     type="email"
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
                     className="w-full rounded-xl border border-border bg-white px-3 py-2 text-sm font-normal text-foreground shadow-inner outline-none transition focus:border-accent/60 focus:ring-4 focus:ring-accent/10"
-                    placeholder={t("seu@email.com")}
+                    placeholder={t("ui.seu_email_com")}
                     required
                   />
                 </label>
 
                 <label className="space-y-2 text-sm font-medium text-foreground">
-                  <span>{t("Senha")}</span>
+                  <span>{t("ui.senha")}</span>
                   <input
                     type="password"
                     value={password}
@@ -143,7 +143,7 @@ export default function Login() {
                   disabled={loading}
                   className="flex w-full items-center justify-center gap-2 rounded-xl bg-foreground px-4 py-2 text-sm font-semibold text-white shadow-lg transition hover:bg-foreground/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground disabled:cursor-not-allowed disabled:opacity-70"
                 >
-                  {loading ? t("Entrando...") : t("Entrar")}
+                  {loading ? t("ui.entrando") : t("ui.entrar")}
                 </button>
               </form>
             </div>
