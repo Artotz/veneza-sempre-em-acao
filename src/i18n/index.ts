@@ -4,8 +4,9 @@ export type Locale = keyof typeof resources;
 
 type MessageValues = Record<string, string | number>;
 type Messages = Record<string, unknown>;
+type LocaleMessages = { translation: Messages };
 
-const messagesByLocale: Record<Locale, Messages> = resources;
+const messagesByLocale: Record<Locale, LocaleMessages> = resources;
 
 let currentLocale: Locale = "pt";
 
@@ -26,7 +27,8 @@ const applyVariables = (message: string, values?: MessageValues) => {
   });
 };
 
-const getNestedMessage = (messages: Messages, key: string) => {
+const getNestedMessage = (messages: Messages | undefined, key: string) => {
+  if (!messages) return undefined;
   const parts = key.split(".");
   let current: unknown = messages;
   for (const part of parts) {
@@ -37,7 +39,7 @@ const getNestedMessage = (messages: Messages, key: string) => {
 };
 
 export const t = (key: string, values?: MessageValues) => {
-  const messages = messagesByLocale[currentLocale]?.translation ?? {};
+  const messages = messagesByLocale[currentLocale]?.translation;
   const message = getNestedMessage(messages, key) ?? key;
   return applyVariables(message, values);
 };
