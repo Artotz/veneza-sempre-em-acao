@@ -244,6 +244,7 @@ export const resources = {
 
         tentar_novamente: "Tentar novamente",
         tirar_foto: "Tirar foto",
+        trocar_camera: "Trocar câmera",
 
         todos_os_dias_do_mes_em_7_colunas: "Todos os dias do mês em 7 colunas.",
 

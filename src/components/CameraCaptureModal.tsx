@@ -84,6 +84,7 @@ export const CameraCaptureModal = ({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [shot, setShot] = useState<CapturePhotoResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
 
   const stopStream = useCallback(() => {
     if (streamRef.current) {
@@ -107,6 +108,7 @@ export const CameraCaptureModal = ({
     setError(null);
     setIsStarting(false);
     setIsCapturing(false);
+    setFacingMode("user");
   }, [clearPreview, stopStream]);
 
   const startCamera = useCallback(async () => {
@@ -126,7 +128,7 @@ export const CameraCaptureModal = ({
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: "environment" } },
+        video: { facingMode: { ideal: facingMode } },
         audio: false,
       });
 
@@ -150,7 +152,7 @@ export const CameraCaptureModal = ({
     } finally {
       setIsStarting(false);
     }
-  }, [clearPreview, onError, stopStream]);
+  }, [clearPreview, facingMode, onError, stopStream]);
 
   useEffect(() => {
     if (!open) {
@@ -161,7 +163,7 @@ export const CameraCaptureModal = ({
     return () => {
       resetState();
     };
-  }, [open, resetState, startCamera]);
+  }, [facingMode, open, resetState, startCamera]);
 
   const handleCapture = async () => {
     if (isCapturing) return;
@@ -221,6 +223,13 @@ export const CameraCaptureModal = ({
     setError(null);
   };
 
+  const handleSwitchCamera = () => {
+    if (isStarting || isCapturing) return;
+    setFacingMode((current) =>
+      current === "user" ? "environment" : "user"
+    );
+  };
+
   if (!open) return null;
 
   return (
@@ -276,6 +285,20 @@ export const CameraCaptureModal = ({
             {t("ui.fechar")}
           </button>
           <div className="flex flex-wrap gap-2">
+            {!shot ? (
+              <button
+                type="button"
+                onClick={handleSwitchCamera}
+                disabled={isStarting || isCapturing}
+                className={`rounded-full border border-border px-4 py-2 text-xs font-semibold transition ${
+                  isStarting || isCapturing
+                    ? "cursor-not-allowed bg-surface-muted text-foreground-muted"
+                    : "bg-white text-foreground"
+                }`}
+              >
+                {t("ui.trocar_camera")}
+              </button>
+            ) : null}
             {shot ? (
               <button
                 type="button"
