@@ -28,6 +28,15 @@ import { t } from "../i18n";
 const buildDayKey = (date: Date) =>
   `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
 
+type CompanyTab = "agendamentos" | "oportunidades";
+type OpportunityTab = "cotacoes" | "preventivas" | "reconexoes";
+type OpportunityItem = {
+  id: string;
+  title: string;
+  detail?: string;
+  createdAt?: string;
+};
+
 const buildDayGroups = (appointments: Appointment[]) => {
   const groups = new Map<string, Appointment[]>();
   appointments.forEach((appointment) => {
@@ -54,6 +63,18 @@ export default function CompanyDetail() {
     () => ["agendado", "em_execucao"],
   );
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [companyTab, setCompanyTab] = useState<CompanyTab>("agendamentos");
+  const [opportunityTab, setOpportunityTab] =
+    useState<OpportunityTab>("cotacoes");
+
+  const opportunities = useMemo(
+    () => ({
+      cotacoes: [] as OpportunityItem[],
+      preventivas: [] as OpportunityItem[],
+      reconexoes: [] as OpportunityItem[],
+    }),
+    [],
+  );
 
   const weeks = useMemo(() => buildMonthWeeks(new Date()), []);
   const monthRange = useMemo(() => {
@@ -243,6 +264,8 @@ export default function CompanyDetail() {
     navigate(`/apontamentos/${appointmentId}`);
   };
 
+  const activeOpportunities = opportunities[opportunityTab];
+
   if (!id) {
     return (
       <AppShell
@@ -386,123 +409,247 @@ export default function CompanyDetail() {
           {t("ui.criar_apontamento")}
         </button>
 
-        <section className="space-y-3">
-          <SectionHeader
-            title={t("ui.apontamentos")}
-            rightSlot={t("ui.ag_count", { count: orderedAppointments.length })}
-          />
+        <div
+          className="rounded-2xl border border-border bg-surface-muted p-1"
+          role="tablist"
+          aria-label={t("ui.alternar_secoes_empresa")}
+        >
+          <div className="grid grid-cols-2 gap-1">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={companyTab === "agendamentos"}
+              onClick={() => setCompanyTab("agendamentos")}
+              className={`rounded-xl px-3 py-2 text-xs font-semibold transition ${
+                companyTab === "agendamentos"
+                  ? "bg-white text-foreground shadow-sm"
+                  : "text-foreground-soft hover:bg-white/60"
+              }`}
+            >
+              {t("ui.agendamentos")}
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={companyTab === "oportunidades"}
+              onClick={() => setCompanyTab("oportunidades")}
+              className={`rounded-xl px-3 py-2 text-xs font-semibold transition ${
+                companyTab === "oportunidades"
+                  ? "bg-white text-foreground shadow-sm"
+                  : "text-foreground-soft hover:bg-white/60"
+              }`}
+            >
+              {t("ui.oportunidades")}
+            </button>
+          </div>
+        </div>
 
-          {state.loading ? (
-            <div className="space-y-3">
-              <div className="h-24 animate-pulse rounded-3xl bg-surface-muted" />
-              <div className="h-24 animate-pulse rounded-3xl bg-surface-muted" />
-            </div>
-          ) : state.error && orderedAppointments.length === 0 ? (
-            <EmptyState
-              title={t("ui.nao_foi_possivel_carregar")}
-              description={state.error}
+        {companyTab === "agendamentos" ? (
+          <section className="space-y-3">
+            <SectionHeader
+              title={t("ui.apontamentos")}
+              rightSlot={t("ui.ag_count", { count: orderedAppointments.length })}
             />
-          ) : (
-            <div className="space-y-3">
-              <div className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
-                <SectionHeader
-                  title={t("ui.filtros_do_mes")}
-                  subtitle={t("ui.status_e_sugestoes")}
-                  rightSlot={t("ui.ag_count", {
-                    count: filteredAppointments.length,
-                  })}
-                />
-                <div className="flex flex-wrap gap-2 text-[11px] font-semibold">
-                  {pillOptions.map((pill) => {
-                    const isActive = statusFilters.includes(pill.status);
-                    return (
-                      <button
-                        key={pill.status}
-                        type="button"
-                        onClick={() =>
-                          setStatusFilters((current) =>
-                            current.includes(pill.status)
-                              ? current.filter(
-                                  (status) => status !== pill.status,
-                                )
-                              : [...current, pill.status],
-                          )
-                        }
-                        aria-pressed={isActive}
-                        className={`rounded-full px-3 py-1 transition ${pill.baseClass} ${
-                          isActive ? `ring-2 ${pill.ringClass}` : ""
-                        }`}
-                      >
-                        {pill.label}: {pill.count}
-                      </button>
-                    );
-                  })}
-                  <button
-                    type="button"
-                    onClick={() => setShowSuggestions((current) => !current)}
-                    aria-pressed={showSuggestions}
-                    className={`rounded-full px-3 py-1 transition bg-accent/10 text-foreground ${
-                      showSuggestions ? "ring-2 ring-accent/30" : ""
-                    }`}
-                  >
-                    {t("ui.sugestoes")}: {suggestionCount}
-                  </button>
-                </div>
-              </div>
 
-              {state.error ? (
-                <div className="rounded-2xl border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-foreground-soft">
-                  {state.error}
+            {state.loading ? (
+              <div className="space-y-3">
+                <div className="h-24 animate-pulse rounded-3xl bg-surface-muted" />
+                <div className="h-24 animate-pulse rounded-3xl bg-surface-muted" />
+              </div>
+            ) : state.error && orderedAppointments.length === 0 ? (
+              <EmptyState
+                title={t("ui.nao_foi_possivel_carregar")}
+                description={state.error}
+              />
+            ) : (
+              <div className="space-y-3">
+                <div className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
+                  <SectionHeader
+                    title={t("ui.filtros_do_mes")}
+                    subtitle={t("ui.status_e_sugestoes")}
+                    rightSlot={t("ui.ag_count", {
+                      count: filteredAppointments.length,
+                    })}
+                  />
+                  <div className="flex flex-wrap gap-2 text-[11px] font-semibold">
+                    {pillOptions.map((pill) => {
+                      const isActive = statusFilters.includes(pill.status);
+                      return (
+                        <button
+                          key={pill.status}
+                          type="button"
+                          onClick={() =>
+                            setStatusFilters((current) =>
+                              current.includes(pill.status)
+                                ? current.filter(
+                                    (status) => status !== pill.status,
+                                  )
+                                : [...current, pill.status],
+                            )
+                          }
+                          aria-pressed={isActive}
+                          className={`rounded-full px-3 py-1 transition ${pill.baseClass} ${
+                            isActive ? `ring-2 ${pill.ringClass}` : ""
+                          }`}
+                        >
+                          {pill.label}: {pill.count}
+                        </button>
+                      );
+                    })}
+                    <button
+                      type="button"
+                      onClick={() => setShowSuggestions((current) => !current)}
+                      aria-pressed={showSuggestions}
+                      className={`rounded-full px-3 py-1 transition bg-accent/10 text-foreground ${
+                        showSuggestions ? "ring-2 ring-accent/30" : ""
+                      }`}
+                    >
+                      {t("ui.sugestoes")}: {suggestionCount}
+                    </button>
+                  </div>
                 </div>
-              ) : null}
-              {filteredAppointments.length ? (
-                filteredAppointments.map((appointment) => {
-                  const appointmentDetail = getAppointmentTitle(appointment);
-                  const snapshot = appointment.addressSnapshot;
-                  const detailLabel = snapshot
-                    ? `${appointmentDetail} - ${snapshot}`
-                    : appointmentDetail;
-                  const dayLabel = formatDateShort(
-                    new Date(appointment.startAt),
-                  );
-                  const key = buildDayKey(new Date(appointment.startAt));
-                  const dayAppointments = dayGroups.get(key) ?? [];
-                  const blocked = isBlocked(appointment, dayAppointments);
-                  const isSuggestion = isSuggested(appointment, user?.email);
-                  return (
-                    <AppointmentCard
-                      key={appointment.id}
-                      appointment={appointment}
-                      companyName={companyDisplayName}
-                      headerLabel={`${dayLabel} - ${formatAppointmentWindow(
-                        appointment,
-                      )}`}
-                      detailLabel={detailLabel}
-                      blocked={blocked}
-                      highlight={isSuggestion}
-                      onClick={() => handleOpenAppointment(appointment.id)}
-                    />
-                  );
-                })
-              ) : (
-                <EmptyState
-                  title={t("ui.sem_apontamentos")}
-                  description={
-                    orderedAppointments.length === 0
-                      ? t("ui.nenhum_apontamento_encontrado_para_este_mes")
-                      : statusFilters.length === 0 && !showSuggestions
-                        ? t(
-                            "ui.nenhum_filtro_ativo_ligue_ao_menos_um_status_acima",
-                          )
-                        : t(
-                            "ui.nenhum_apontamento_encontrado_para_os_filtros_ativos",
-                          )
-                  }
-                />
-              )}
+
+                {state.error ? (
+                  <div className="rounded-2xl border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-foreground-soft">
+                    {state.error}
+                  </div>
+                ) : null}
+                {filteredAppointments.length ? (
+                  filteredAppointments.map((appointment) => {
+                    const appointmentDetail = getAppointmentTitle(appointment);
+                    const snapshot = appointment.addressSnapshot;
+                    const detailLabel = snapshot
+                      ? `${appointmentDetail} - ${snapshot}`
+                      : appointmentDetail;
+                    const dayLabel = formatDateShort(
+                      new Date(appointment.startAt),
+                    );
+                    const key = buildDayKey(new Date(appointment.startAt));
+                    const dayAppointments = dayGroups.get(key) ?? [];
+                    const blocked = isBlocked(appointment, dayAppointments);
+                    const isSuggestion = isSuggested(appointment, user?.email);
+                    return (
+                      <AppointmentCard
+                        key={appointment.id}
+                        appointment={appointment}
+                        companyName={companyDisplayName}
+                        headerLabel={`${dayLabel} - ${formatAppointmentWindow(
+                          appointment,
+                        )}`}
+                        detailLabel={detailLabel}
+                        blocked={blocked}
+                        highlight={isSuggestion}
+                        onClick={() => handleOpenAppointment(appointment.id)}
+                      />
+                    );
+                  })
+                ) : (
+                  <EmptyState
+                    title={t("ui.sem_apontamentos")}
+                    description={
+                      orderedAppointments.length === 0
+                        ? t("ui.nenhum_apontamento_encontrado_para_este_mes")
+                        : statusFilters.length === 0 && !showSuggestions
+                          ? t(
+                              "ui.nenhum_filtro_ativo_ligue_ao_menos_um_status_acima",
+                            )
+                          : t(
+                              "ui.nenhum_apontamento_encontrado_para_os_filtros_ativos",
+                            )
+                    }
+                  />
+                )}
+              </div>
+            )}
+          </section>
+        ) : (
+          <section className="space-y-3">
+            <SectionHeader
+              title={t("ui.oportunidades")}
+              rightSlot={t("ui.op_count", {
+                count: activeOpportunities.length,
+              })}
+            />
+
+            <div
+              className="rounded-2xl border border-border bg-surface-muted p-1"
+              role="tablist"
+              aria-label={t("ui.alternar_tipos_de_oportunidade")}
+            >
+              <div className="grid grid-cols-3 gap-1">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={opportunityTab === "cotacoes"}
+                  onClick={() => setOpportunityTab("cotacoes")}
+                  className={`rounded-xl px-3 py-2 text-[11px] font-semibold transition ${
+                    opportunityTab === "cotacoes"
+                      ? "bg-white text-foreground shadow-sm"
+                      : "text-foreground-soft hover:bg-white/60"
+                  }`}
+                >
+                  {t("ui.cotacoes")}
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={opportunityTab === "preventivas"}
+                  onClick={() => setOpportunityTab("preventivas")}
+                  className={`rounded-xl px-3 py-2 text-[11px] font-semibold transition ${
+                    opportunityTab === "preventivas"
+                      ? "bg-white text-foreground shadow-sm"
+                      : "text-foreground-soft hover:bg-white/60"
+                  }`}
+                >
+                  {t("ui.preventivas")}
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={opportunityTab === "reconexoes"}
+                  onClick={() => setOpportunityTab("reconexoes")}
+                  className={`rounded-xl px-3 py-2 text-[11px] font-semibold transition ${
+                    opportunityTab === "reconexoes"
+                      ? "bg-white text-foreground shadow-sm"
+                      : "text-foreground-soft hover:bg-white/60"
+                  }`}
+                >
+                  {t("ui.reconexoes")}
+                </button>
+              </div>
             </div>
-          )}
-        </section>
+
+            {activeOpportunities.length ? (
+              <div className="space-y-3">
+                {activeOpportunities.map((item) => (
+                  <div
+                    key={item.id}
+                    className="space-y-1 rounded-3xl border border-border bg-white p-4 shadow-sm"
+                  >
+                    <p className="text-sm font-semibold text-foreground">
+                      {item.title}
+                    </p>
+                    {item.detail ? (
+                      <p className="text-xs text-foreground-muted">
+                        {item.detail}
+                      </p>
+                    ) : null}
+                    {item.createdAt ? (
+                      <p className="text-[11px] text-foreground-soft">
+                        {formatDateShort(new Date(item.createdAt))}
+                      </p>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <EmptyState
+                title={t("ui.nenhuma_oportunidade_encontrada")}
+                description={t("ui.nenhuma_oportunidade_disponivel_no_momento")}
+              />
+            )}
+          </section>
+        )}
       </div>
     </AppShell>
   );

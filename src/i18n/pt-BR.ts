@@ -16,6 +16,8 @@ export const resources = {
         ajuste_a_busca_ou_tente_novamente: "Ajuste a busca ou tente novamente.",
         alinhe_a_camera_e_capture_a_foto: "Alinhe a câmera e capture a foto.",
         alternar_visualizacao: "Alternar visualização",
+        alternar_secoes_empresa: "Alternar seções da empresa",
+        alternar_tipos_de_oportunidade: "Alternar tipos de oportunidade",
         apontamento_window: "Apontamento - {{window}}",
         apontamentos: "Apontamentos",
         aponte_a_camera_e_tire_a_foto: "Aponte a câmera e tire a foto.",
@@ -167,7 +169,13 @@ export const resources = {
         offline: "Offline",
         online: "Online",
 
+        op_count: "{{count}} op.",
+
+        oportunidades: "Oportunidades",
         oportunidades_percebidas: "Oportunidades percebidas",
+        nenhuma_oportunidade_encontrada: "Nenhuma oportunidade encontrada",
+        nenhuma_oportunidade_disponivel_no_momento:
+          "Nenhuma oportunidade disponível no momento.",
         ordenar_por: "Ordenar por:",
 
         outro: "Outro",
@@ -186,12 +194,15 @@ export const resources = {
         preencha_os_dados_essenciais: "Preencha os dados essenciais.",
 
         preventiva: "Preventiva",
+        preventivas: "Preventivas",
         preview_da_foto: "Preview da foto",
 
+        cotacoes: "Cotações",
         qtd_cot_3m: "Qtd Cot (3m)",
         quantidade_cot_3m: "Quantidade Cot (3m)",
 
         reconexao: "Reconexão",
+        reconexoes: "Reconexões",
         recursos: "Recursos",
         reforma_de_componentes: "Reforma de componentes",
 
