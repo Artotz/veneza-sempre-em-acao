@@ -207,7 +207,7 @@ export default function Companies() {
                   company.csa ? t("CSA {{csa}}", { csa: company.csa }) : null,
                 ].filter(Boolean).length ? (
                   <p className="text-sm text-foreground-muted">
-                    [
+                    {[
                       company.state,
                       company.csa
                         ? t("CSA {{csa}}", { csa: company.csa })
