@@ -7,9 +7,7 @@ export default function NotFound() {
   const { user } = useAuth();
   const isLoggedIn = Boolean(user);
   const primaryHref = isLoggedIn ? "/cronograma/dia" : "/login";
-  const primaryLabel = isLoggedIn
-    ? t("Ir para cronograma")
-    : t("Fazer login");
+  const primaryLabel = isLoggedIn ? t("Ir para cronograma") : t("Fazer login");
 
   return (
     <AppShell title={t("Pagina nao encontrada")}>
@@ -53,10 +51,10 @@ export default function NotFound() {
             </Link>
           )}
         </div>
-
+        {/* 
         <div className="rounded-2xl border border-dashed border-border bg-surface-muted px-4 py-3 text-xs text-foreground-muted">
           {t("Dica: confira o endereco ou use o menu inferior para navegar.")}
-        </div>
+        </div> */}
       </div>
     </AppShell>
   );

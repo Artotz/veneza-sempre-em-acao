@@ -11,6 +11,7 @@ import NewAppointment from "./screens/NewAppointment";
 import { AuthProvider } from "./contexts/AuthProvider";
 import { RequireAuth } from "./components/RequireAuth";
 import CompanyDetail from "./screens/CompanyDetail";
+import UserProfile from "./screens/UserProfile";
 
 export default function App() {
   return (
@@ -80,6 +81,14 @@ export default function App() {
               element={
                 <RequireAuth>
                   <AllAppointments />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/perfil"
+              element={
+                <RequireAuth>
+                  <UserProfile />
                 </RequireAuth>
               }
             />

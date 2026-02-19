@@ -1,4 +1,5 @@
 import { type ReactNode } from "react";
+import { Link } from "react-router-dom";
 import { BottomNav } from "./BottomNav";
 import { useAuth } from "../contexts/useAuth";
 import { t } from "../i18n";
@@ -31,9 +32,18 @@ export const AppShell = ({
               {t("Cronograma")}
             </p>
             {headerRightSlot ? (
-              <div className="shrink-0 rounded-2xl border border-border bg-white/70 px-3 py-1 text-xs font-semibold text-foreground-soft shadow-sm">
-                {headerRightSlot}
-              </div>
+              userEmail ? (
+                <Link
+                  to="/perfil"
+                  className="shrink-0 rounded-2xl border border-border bg-white/70 px-3 py-1 text-xs font-semibold text-foreground-soft shadow-sm transition hover:bg-white"
+                >
+                  {headerRightSlot}
+                </Link>
+              ) : (
+                <div className="shrink-0 rounded-2xl border border-border bg-white/70 px-3 py-1 text-xs font-semibold text-foreground-soft shadow-sm">
+                  {headerRightSlot}
+                </div>
+              )
             ) : null}
           </div>
           <h1 className="mt-2 text-2xl font-display font-semibold text-foreground">
