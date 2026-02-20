@@ -15,21 +15,28 @@ export default function Login() {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const { user } = useAuth();
 
-  useEffect(() => {
-    if (user) {
-      navigate("/empresas", { replace: true });
-    }
-  }, [navigate, user]);
-
-  const queryBanner = useMemo<BannerState | null>(() => {
-    const error = searchParams.get("error");
-    const message = searchParams.get("message");
-    if (error) return { variant: "error", message: error };
-    if (message) return { variant: "success", message };
-    return null;
+  const redirectTo = useMemo(() => {
+    const redirectParam = searchParams.get("redirect");
+    if (!redirectParam) return null;
+    if (!redirectParam.startsWith("/")) return null;
+    if (redirectParam.startsWith("//")) return null;
+    if (redirectParam.includes("://")) return null;
+    return redirectParam;
   }, [searchParams]);
 
-  const redirectTo = searchParams.get("redirect");
+  useEffect(() => {
+    if (user) {
+      navigate(redirectTo || "/empresas", { replace: true });
+    }
+  }, [navigate, redirectTo, user]);
+
+  const queryBanner = useMemo<BannerState | null>(() => {
+    const noticeKey = searchParams.get("notice");
+    if (noticeKey && noticeKey === "ui.faca_login_para_continuar") {
+      return { variant: "success", message: t(noticeKey) };
+    }
+    return null;
+  }, [searchParams]);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -53,11 +60,9 @@ export default function Login() {
     if (error) {
       setBanner({
         variant: "error",
-        message:
-          error.message ||
-          t(
-            "ui.nao_foi_possivel_entrar_com_email_e_senha_verifique_os_dados_e_tente_novamente",
-          ),
+        message: t(
+          "ui.nao_foi_possivel_entrar_com_email_e_senha_verifique_os_dados_e_tente_novamente",
+        ),
       });
       return;
     }

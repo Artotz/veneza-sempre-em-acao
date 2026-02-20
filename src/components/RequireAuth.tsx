@@ -10,9 +10,9 @@ export function RequireAuth({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!loading && !user) {
-      const message = encodeURIComponent(t("ui.faca_login_para_continuar"));
+      const notice = encodeURIComponent("ui.faca_login_para_continuar");
       const redirect = `${location.pathname}${location.search}`;
-      navigate(`/login?message=${message}&redirect=${encodeURIComponent(redirect)}`, {
+      navigate(`/login?notice=${notice}&redirect=${encodeURIComponent(redirect)}`, {
         replace: true,
       });
     }
