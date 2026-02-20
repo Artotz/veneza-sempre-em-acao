@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { AppShell } from "../components/AppShell";
 import { AppointmentCard } from "../components/AppointmentCard";
+import { CalendarTabs } from "../components/CalendarTabs";
 import { CheckInOutMap } from "../components/CheckInOutMap";
 import { DateSelector } from "../components/DateSelector";
 import { DetailsMapTabs } from "../components/DetailsMapTabs";
@@ -217,6 +218,7 @@ export default function DayView() {
     >
       <div className="space-y-5">
         <section className="space-y-4 rounded-3xl border border-border bg-white p-4 shadow-sm">
+          <CalendarTabs />
           {/* <SectionHeader
             title={week.label}
             subtitle={formatWeekRange(week.startAt, week.endAt)}

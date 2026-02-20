@@ -60,6 +60,10 @@ export const resources = {
         criado_por_name: "Criado por {{name}}",
         criar_apontamento: "Criar apontamento",
         cronograma: "Cronograma",
+        home: "Home",
+        calendario: "Calendário",
+        agenda: "Agenda",
+        hello_world: "Hello world",
 
         dados_da_empresa: "Dados da empresa",
         dados_do_apontamento: "Dados do apontamento",
@@ -133,6 +137,7 @@ export const resources = {
         inicio: "Início",
 
         ir_para_empresas: "Ir para empresas",
+        ir_para_home: "Ir para home",
         justificar_ausencia: "Justificar ausência",
 
         lamina: "Lâmina",
@@ -293,6 +298,7 @@ export const resources = {
         ultimo_acesso: "Último acesso",
         ver_empresas: "Ver empresas",
         voltar_ao_inicio: "Voltar ao início",
+        voltar_para_o_dia: "Voltar para o dia",
         pendentes_na_semana_count: "Pendentes na semana: {{count}}",
 
         agendamentos_do_dia_selecionado_ordenados_por_horario:

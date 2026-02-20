@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { AppShell } from "../components/AppShell";
+import { CalendarTabs } from "../components/CalendarTabs";
 import { CheckInOutMap } from "../components/CheckInOutMap";
 import { DateSelector } from "../components/DateSelector";
 import { DetailsMapTabs } from "../components/DetailsMapTabs";
@@ -95,6 +96,7 @@ export default function MonthView() {
     >
       <div className="space-y-4">
         <section className="space-y-4 rounded-3xl border border-border bg-white p-4 shadow-sm">
+          <CalendarTabs />
           {/* <SectionHeader
             title="Selecao do mes"
             subtitle="Escolha o mes para visualizar a grade."
@@ -165,7 +167,7 @@ export default function MonthView() {
                       return (
                         <Link
                           key={`${week.id}-${day.date.getTime()}`}
-                          to={`/cronograma/dia?month=${formatMonthParam(
+                          to={`/calendario/dia?month=${formatMonthParam(
                             selectedMonth,
                           )}&week=${weekIndex + 1}&day=${day.index}`}
                           aria-label={t("ui.com_agendamentos_label_count", {

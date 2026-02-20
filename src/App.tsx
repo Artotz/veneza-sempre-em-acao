@@ -5,6 +5,7 @@ import MonthView from "./screens/MonthView";
 import NotFound from "./screens/NotFound";
 import DayView from "./screens/DayView";
 import WeekView from "./screens/WeekView";
+import Home from "./screens/Home";
 import { ScheduleProvider } from "./state/ScheduleProvider";
 import Login from "./screens/Login";
 import NewAppointment from "./screens/NewAppointment";
@@ -12,6 +13,7 @@ import { AuthProvider } from "./contexts/AuthProvider";
 import { RequireAuth } from "./components/RequireAuth";
 import CompanyDetail from "./screens/CompanyDetail";
 import UserProfile from "./screens/UserProfile";
+import Companies from "./screens/Companies";
 
 export default function App() {
   return (
@@ -21,14 +23,22 @@ export default function App() {
           <Routes>
             <Route
               path="/"
-              element={<Navigate to="/cronograma/dia" replace />}
+              element={<Navigate to="/home" replace />}
             />
             <Route path="/login" element={<Login />} />
+            <Route
+              path="/home"
+              element={
+                <RequireAuth>
+                  <Home />
+                </RequireAuth>
+              }
+            />
             <Route
               path="/empresas"
               element={
                 <RequireAuth>
-                  <Navigate to="/cronograma/lista?tab=empresas" replace />
+                  <Companies />
                 </RequireAuth>
               }
             />
@@ -50,13 +60,13 @@ export default function App() {
             />
             <Route
               path="/cronograma"
-              element={<Navigate to="/cronograma/dia" replace />}
+              element={<Navigate to="/calendario/semana" replace />}
             />
             <Route
               path="/cronograma/dia"
               element={
                 <RequireAuth>
-                  <DayView />
+                  <Navigate to="/calendario/dia" replace />
                 </RequireAuth>
               }
             />
@@ -64,7 +74,7 @@ export default function App() {
               path="/cronograma/semana"
               element={
                 <RequireAuth>
-                  <WeekView />
+                  <Navigate to="/calendario/semana" replace />
                 </RequireAuth>
               }
             />
@@ -72,12 +82,52 @@ export default function App() {
               path="/cronograma/mes"
               element={
                 <RequireAuth>
-                  <MonthView />
+                  <Navigate to="/calendario/mes" replace />
                 </RequireAuth>
               }
             />
             <Route
               path="/cronograma/lista"
+              element={
+                <RequireAuth>
+                  <Navigate to="/agenda" replace />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/calendario/dia"
+              element={
+                <RequireAuth>
+                  <DayView />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/calendario"
+              element={
+                <RequireAuth>
+                  <Navigate to="/calendario/semana" replace />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/calendario/semana"
+              element={
+                <RequireAuth>
+                  <WeekView />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/calendario/mes"
+              element={
+                <RequireAuth>
+                  <MonthView />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/agenda"
               element={
                 <RequireAuth>
                   <AllAppointments />

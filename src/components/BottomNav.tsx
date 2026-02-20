@@ -5,10 +5,10 @@ import { t } from "../i18n";
 export const BottomNav = () => {
   const isOnline = useOnlineStatus();
   const navItems = [
-    { to: "/cronograma/dia", label: t("ui.dia") },
-    { to: "/cronograma/semana", label: t("ui.semana") },
-    { to: "/cronograma/mes", label: t("ui.mes") },
-    { to: "/cronograma/lista", label: t("ui.lista") },
+    { to: "/home", label: t("ui.home") },
+    { to: "/calendario", label: t("ui.calendario") },
+    { to: "/agenda", label: t("ui.agenda") },
+    { to: "/empresas", label: t("ui.empresas") },
   ];
 
   return (

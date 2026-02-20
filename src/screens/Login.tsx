@@ -21,7 +21,7 @@ export default function Login() {
 
   useEffect(() => {
     if (user) {
-      navigate("/cronograma/dia", { replace: true });
+      navigate("/home", { replace: true });
     }
   }, [navigate, user]);
 
@@ -87,7 +87,7 @@ export default function Login() {
       return;
     }
 
-    navigate("/cronograma/dia", { replace: true });
+    navigate("/home", { replace: true });
   };
 
   const handleInstallClick = async () => {

@@ -947,10 +947,10 @@ export default function AppointmentDetail() {
           }
         />
         {/* <Link
-          to="/cronograma/dia"
+          to="/calendario/dia"
           className="mt-4 inline-flex items-center justify-center rounded-full border border-border px-4 py-2 text-xs font-semibold text-foreground-soft"
         >
-          Voltar para o dia
+          {t("ui.voltar_para_o_dia")}
         </Link> */}
       </AppShell>
     );
@@ -1308,10 +1308,10 @@ export default function AppointmentDetail() {
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           {/* <Link
-            to="/cronograma/dia"
+            to="/calendario/dia"
             className="inline-flex items-center gap-2 text-xs font-semibold text-foreground-soft"
           >
-            Voltar para o dia
+            {t("ui.voltar_para_o_dia")}
           </Link> */}
           <div className="flex flex-wrap items-center gap-2">
             <span

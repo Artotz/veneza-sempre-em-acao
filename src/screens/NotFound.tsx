@@ -6,8 +6,8 @@ import { t } from "../i18n";
 export default function NotFound() {
   const { user } = useAuth();
   const isLoggedIn = Boolean(user);
-  const primaryHref = isLoggedIn ? "/cronograma/dia" : "/login";
-  const primaryLabel = isLoggedIn ? t("ui.ir_para_cronograma") : t("ui.fazer_login");
+  const primaryHref = isLoggedIn ? "/home" : "/login";
+  const primaryLabel = isLoggedIn ? t("ui.ir_para_home") : t("ui.fazer_login");
 
   return (
     <AppShell title={t("labels.page.not_found")}>
