@@ -185,6 +185,8 @@ export const resources = {
 
         pops: "POPs",
         pwa_cronograma: "Veneza Field Service",
+        instalar_app: "Instalar aplicativo",
+        instalando_app: "Instalando...",
 
         pagina_nao_encontrada: "Página não encontrada",
         pendente: "Pendente",

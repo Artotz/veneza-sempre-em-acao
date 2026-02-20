@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { createSupabaseBrowserClient } from "../lib/supabaseClient";
 import { useAuth } from "../contexts/useAuth";
 import { t } from "../i18n";
@@ -9,41 +9,61 @@ type BannerState =
   | { variant: "success"; message: string }
   | null;
 
+type BeforeInstallPromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
+};
+
 export default function Login() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const { user } = useAuth();
 
-  const redirectTo = useMemo(() => {
-    const redirectParam = searchParams.get("redirect");
-    if (!redirectParam) return null;
-    if (!redirectParam.startsWith("/")) return null;
-    if (redirectParam.startsWith("//")) return null;
-    if (redirectParam.includes("://")) return null;
-    return redirectParam;
-  }, [searchParams]);
-
   useEffect(() => {
     if (user) {
-      navigate(redirectTo || "/empresas", { replace: true });
+      navigate("/cronograma/dia", { replace: true });
     }
-  }, [navigate, redirectTo, user]);
-
-  const queryBanner = useMemo<BannerState | null>(() => {
-    const noticeKey = searchParams.get("notice");
-    if (noticeKey && noticeKey === "ui.faca_login_para_continuar") {
-      return { variant: "success", message: t(noticeKey) };
-    }
-    return null;
-  }, [searchParams]);
+  }, [navigate, user]);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [banner, setBanner] = useState<BannerState | null | undefined>();
+  const [banner, setBanner] = useState<BannerState | null>();
   const [loading, setLoading] = useState(false);
+  const [installPrompt, setInstallPrompt] =
+    useState<BeforeInstallPromptEvent | null>(null);
+  const [isInstalled, setIsInstalled] = useState(false);
+  const [installing, setInstalling] = useState(false);
 
-  const activeBanner = banner === undefined ? queryBanner : banner;
+  useEffect(() => {
+    const checkStandalone = () => {
+      const isStandalone =
+        window.matchMedia("(display-mode: standalone)").matches ||
+        (window.navigator as { standalone?: boolean }).standalone === true;
+      setIsInstalled(isStandalone);
+    };
+
+    const handleBeforeInstallPrompt = (event: Event) => {
+      event.preventDefault();
+      setInstallPrompt(event as BeforeInstallPromptEvent);
+    };
+
+    const handleAppInstalled = () => {
+      setIsInstalled(true);
+      setInstallPrompt(null);
+    };
+
+    checkStandalone();
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    window.addEventListener("appinstalled", handleAppInstalled);
+
+    return () => {
+      window.removeEventListener(
+        "beforeinstallprompt",
+        handleBeforeInstallPrompt,
+      );
+      window.removeEventListener("appinstalled", handleAppInstalled);
+    };
+  }, []);
 
   const handlePasswordSignIn = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -67,7 +87,23 @@ export default function Login() {
       return;
     }
 
-    navigate(redirectTo || "/empresas", { replace: true });
+    navigate("/cronograma/dia", { replace: true });
+  };
+
+  const handleInstallClick = async () => {
+    if (!installPrompt) return;
+    setInstalling(true);
+
+    try {
+      await installPrompt.prompt();
+      const choiceResult = await installPrompt.userChoice;
+      if (choiceResult.outcome === "accepted") {
+        setInstallPrompt(null);
+        setIsInstalled(true);
+      }
+    } finally {
+      setInstalling(false);
+    }
   };
 
   return (
@@ -106,15 +142,15 @@ export default function Login() {
                 </p>
               </div>
 
-              {activeBanner && (
+              {banner && (
                 <div
                   className={`rounded-2xl border px-4 py-3 text-sm ${
-                    activeBanner.variant === "error"
+                    banner.variant === "error"
                       ? "border-danger/40 bg-danger/10 text-danger"
                       : "border-success/40 bg-success/10 text-success"
                   }`}
                 >
-                  {activeBanner.message}
+                  {banner.message}
                 </div>
               )}
 
@@ -150,6 +186,17 @@ export default function Login() {
                 >
                   {loading ? t("ui.entrando") : t("ui.entrar")}
                 </button>
+
+                {installPrompt && !isInstalled && (
+                  <button
+                    type="button"
+                    onClick={handleInstallClick}
+                    disabled={installing}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-foreground/20 bg-white px-4 py-2 text-sm font-semibold text-foreground shadow-sm transition hover:bg-foreground/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {installing ? t("ui.instalando_app") : t("ui.instalar_app")}
+                  </button>
+                )}
               </form>
             </div>
           </div>
