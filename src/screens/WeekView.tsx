@@ -71,6 +71,13 @@ export default function WeekView() {
 
   const [selectedWeekIndex, setSelectedWeekIndex] = useState(fallbackWeekIndex);
   const [activeTab, setActiveTab] = useState<"details" | "map">("details");
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const tick = () => setNow(new Date());
+    const interval = setInterval(tick, 60_000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const monthParam = parseMonthParam(searchParams.get("month"));
@@ -140,6 +147,13 @@ export default function WeekView() {
   const gridHeight =
     (timeRange.maxHour - timeRange.minHour) * HOUR_HEIGHT + GRID_PADDING * 2;
   const pixelsPerMinute = HOUR_HEIGHT / 60;
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const currentTop =
+    GRID_PADDING +
+    (currentMinutes - timeRange.minHour * 60) * pixelsPerMinute;
+  const isCurrentTimeVisible =
+    currentMinutes >= timeRange.minHour * 60 &&
+    currentMinutes <= timeRange.maxHour * 60;
   const getAppointmentStyle = useCallback(
     (appointment: (typeof weekAppointments)[number]) => {
       const start = new Date(appointment.startAt);
@@ -245,7 +259,7 @@ export default function WeekView() {
                           {t("ui.hora")}
                         </div>
                         {week.days.map((day) => {
-                          const isToday = isSameDay(day.date, today);
+                          const isToday = isSameDay(day.date, now);
                           return (
                             <div
                               key={day.id}
@@ -294,7 +308,7 @@ export default function WeekView() {
                         </div>
                         {week.days.map((day, dayIndex) => {
                           const dayAppointments = dayGroups[dayIndex] ?? [];
-                          const isToday = isSameDay(day.date, today);
+                          const isToday = isSameDay(day.date, now);
                           return (
                             <div
                               key={day.id}
@@ -303,6 +317,12 @@ export default function WeekView() {
                               }`}
                               style={{ height: gridHeight }}
                             >
+                              {isToday && isCurrentTimeVisible ? (
+                                <div
+                                  className="absolute left-0 right-0 z-10 border-t-2 border-accent"
+                                  style={{ top: currentTop }}
+                                />
+                              ) : null}
                               {slotMarkers.map((slot) => (
                                 <div
                                   key={`${day.id}-${slot.key}`}
