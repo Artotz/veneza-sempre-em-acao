@@ -4,6 +4,7 @@ import { AppShell } from "../components/AppShell";
 import { AppointmentCard } from "../components/AppointmentCard";
 import { EmptyState } from "../components/EmptyState";
 import { SectionHeader } from "../components/SectionHeader";
+import { StatusFilters } from "../components/StatusFilters";
 import { useAuth } from "../contexts/useAuth";
 import { buildMonthWeeks, formatDateShort, formatMonthYear } from "../lib/date";
 import { formatCurrencyBRL, formatQuantity } from "../lib/format";
@@ -61,7 +62,7 @@ export default function CompanyDetail() {
   const [companyLoading, setCompanyLoading] = useState(true);
   const [companyError, setCompanyError] = useState<string | null>(null);
   const [statusFilters, setStatusFilters] = useState<AppointmentStatus[]>(
-    () => ["agendado", "em_execucao"],
+    () => ["em_execucao", "agendado"],
   );
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [companyTab, setCompanyTab] = useState<CompanyTab>("agendamentos");
@@ -292,47 +293,6 @@ export default function CompanyDetail() {
     });
   }, [orderedAppointments, showSuggestions, statusFilters, user?.email]);
 
-  const pillOptions = useMemo(
-    () => [
-      {
-        status: "agendado" as const,
-        label: t("ui.agendados"),
-        count: summary.agendado,
-        baseClass: "bg-warning/15 text-warning",
-        ringClass: "ring-warning/30",
-      },
-      {
-        status: "expirado" as const,
-        label: t("ui.expirados"),
-        count: summary.expirado,
-        baseClass: "bg-foreground/10 text-foreground-muted",
-        ringClass: "ring-foreground/20",
-      },
-      {
-        status: "em_execucao" as const,
-        label: t("ui.em_execucao"),
-        count: summary.em_execucao,
-        baseClass: "bg-info/15 text-info",
-        ringClass: "ring-info/30",
-      },
-      {
-        status: "concluido" as const,
-        label: t("ui.concluidos"),
-        count: summary.concluido,
-        baseClass: "bg-success/15 text-success",
-        ringClass: "ring-success/30",
-      },
-      {
-        status: "cancelado" as const,
-        label: t("ui.cancelados"),
-        count: summary.cancelado,
-        baseClass: "bg-danger/15 text-danger",
-        ringClass: "ring-danger/30",
-      },
-    ],
-    [summary],
-  );
-
   const companyDisplayName =
     company?.name ?? orderedAppointments[0]?.companyName ?? t("ui.empresa");
 
@@ -526,42 +486,17 @@ export default function CompanyDetail() {
                       count: filteredAppointments.length,
                     })}
                   />
-                  <div className="flex flex-wrap gap-2 text-[11px] font-semibold">
-                    {pillOptions.map((pill) => {
-                      const isActive = statusFilters.includes(pill.status);
-                      return (
-                        <button
-                          key={pill.status}
-                          type="button"
-                          onClick={() =>
-                            setStatusFilters((current) =>
-                              current.includes(pill.status)
-                                ? current.filter(
-                                    (status) => status !== pill.status,
-                                  )
-                                : [...current, pill.status],
-                            )
-                          }
-                          aria-pressed={isActive}
-                          className={`rounded-full px-3 py-1 transition ${pill.baseClass} ${
-                            isActive ? `ring-2 ${pill.ringClass}` : ""
-                          }`}
-                        >
-                          {pill.label}: {pill.count}
-                        </button>
-                      );
-                    })}
-                    <button
-                      type="button"
-                      onClick={() => setShowSuggestions((current) => !current)}
-                      aria-pressed={showSuggestions}
-                      className={`rounded-full px-3 py-1 transition bg-accent/10 text-foreground ${
-                        showSuggestions ? "ring-2 ring-accent/30" : ""
-                      }`}
-                    >
-                      {t("ui.sugestoes")}: {suggestionCount}
-                    </button>
-                  </div>
+                  <StatusFilters
+                    summary={summary}
+                    statusFilters={statusFilters}
+                    onChange={setStatusFilters}
+                    showSuggestions={showSuggestions}
+                    onToggleSuggestions={() =>
+                      setShowSuggestions((current) => !current)
+                    }
+                    suggestionCount={suggestionCount}
+                    className="grid grid-cols-3 gap-2 text-[11px] font-semibold"
+                  />
                 </div>
 
                 {state.error ? (

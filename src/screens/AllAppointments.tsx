@@ -5,6 +5,7 @@ import { AppointmentCard } from "../components/AppointmentCard";
 import { DetailsMapTabs } from "../components/DetailsMapTabs";
 import { EmptyState } from "../components/EmptyState";
 import { SectionHeader } from "../components/SectionHeader";
+import { StatusFilters } from "../components/StatusFilters";
 import { useAuth } from "../contexts/useAuth";
 import { buildMonthWeeks, formatDateShort, formatMonthYear } from "../lib/date";
 import { formatCurrencyBRL, formatQuantity } from "../lib/format";
@@ -54,7 +55,7 @@ export default function AllAppointments() {
     searchParams.get("tab") === "empresas" ? "map" : "details",
   );
   const [statusFilters, setStatusFilters] = useState<AppointmentStatus[]>(
-    () => ["agendado", "em_execucao"],
+    () => ["em_execucao", "agendado"],
   );
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [companyQuery, setCompanyQuery] = useState("");
@@ -207,47 +208,6 @@ export default function AllAppointments() {
     return items;
   }, [companyQuery, companySortBy, protheusCounts, state.companies]);
 
-  const pillOptions = useMemo(
-    () => [
-      {
-        status: "agendado" as const,
-        label: t("ui.agendados"),
-        count: summary.agendado,
-        baseClass: "bg-warning/15 text-warning",
-        ringClass: "ring-warning/30",
-      },
-      {
-        status: "expirado" as const,
-        label: t("ui.expirados"),
-        count: summary.expirado,
-        baseClass: "bg-foreground/10 text-foreground-muted",
-        ringClass: "ring-foreground/20",
-      },
-      {
-        status: "em_execucao" as const,
-        label: t("ui.em_execucao"),
-        count: summary.em_execucao,
-        baseClass: "bg-info/15 text-info",
-        ringClass: "ring-info/30",
-      },
-      {
-        status: "concluido" as const,
-        label: t("ui.concluidos"),
-        count: summary.concluido,
-        baseClass: "bg-success/15 text-success",
-        ringClass: "ring-success/30",
-      },
-      {
-        status: "cancelado" as const,
-        label: t("ui.cancelados"),
-        count: summary.cancelado,
-        baseClass: "bg-danger/15 text-danger",
-        ringClass: "ring-danger/30",
-      },
-    ],
-    [summary],
-  );
-
   const handleOpenAppointment = (id: string) => {
     navigate(`/apontamentos/${id}`);
   };
@@ -301,40 +261,17 @@ export default function AllAppointments() {
                 subtitle={t("ui.distribuicao_por_status")}
                 rightSlot={t("ui.ag_count", { count: summary.total })}
               />
-              <div className="flex flex-wrap gap-2 text-[11px] font-semibold">
-                {pillOptions.map((pill) => {
-                  const isActive = statusFilters.includes(pill.status);
-                  return (
-                    <button
-                      key={pill.status}
-                      type="button"
-                      onClick={() =>
-                        setStatusFilters((current) =>
-                          current.includes(pill.status)
-                            ? current.filter((status) => status !== pill.status)
-                            : [...current, pill.status],
-                        )
-                      }
-                      aria-pressed={isActive}
-                      className={`rounded-full px-3 py-1 transition ${
-                        pill.baseClass
-                      } ${isActive ? `ring-2 ${pill.ringClass}` : ""}`}
-                    >
-                      {pill.label}: {pill.count}
-                    </button>
-                  );
-                })}
-                <button
-                  type="button"
-                  onClick={() => setShowSuggestions((current) => !current)}
-                  aria-pressed={showSuggestions}
-                  className={`rounded-full px-3 py-1 transition bg-accent/10 text-foreground ${
-                    showSuggestions ? "ring-2 ring-accent/30" : ""
-                  }`}
-                >
-                  {t("ui.sugestoes")}: {suggestionCount}
-                </button>
-              </div>
+              <StatusFilters
+                summary={summary}
+                statusFilters={statusFilters}
+                onChange={setStatusFilters}
+                showSuggestions={showSuggestions}
+                onToggleSuggestions={() =>
+                  setShowSuggestions((current) => !current)
+                }
+                suggestionCount={suggestionCount}
+                className="grid grid-cols-3 gap-2 text-[11px] font-semibold"
+              />
             </section>
 
             <section className="space-y-3">
@@ -407,7 +344,7 @@ export default function AllAppointments() {
                 placeholder={t("ui.buscar_empresa")}
                 className="w-full rounded-2xl border border-border bg-surface-muted px-4 py-3 text-sm text-foreground outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
               />
-              <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
+              <div className="flex items-center gap-2 text-xs font-semibold">
                 <span className="text-foreground-soft">{t("ui.ordenar_por")}</span>
                 <select
                   value={companySortBy}
@@ -420,7 +357,7 @@ export default function AllAppointments() {
                         | "reconexoes",
                     )
                   }
-                  className="rounded-2xl border border-border bg-white px-3 py-2 text-xs font-semibold text-foreground shadow-sm outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
+                  className="flex-1 rounded-2xl border border-border bg-white px-3 py-2 text-xs font-semibold text-foreground shadow-sm outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
                 >
                   <option value="valor">{t("ui.valor_cot_1m")}</option>
                   <option value="quantidade">{t("ui.quantidade_cot_1m")}</option>

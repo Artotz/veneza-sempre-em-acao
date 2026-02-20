@@ -7,6 +7,7 @@ import { DateSelector } from "../components/DateSelector";
 import { DetailsMapTabs } from "../components/DetailsMapTabs";
 import { EmptyState } from "../components/EmptyState";
 import { SectionHeader } from "../components/SectionHeader";
+import { StatusFilters } from "../components/StatusFilters";
 import { useAuth } from "../contexts/useAuth";
 import {
   buildMonthOptions,
@@ -74,7 +75,7 @@ export default function DayView() {
   );
   const [activeTab, setActiveTab] = useState<"details" | "map">("details");
   const [statusFilters, setStatusFilters] = useState<AppointmentStatus[]>(
-    () => ["agendado", "em_execucao"],
+    () => ["em_execucao", "agendado"],
   );
   const [showSuggestions, setShowSuggestions] = useState(false);
 
@@ -183,46 +184,6 @@ export default function DayView() {
       return matchesStatus || matchesSuggestion;
     });
   }, [activeDayAppointments, showSuggestions, statusFilters, user?.email]);
-  const pillOptions = useMemo(
-    () => [
-      {
-        status: "agendado" as const,
-        label: t("ui.agendados"),
-        count: daySummary.agendado,
-        baseClass: "bg-warning/15 text-warning",
-        ringClass: "ring-warning/30",
-      },
-      {
-        status: "expirado" as const,
-        label: t("ui.expirados"),
-        count: daySummary.expirado,
-        baseClass: "bg-foreground/10 text-foreground-muted",
-        ringClass: "ring-foreground/20",
-      },
-      {
-        status: "em_execucao" as const,
-        label: t("ui.em_execucao"),
-        count: daySummary.em_execucao,
-        baseClass: "bg-info/15 text-info",
-        ringClass: "ring-info/30",
-      },
-      {
-        status: "concluido" as const,
-        label: t("ui.concluidos"),
-        count: daySummary.concluido,
-        baseClass: "bg-success/15 text-success",
-        ringClass: "ring-success/30",
-      },
-      {
-        status: "cancelado" as const,
-        label: t("ui.cancelados"),
-        count: daySummary.cancelado,
-        baseClass: "bg-danger/15 text-danger",
-        ringClass: "ring-danger/30",
-      },
-    ],
-    [daySummary],
-  );
   const hasDayAppointments = activeDayAppointments.length > 0;
   // const firstPendingId = getFirstPendingId(activeDayAppointments);
 
@@ -338,42 +299,17 @@ export default function DayView() {
                       count: filteredAppointments.length,
                     })}
                   />
-                  <div className="flex flex-wrap gap-2 text-[11px] font-semibold">
-                    {pillOptions.map((pill) => {
-                      const isActive = statusFilters.includes(pill.status);
-                      return (
-                        <button
-                          key={pill.status}
-                          type="button"
-                          onClick={() =>
-                            setStatusFilters((current) =>
-                              current.includes(pill.status)
-                                ? current.filter(
-                                    (status) => status !== pill.status,
-                                  )
-                                : [...current, pill.status],
-                            )
-                          }
-                          aria-pressed={isActive}
-                          className={`rounded-full px-3 py-1 transition ${pill.baseClass} ${
-                            isActive ? `ring-2 ${pill.ringClass}` : ""
-                          }`}
-                        >
-                          {pill.label}: {pill.count}
-                        </button>
-                      );
-                    })}
-                    <button
-                      type="button"
-                      onClick={() => setShowSuggestions((current) => !current)}
-                      aria-pressed={showSuggestions}
-                      className={`rounded-full px-3 py-1 transition bg-accent/10 text-foreground ${
-                        showSuggestions ? "ring-2 ring-accent/30" : ""
-                      }`}
-                    >
-                      {t("ui.sugestoes")}: {suggestionCount}
-                    </button>
-                  </div>
+                  <StatusFilters
+                    summary={daySummary}
+                    statusFilters={statusFilters}
+                    onChange={setStatusFilters}
+                    showSuggestions={showSuggestions}
+                    onToggleSuggestions={() =>
+                      setShowSuggestions((current) => !current)
+                    }
+                    suggestionCount={suggestionCount}
+                    className="grid grid-cols-3 gap-2 text-[11px] font-semibold"
+                  />
                 </div>
 
                 <div className="space-y-3">
