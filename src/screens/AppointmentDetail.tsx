@@ -1342,7 +1342,7 @@ export default function AppointmentDetail() {
           </div>
         </div>
         {syncStatus ? (
-          <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
+          <div className="w-full rounded-none border border-border bg-surface-muted px-3 py-1 text-[11px] text-foreground-soft">
             {syncStatus}
           </div>
         ) : null}
