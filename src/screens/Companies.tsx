@@ -7,6 +7,7 @@ import { useAuth } from "../contexts/useAuth";
 import { formatCurrencyBRL, formatQuantity } from "../lib/format";
 import {
   buildProtheusCounts,
+  buildDocumentVariants,
   chunkArray,
   getProtheusKey,
   mergeProtheusCounts,
@@ -143,9 +144,9 @@ export default function Companies() {
 
       const documents = Array.from(
         new Set(
-          companies
-            .map((company) => getProtheusKey(company.document))
-            .filter(Boolean),
+          companies.flatMap((company) =>
+            buildDocumentVariants(company.document),
+          ),
         ),
       );
       if (!documents.length) {

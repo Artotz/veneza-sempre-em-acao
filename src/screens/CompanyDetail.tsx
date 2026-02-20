@@ -7,7 +7,7 @@ import { SectionHeader } from "../components/SectionHeader";
 import { useAuth } from "../contexts/useAuth";
 import { buildMonthWeeks, formatDateShort, formatMonthYear } from "../lib/date";
 import { formatCurrencyBRL, formatQuantity } from "../lib/format";
-import { splitProtheusSeries } from "../lib/protheus";
+import { buildDocumentVariants, splitProtheusSeries } from "../lib/protheus";
 import {
   formatAppointmentWindow,
   getAppointmentStatus,
@@ -214,10 +214,16 @@ export default function CompanyDetail() {
         return;
       }
 
+      const variants = buildDocumentVariants(document);
+      if (!variants.length) {
+        setProtheusSeries({ preventivas: [], reconexoes: [] });
+        return;
+      }
+
       const { data, error: requestError } = await supabase
         .from("base_protheus")
         .select("serie, tipo_lead")
-        .eq("a1_cgc", document);
+        .in("a1_cgc", variants);
 
       if (!active) return;
 
@@ -411,49 +417,28 @@ export default function CompanyDetail() {
                 ) : null}
               </div>
 
-              <div className="space-y-1 text-sm text-foreground-muted">
+              <div className="flex flex-wrap gap-2 text-xs font-semibold text-foreground">
                 {company.clientClass ? (
-                  <p>
-                    {t("ui.classe_value", { value: company.clientClass })}
-                  </p>
+                  <span className="rounded-full border border-border bg-surface-muted px-3 py-1">
+                    {company.clientClass}
+                  </span>
                 ) : null}
                 {company.carteiraDef ? (
-                  <p>
-                    {t("ui.carteira_value", { value: company.carteiraDef })}
-                  </p>
+                  <span className="rounded-full border border-border bg-surface-muted px-3 py-1">
+                    {company.carteiraDef}
+                  </span>
                 ) : null}
                 {company.carteiraDef2 ? (
-                  <p>
-                    {t("ui.carteira_2_value", {
-                      value: company.carteiraDef2,
-                    })}
-                  </p>
-                ) : null}
-                {company.validacao ? (
-                  <p>
-                    {t("ui.validacao_value", { value: company.validacao })}
-                  </p>
+                  <span className="rounded-full border border-border bg-surface-muted px-3 py-1">
+                    {company.carteiraDef2}
+                  </span>
                 ) : null}
               </div>
-
-              <div className="grid gap-2 text-xs sm:grid-cols-2">
-                <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
-                    {t("ui.valor_cot_1m")}
-                  </p>
-                  <p className="text-sm font-semibold text-foreground">
-                    {formatCurrencyBRL(company.vlrUltimos3Meses)}
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
-                    {t("ui.qtd_cot_1m")}
-                  </p>
-                  <p className="text-sm font-semibold text-foreground">
-                    {formatQuantity(company.qtdUltimos3Meses)}
-                  </p>
-                </div>
-              </div>
+              {company.validacao ? (
+                <p className="text-sm text-foreground-muted">
+                  {t("ui.validacao_value", { value: company.validacao })}
+                </p>
+              ) : null}
             </div>
           ) : (
             <EmptyState

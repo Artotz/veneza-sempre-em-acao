@@ -10,8 +10,20 @@ export type ProtheusCountSummary = {
 
 export type ProtheusCountMap = Record<string, ProtheusCountSummary>;
 
+export const normalizeDocument = (document?: string | null) =>
+  document?.replace(/\D/g, "") ?? "";
+
 export const getProtheusKey = (document?: string | null) =>
-  document?.trim() ?? "";
+  normalizeDocument(document);
+
+export const buildDocumentVariants = (document?: string | null) => {
+  const raw = document?.trim() ?? "";
+  const normalized = normalizeDocument(document);
+  const variants = new Set<string>();
+  if (raw) variants.add(raw);
+  if (normalized) variants.add(normalized);
+  return Array.from(variants);
+};
 
 export const buildProtheusCounts = (
   rows: { a1_cgc?: string | null; tipo_lead?: string | null }[]
@@ -21,9 +33,10 @@ export const buildProtheusCounts = (
     const key = getProtheusKey(row.a1_cgc);
     if (!key) return;
     const entry = counts[key] ?? { preventivas: 0, reconexoes: 0 };
-    if (row.tipo_lead === PROTHEUS_LEAD_TYPES.preventiva) {
+    const lead = row.tipo_lead?.trim().toUpperCase() ?? "";
+    if (lead === PROTHEUS_LEAD_TYPES.preventiva) {
       entry.preventivas += 1;
-    } else if (row.tipo_lead === PROTHEUS_LEAD_TYPES.reconexao) {
+    } else if (lead === PROTHEUS_LEAD_TYPES.reconexao) {
       entry.reconexoes += 1;
     }
     counts[key] = entry;

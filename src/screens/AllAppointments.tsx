@@ -10,6 +10,7 @@ import { buildMonthWeeks, formatDateShort, formatMonthYear } from "../lib/date";
 import { formatCurrencyBRL, formatQuantity } from "../lib/format";
 import {
   buildProtheusCounts,
+  buildDocumentVariants,
   chunkArray,
   getProtheusKey,
   mergeProtheusCounts,
@@ -89,9 +90,9 @@ export default function AllAppointments() {
 
       const documents = Array.from(
         new Set(
-          state.companies
-            .map((company) => getProtheusKey(company.document))
-            .filter(Boolean),
+          state.companies.flatMap((company) =>
+            buildDocumentVariants(company.document),
+          ),
         ),
       );
 
