@@ -87,17 +87,25 @@ export default function CompanyDetail() {
       },
     ];
 
-    const preventivas = protheusSeries.preventivas.map((serie, index) => ({
-      id: `preventiva-${serie}-${index}`,
-      title: serie,
-    }));
+    const preventivas: OpportunityItem[] = protheusSeries.preventivas.map(
+      (serie, index) => ({
+        id: `preventiva-${serie}-${index}`,
+        title: serie,
+      }),
+    );
 
-    const reconexoes = protheusSeries.reconexoes.map((serie, index) => ({
-      id: `reconexao-${serie}-${index}`,
-      title: serie,
-    }));
+    const reconexoes: OpportunityItem[] = protheusSeries.reconexoes.map(
+      (serie, index) => ({
+        id: `reconexao-${serie}-${index}`,
+        title: serie,
+      }),
+    );
 
-    return { cotacoes, preventivas, reconexoes };
+    return {
+      cotacoes,
+      preventivas,
+      reconexoes,
+    } satisfies Record<OpportunityTab, OpportunityItem[]>;
   }, [
     company?.qtdUltimos3Meses,
     company?.vlrUltimos3Meses,
