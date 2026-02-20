@@ -150,6 +150,7 @@ export default function AllAppointments() {
       {
         total: state.appointments.length,
         agendado: 0,
+        expirado: 0,
         em_execucao: 0,
         concluido: 0,
         cancelado: 0,
@@ -214,6 +215,13 @@ export default function AllAppointments() {
         count: summary.agendado,
         baseClass: "bg-warning/15 text-warning",
         ringClass: "ring-warning/30",
+      },
+      {
+        status: "expirado" as const,
+        label: t("ui.expirados"),
+        count: summary.expirado,
+        baseClass: "bg-foreground/10 text-foreground-muted",
+        ringClass: "ring-foreground/20",
       },
       {
         status: "em_execucao" as const,

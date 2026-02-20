@@ -30,6 +30,7 @@ const GRID_PADDING = 8;
 
 const statusCardStyle: Record<AppointmentStatus, string> = {
   agendado: "border-warning/30 bg-warning/15 text-warning",
+  expirado: "border-foreground/20 bg-foreground/10 text-foreground-muted",
   em_execucao: "border-info/30 bg-info/15 text-info",
   concluido: "border-success/30 bg-success/15 text-success",
   cancelado: "border-danger/30 bg-danger/15 text-danger",

@@ -9,6 +9,8 @@ export const resources = {
         agenda_da_semana: "Agenda da semana",
         agendado: "Agendado",
         agendados: "Agendados",
+        expirado: "Expirado",
+        expirados: "Expirados",
         agendamento: "Agendamento",
         agendamento_nao_encontrado: "Agendamento não encontrado",
         agendamento_nao_encontrado_2: "Agendamento não encontrado.",

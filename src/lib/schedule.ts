@@ -2,8 +2,19 @@ import type { Appointment, AppointmentStatus } from "./types";
 import { formatTime } from "./date";
 import { t } from "../i18n";
 
+export const isPending = (appointment: Appointment) =>
+  appointment.status
+    ? appointment.status === "scheduled"
+    : !appointment.checkOutAt && !appointment.absenceReason;
+
+const getTodayStart = () => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return today;
+};
+
 export const getAppointmentStatus = (
-  appointment: Appointment
+  appointment: Appointment,
 ): AppointmentStatus => {
   if (appointment.status === "absent" || appointment.absenceReason)
     return "cancelado";
@@ -11,13 +22,16 @@ export const getAppointmentStatus = (
     return "concluido";
   if (appointment.status === "in_progress" || appointment.checkInAt)
     return "em_execucao";
+
+  if (isPending(appointment)) {
+    const startAt = new Date(appointment.startAt);
+    if (!Number.isNaN(startAt.getTime()) && startAt < getTodayStart()) {
+      return "expirado";
+    }
+  }
+
   return "agendado";
 };
-
-export const isPending = (appointment: Appointment) =>
-  appointment.status
-    ? appointment.status === "scheduled"
-    : !appointment.checkOutAt && !appointment.absenceReason;
 
 const normalizeEmail = (value?: string | null) =>
   value?.trim().toLowerCase() ?? "";

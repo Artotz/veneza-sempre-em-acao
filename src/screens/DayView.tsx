@@ -158,6 +158,7 @@ export default function DayView() {
       {
         total: activeDayAppointments.length,
         agendado: 0,
+        expirado: 0,
         em_execucao: 0,
         concluido: 0,
         cancelado: 0,
@@ -190,6 +191,13 @@ export default function DayView() {
         count: daySummary.agendado,
         baseClass: "bg-warning/15 text-warning",
         ringClass: "ring-warning/30",
+      },
+      {
+        status: "expirado" as const,
+        label: t("ui.expirados"),
+        count: daySummary.expirado,
+        baseClass: "bg-foreground/10 text-foreground-muted",
+        ringClass: "ring-foreground/20",
       },
       {
         status: "em_execucao" as const,

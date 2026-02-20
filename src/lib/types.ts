@@ -1,5 +1,6 @@
 export type AppointmentStatus =
   | "agendado"
+  | "expirado"
   | "em_execucao"
   | "concluido"
   | "cancelado";
