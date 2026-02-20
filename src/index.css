@@ -35,6 +35,14 @@ body {
   @apply bg-background text-foreground font-sans antialiased;
 }
 
+.app-background {
+  background-image: url("./assets/bg.png");
+  background-repeat: no-repeat;
+  background-position: left bottom;
+  background-size: cover;
+  background-attachment: fixed;
+}
+
 h1,
 h2,
 h3 {

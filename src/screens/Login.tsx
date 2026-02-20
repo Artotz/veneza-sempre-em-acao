@@ -107,7 +107,7 @@ export default function Login() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-surface via-surface-muted to-surface-strong px-4 py-10">
+    <div className="app-background flex min-h-screen items-center justify-center bg-background px-4 py-10">
       <div className="w-full max-w-xl overflow-hidden rounded-3xl border border-border bg-white shadow-2xl">
         <div className="grid gap-6 bg-gradient-to-br from-accent to-brand px-8 py-10 text-white md:grid-cols-[1.1fr_1fr] md:gap-0">
           <div className="flex flex-col justify-between gap-6">
