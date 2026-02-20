@@ -221,8 +221,10 @@ export default function Companies() {
           placeholder={t("ui.buscar_empresa")}
           className="w-full rounded-2xl border border-border bg-surface-muted px-4 py-3 text-sm text-foreground outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
         />
-        <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
-          <span className="text-foreground-soft">{t("ui.ordenar_por")}</span>
+        <div className="flex w-full items-center gap-2 text-xs font-semibold">
+          <span className="shrink-0 text-foreground-soft">
+            {t("ui.ordenar_por")}
+          </span>
           <select
             value={sortBy}
             onChange={(event) =>
@@ -234,7 +236,7 @@ export default function Companies() {
                   | "reconexoes",
               )
             }
-            className="rounded-2xl border border-border bg-white px-3 py-2 text-xs font-semibold text-foreground shadow-sm outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
+            className="w-full flex-1 rounded-2xl border border-border bg-white px-3 py-2 text-xs font-semibold text-foreground shadow-sm outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
           >
             <option value="valor">{t("ui.valor_cot_1m")}</option>
             <option value="quantidade">{t("ui.quantidade_cot_1m")}</option>
