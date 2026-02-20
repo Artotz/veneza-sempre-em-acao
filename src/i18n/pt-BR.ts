@@ -199,7 +199,9 @@ export const resources = {
 
         cotacoes: "Cotações",
         qtd_cot_3m: "Qtd Cot (3m)",
+        qtd_cot_1m: "Qtd Cot (1m)",
         quantidade_cot_3m: "Quantidade Cot (3m)",
+        quantidade_cot_1m: "Quantidade Cot (1m)",
 
         reconexao: "Reconexão",
         reconexoes: "Reconexões",
@@ -258,6 +260,9 @@ export const resources = {
 
         validacao_value: "Validação: {{value}}",
         valor_cot_3m: "Valor Cot (3m)",
+        valor_cot_1m: "Valor Cot (1m)",
+        qtd_preventivas: "Qtd Preventivas",
+        qtd_reconexoes: "Qtd Reconexões",
 
         ver_empresa: "Ver empresa",
 

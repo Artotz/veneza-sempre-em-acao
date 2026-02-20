@@ -9,6 +9,13 @@ import { useAuth } from "../contexts/useAuth";
 import { buildMonthWeeks, formatDateShort, formatMonthYear } from "../lib/date";
 import { formatCurrencyBRL, formatQuantity } from "../lib/format";
 import {
+  buildProtheusCounts,
+  chunkArray,
+  getProtheusKey,
+  mergeProtheusCounts,
+  type ProtheusCountMap,
+} from "../lib/protheus";
+import {
   formatAppointmentWindow,
   getAppointmentStatus,
   getAppointmentTitle,
@@ -17,6 +24,7 @@ import {
   sortByStart,
 } from "../lib/schedule";
 import type { Appointment, AppointmentStatus } from "../lib/types";
+import { createSupabaseBrowserClient } from "../lib/supabaseClient";
 import { useSchedule } from "../state/useSchedule";
 import { t } from "../i18n";
 
@@ -38,6 +46,7 @@ const buildDayGroups = (appointments: Appointment[]) => {
 export default function AllAppointments() {
   const { state, selectors, actions } = useSchedule();
   const { user } = useAuth();
+  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<"details" | "map">(() =>
@@ -48,9 +57,10 @@ export default function AllAppointments() {
   );
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [companyQuery, setCompanyQuery] = useState("");
-  const [companySortBy, setCompanySortBy] = useState<"valor" | "quantidade">(
-    "valor",
-  );
+  const [companySortBy, setCompanySortBy] = useState<
+    "valor" | "quantidade" | "preventivas" | "reconexoes"
+  >("valor");
+  const [protheusCounts, setProtheusCounts] = useState<ProtheusCountMap>({});
 
   const weeks = useMemo(() => buildMonthWeeks(new Date()), []);
   const monthRange = useMemo(() => {
@@ -66,6 +76,60 @@ export default function AllAppointments() {
   useEffect(() => {
     setActiveTab(searchParams.get("tab") === "empresas" ? "map" : "details");
   }, [searchParams]);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadProtheusCounts = async () => {
+      const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
+      if (isOffline) {
+        setProtheusCounts({});
+        return;
+      }
+
+      const documents = Array.from(
+        new Set(
+          state.companies
+            .map((company) => getProtheusKey(company.document))
+            .filter(Boolean),
+        ),
+      );
+
+      if (!documents.length) {
+        setProtheusCounts({});
+        return;
+      }
+
+      let aggregated: ProtheusCountMap = {};
+      for (const chunk of chunkArray(documents, 200)) {
+        const { data, error: requestError } = await supabase
+          .from("base_protheus")
+          .select("a1_cgc, tipo_lead")
+          .in("a1_cgc", chunk);
+
+        if (!active) return;
+
+        if (requestError) {
+          setProtheusCounts({});
+          return;
+        }
+
+        aggregated = mergeProtheusCounts(
+          aggregated,
+          buildProtheusCounts(data ?? []),
+        );
+      }
+
+      if (!active) return;
+      setProtheusCounts(aggregated);
+    };
+
+    void loadProtheusCounts();
+
+    return () => {
+      active = false;
+    };
+  }, [state.companies, supabase]);
 
   const orderedAppointments = useMemo(
     () => [...state.appointments].sort(sortByStart),
@@ -126,14 +190,20 @@ export default function AllAppointments() {
     const getMetric = (company: (typeof items)[number]) =>
       companySortBy === "valor"
         ? (company.vlrUltimos3Meses ?? 0)
-        : (company.qtdUltimos3Meses ?? 0);
+        : companySortBy === "quantidade"
+          ? (company.qtdUltimos3Meses ?? 0)
+          : companySortBy === "preventivas"
+            ? (protheusCounts[getProtheusKey(company.document)]?.preventivas ??
+                0)
+            : (protheusCounts[getProtheusKey(company.document)]?.reconexoes ??
+                0);
     items.sort((a, b) => {
       const diff = getMetric(b) - getMetric(a);
       if (diff !== 0) return diff;
       return (a.name ?? "").localeCompare(b.name ?? "", "pt-BR");
     });
     return items;
-  }, [companyQuery, companySortBy, state.companies]);
+  }, [companyQuery, companySortBy, protheusCounts, state.companies]);
 
   const pillOptions = useMemo(
     () => [
@@ -330,30 +400,24 @@ export default function AllAppointments() {
               />
               <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
                 <span className="text-foreground-soft">{t("ui.ordenar_por")}</span>
-                <button
-                  type="button"
-                  onClick={() => setCompanySortBy("valor")}
-                  aria-pressed={companySortBy === "valor"}
-                  className={`rounded-full px-3 py-1 transition ${
-                    companySortBy === "valor"
-                      ? "bg-foreground text-white"
-                      : "bg-surface-muted text-foreground-soft"
-                  }`}
+                <select
+                  value={companySortBy}
+                  onChange={(event) =>
+                    setCompanySortBy(
+                      event.target.value as
+                        | "valor"
+                        | "quantidade"
+                        | "preventivas"
+                        | "reconexoes",
+                    )
+                  }
+                  className="rounded-2xl border border-border bg-white px-3 py-2 text-xs font-semibold text-foreground shadow-sm outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
                 >
-                  {t("ui.valor_cot_3m")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCompanySortBy("quantidade")}
-                  aria-pressed={companySortBy === "quantidade"}
-                  className={`rounded-full px-3 py-1 transition ${
-                    companySortBy === "quantidade"
-                      ? "bg-foreground text-white"
-                      : "bg-surface-muted text-foreground-soft"
-                  }`}
-                >
-                  {t("ui.quantidade_cot_3m")}
-                </button>
+                  <option value="valor">{t("ui.valor_cot_1m")}</option>
+                  <option value="quantidade">{t("ui.quantidade_cot_1m")}</option>
+                  <option value="preventivas">{t("ui.qtd_preventivas")}</option>
+                  <option value="reconexoes">{t("ui.qtd_reconexoes")}</option>
+                </select>
               </div>
             </section>
 
@@ -390,23 +454,33 @@ export default function AllAppointments() {
                       ) : null}
                     </div>
 
-                    <div className="grid gap-2 text-xs sm:grid-cols-2">
-                      <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
-                          {t("ui.valor_cot_3m")}
-                        </p>
-                        <p className="text-sm font-semibold text-foreground">
-                          {formatCurrencyBRL(company.vlrUltimos3Meses)}
-                        </p>
-                      </div>
-                      <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
-                          {t("ui.qtd_cot_3m")}
-                        </p>
-                        <p className="text-sm font-semibold text-foreground">
-                          {formatQuantity(company.qtdUltimos3Meses)}
-                        </p>
-                      </div>
+                    <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
+                        {companySortBy === "valor"
+                          ? t("ui.valor_cot_1m")
+                          : companySortBy === "quantidade"
+                            ? t("ui.qtd_cot_1m")
+                            : companySortBy === "preventivas"
+                              ? t("ui.qtd_preventivas")
+                              : t("ui.qtd_reconexoes")}
+                      </p>
+                      <p className="text-sm font-semibold text-foreground">
+                        {companySortBy === "valor"
+                          ? formatCurrencyBRL(company.vlrUltimos3Meses)
+                          : companySortBy === "quantidade"
+                            ? formatQuantity(company.qtdUltimos3Meses)
+                            : companySortBy === "preventivas"
+                              ? formatQuantity(
+                                  protheusCounts[
+                                    getProtheusKey(company.document)
+                                  ]?.preventivas ?? 0,
+                                )
+                              : formatQuantity(
+                                  protheusCounts[
+                                    getProtheusKey(company.document)
+                                  ]?.reconexoes ?? 0,
+                                )}
+                      </p>
                     </div>
 
                     <div className="grid gap-2 sm:grid-cols-2">

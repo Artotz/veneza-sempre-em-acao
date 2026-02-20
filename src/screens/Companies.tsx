@@ -5,6 +5,13 @@ import { EmptyState } from "../components/EmptyState";
 import { SectionHeader } from "../components/SectionHeader";
 import { useAuth } from "../contexts/useAuth";
 import { formatCurrencyBRL, formatQuantity } from "../lib/format";
+import {
+  buildProtheusCounts,
+  chunkArray,
+  getProtheusKey,
+  mergeProtheusCounts,
+  type ProtheusCountMap,
+} from "../lib/protheus";
 import { createSupabaseBrowserClient } from "../lib/supabaseClient";
 import { COMPANY_SELECT, mapCompany } from "../lib/supabase";
 import type { Company } from "../lib/types";
@@ -20,9 +27,12 @@ export default function Companies() {
   const { user, loading: authLoading } = useAuth();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [query, setQuery] = useState("");
-  const [sortBy, setSortBy] = useState<"valor" | "quantidade">("valor");
+  const [sortBy, setSortBy] = useState<
+    "valor" | "quantidade" | "preventivas" | "reconexoes"
+  >("valor");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [protheusCounts, setProtheusCounts] = useState<ProtheusCountMap>({});
 
   const filterCompanies = (items: Company[], term: string) => {
     const trimmed = term.trim().toLowerCase();
@@ -121,19 +131,78 @@ export default function Companies() {
     };
   }, [authLoading, query, supabase, user?.email]);
 
+  useEffect(() => {
+    let active = true;
+
+    const loadProtheusCounts = async () => {
+      const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
+      if (isOffline) {
+        setProtheusCounts({});
+        return;
+      }
+
+      const documents = Array.from(
+        new Set(
+          companies
+            .map((company) => getProtheusKey(company.document))
+            .filter(Boolean),
+        ),
+      );
+      if (!documents.length) {
+        setProtheusCounts({});
+        return;
+      }
+
+      let aggregated: ProtheusCountMap = {};
+      for (const chunk of chunkArray(documents, 200)) {
+        const { data, error: requestError } = await supabase
+          .from("base_protheus")
+          .select("a1_cgc, tipo_lead")
+          .in("a1_cgc", chunk);
+
+        if (!active) return;
+
+        if (requestError) {
+          setProtheusCounts({});
+          return;
+        }
+
+        aggregated = mergeProtheusCounts(
+          aggregated,
+          buildProtheusCounts(data ?? []),
+        );
+      }
+
+      if (!active) return;
+      setProtheusCounts(aggregated);
+    };
+
+    void loadProtheusCounts();
+
+    return () => {
+      active = false;
+    };
+  }, [companies, supabase]);
+
   const sortedCompanies = useMemo(() => {
     const items = [...companies];
     const getMetric = (company: Company) =>
       sortBy === "valor"
         ? (company.vlrUltimos3Meses ?? 0)
-        : (company.qtdUltimos3Meses ?? 0);
+        : sortBy === "quantidade"
+          ? (company.qtdUltimos3Meses ?? 0)
+          : sortBy === "preventivas"
+            ? (protheusCounts[getProtheusKey(company.document)]?.preventivas ??
+                0)
+            : (protheusCounts[getProtheusKey(company.document)]?.reconexoes ??
+                0);
     items.sort((a, b) => {
       const diff = getMetric(b) - getMetric(a);
       if (diff !== 0) return diff;
       return (a.name ?? "").localeCompare(b.name ?? "", "pt-BR");
     });
     return items;
-  }, [companies, sortBy]);
+  }, [companies, protheusCounts, sortBy]);
 
   return (
     <AppShell
@@ -153,30 +222,24 @@ export default function Companies() {
         />
         <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
           <span className="text-foreground-soft">{t("ui.ordenar_por")}</span>
-          <button
-            type="button"
-            onClick={() => setSortBy("valor")}
-            aria-pressed={sortBy === "valor"}
-            className={`rounded-full px-3 py-1 transition ${
-              sortBy === "valor"
-                ? "bg-foreground text-white"
-                : "bg-surface-muted text-foreground-soft"
-            }`}
+          <select
+            value={sortBy}
+            onChange={(event) =>
+              setSortBy(
+                event.target.value as
+                  | "valor"
+                  | "quantidade"
+                  | "preventivas"
+                  | "reconexoes",
+              )
+            }
+            className="rounded-2xl border border-border bg-white px-3 py-2 text-xs font-semibold text-foreground shadow-sm outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
           >
-            {t("ui.valor_cot_3m")}
-          </button>
-          <button
-            type="button"
-            onClick={() => setSortBy("quantidade")}
-            aria-pressed={sortBy === "quantidade"}
-            className={`rounded-full px-3 py-1 transition ${
-              sortBy === "quantidade"
-                ? "bg-foreground text-white"
-                : "bg-surface-muted text-foreground-soft"
-            }`}
-          >
-            {t("ui.quantidade_cot_3m")}
-          </button>
+            <option value="valor">{t("ui.valor_cot_1m")}</option>
+            <option value="quantidade">{t("ui.quantidade_cot_1m")}</option>
+            <option value="preventivas">{t("ui.qtd_preventivas")}</option>
+            <option value="reconexoes">{t("ui.qtd_reconexoes")}</option>
+          </select>
         </div>
       </section>
 
@@ -219,23 +282,31 @@ export default function Companies() {
                 ) : null}
               </div>
 
-              <div className="grid gap-2 text-xs sm:grid-cols-2">
-                <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
-                    {t("ui.valor_cot_3m")}
-                  </p>
-                  <p className="text-sm font-semibold text-foreground">
-                    {formatCurrencyBRL(company.vlrUltimos3Meses)}
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
-                    {t("ui.qtd_cot_3m")}
-                  </p>
-                  <p className="text-sm font-semibold text-foreground">
-                    {formatQuantity(company.qtdUltimos3Meses)}
-                  </p>
-                </div>
+              <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
+                  {sortBy === "valor"
+                    ? t("ui.valor_cot_1m")
+                    : sortBy === "quantidade"
+                      ? t("ui.qtd_cot_1m")
+                      : sortBy === "preventivas"
+                        ? t("ui.qtd_preventivas")
+                        : t("ui.qtd_reconexoes")}
+                </p>
+                <p className="text-sm font-semibold text-foreground">
+                  {sortBy === "valor"
+                    ? formatCurrencyBRL(company.vlrUltimos3Meses)
+                    : sortBy === "quantidade"
+                      ? formatQuantity(company.qtdUltimos3Meses)
+                      : sortBy === "preventivas"
+                        ? formatQuantity(
+                            protheusCounts[getProtheusKey(company.document)]
+                              ?.preventivas ?? 0,
+                          )
+                        : formatQuantity(
+                            protheusCounts[getProtheusKey(company.document)]
+                              ?.reconexoes ?? 0,
+                          )}
+                </p>
               </div>
 
               <div className="grid gap-2 sm:grid-cols-2">

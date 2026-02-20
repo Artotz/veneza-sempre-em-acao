@@ -7,6 +7,7 @@ import { SectionHeader } from "../components/SectionHeader";
 import { useAuth } from "../contexts/useAuth";
 import { buildMonthWeeks, formatDateShort, formatMonthYear } from "../lib/date";
 import { formatCurrencyBRL, formatQuantity } from "../lib/format";
+import { splitProtheusSeries } from "../lib/protheus";
 import {
   formatAppointmentWindow,
   getAppointmentStatus,
@@ -66,15 +67,42 @@ export default function CompanyDetail() {
   const [companyTab, setCompanyTab] = useState<CompanyTab>("agendamentos");
   const [opportunityTab, setOpportunityTab] =
     useState<OpportunityTab>("cotacoes");
+  const [protheusSeries, setProtheusSeries] = useState<{
+    preventivas: string[];
+    reconexoes: string[];
+  }>({ preventivas: [], reconexoes: [] });
 
-  const opportunities = useMemo(
-    () => ({
-      cotacoes: [] as OpportunityItem[],
-      preventivas: [] as OpportunityItem[],
-      reconexoes: [] as OpportunityItem[],
-    }),
-    [],
-  );
+  const opportunities = useMemo(() => {
+    const cotacoes: OpportunityItem[] = [
+      {
+        id: "cotacao-valor",
+        title: t("ui.valor_cot_1m"),
+        detail: formatCurrencyBRL(company?.vlrUltimos3Meses),
+      },
+      {
+        id: "cotacao-qtd",
+        title: t("ui.qtd_cot_1m"),
+        detail: formatQuantity(company?.qtdUltimos3Meses),
+      },
+    ];
+
+    const preventivas = protheusSeries.preventivas.map((serie, index) => ({
+      id: `preventiva-${serie}-${index}`,
+      title: serie,
+    }));
+
+    const reconexoes = protheusSeries.reconexoes.map((serie, index) => ({
+      id: `reconexao-${serie}-${index}`,
+      title: serie,
+    }));
+
+    return { cotacoes, preventivas, reconexoes };
+  }, [
+    company?.qtdUltimos3Meses,
+    company?.vlrUltimos3Meses,
+    protheusSeries,
+    t,
+  ]);
 
   const weeks = useMemo(() => buildMonthWeeks(new Date()), []);
   const monthRange = useMemo(() => {
@@ -174,6 +202,40 @@ export default function CompanyDetail() {
       active = false;
     };
   }, [authLoading, id, selectors, state.companies, supabase, user?.email]);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadProtheus = async () => {
+      const document = company?.document?.trim();
+      const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
+      if (!document || isOffline) {
+        setProtheusSeries({ preventivas: [], reconexoes: [] });
+        return;
+      }
+
+      const { data, error: requestError } = await supabase
+        .from("base_protheus")
+        .select("serie, tipo_lead")
+        .eq("a1_cgc", document);
+
+      if (!active) return;
+
+      if (requestError) {
+        setProtheusSeries({ preventivas: [], reconexoes: [] });
+        return;
+      }
+
+      const series = splitProtheusSeries(data ?? []);
+      setProtheusSeries(series);
+    };
+
+    void loadProtheus();
+
+    return () => {
+      active = false;
+    };
+  }, [company?.document, supabase]);
 
   const orderedAppointments = useMemo(() => {
     if (!id) return [];
@@ -377,7 +439,7 @@ export default function CompanyDetail() {
               <div className="grid gap-2 text-xs sm:grid-cols-2">
                 <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
-                    {t("ui.valor_cot_3m")}
+                    {t("ui.valor_cot_1m")}
                   </p>
                   <p className="text-sm font-semibold text-foreground">
                     {formatCurrencyBRL(company.vlrUltimos3Meses)}
@@ -385,7 +447,7 @@ export default function CompanyDetail() {
                 </div>
                 <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
-                    {t("ui.qtd_cot_3m")}
+                    {t("ui.qtd_cot_1m")}
                   </p>
                   <p className="text-sm font-semibold text-foreground">
                     {formatQuantity(company.qtdUltimos3Meses)}

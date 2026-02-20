@@ -745,7 +745,7 @@ export default function AppointmentDetail() {
         setSyncStatus(
           error instanceof Error
             ? error.message
-          : t("ui.nao_foi_possivel_sincronizar_o_check_in"),
+            : t("ui.nao_foi_possivel_sincronizar_o_check_in"),
         );
       }
     },
@@ -809,7 +809,7 @@ export default function AppointmentDetail() {
         setSyncStatus(
           error instanceof Error
             ? error.message
-          : t("ui.nao_foi_possivel_sincronizar_o_check_out"),
+            : t("ui.nao_foi_possivel_sincronizar_o_check_out"),
         );
       }
     },
@@ -845,7 +845,7 @@ export default function AppointmentDetail() {
         setSyncStatus(
           error instanceof Error
             ? error.message
-          : t("ui.nao_foi_possivel_sincronizar_a_ausencia"),
+            : t("ui.nao_foi_possivel_sincronizar_a_ausencia"),
         );
       }
     },
@@ -1484,7 +1484,7 @@ export default function AppointmentDetail() {
         <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
           <SectionHeader
             title={t("ui.acoes")}
-            subtitle={t("ui.sincroniza_com_o_supabase")}
+            // subtitle={t("ui.sincroniza_com_o_supabase")}
           />
           <button
             type="button"
@@ -1808,9 +1808,7 @@ export default function AppointmentDetail() {
                   onChange={(event) =>
                     setCheckoutObservation(event.target.value)
                   }
-                  placeholder={t(
-                    "ui.ex_cliente_solicitou_retorno_em_15_dias",
-                  )}
+                  placeholder={t("ui.ex_cliente_solicitou_retorno_em_15_dias")}
                   className="mt-3 w-full resize-none rounded-2xl border border-border bg-white px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-accent/40"
                   rows={3}
                   disabled={isCheckoutBusy}
@@ -1992,9 +1990,9 @@ export default function AppointmentDetail() {
               <h3 className="text-base font-semibold text-foreground">
                 {t("ui.acoes_do_agendamento")}
               </h3>
-              <p className="mt-1 text-xs text-foreground-muted">
+              {/* <p className="mt-1 text-xs text-foreground-muted">
                 {t("ui.sincroniza_com_o_supabase")}
-              </p>
+              </p> */}
             </div>
 
             <div className="px-5 py-4">
