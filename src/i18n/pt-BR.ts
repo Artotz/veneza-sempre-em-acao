@@ -37,6 +37,7 @@ export const resources = {
 
         capturando_localizacao: "Capturando localização...",
         capturar_foto: "Capturar foto",
+        adicionar_foto: "Adicionar foto",
         carregando_detalhes: "Carregando detalhes.",
         carregando_empresa: "Carregando empresa...",
         carregando_fotos: "Carregando fotos...",
@@ -46,6 +47,7 @@ export const resources = {
         carteira_value: "Carteira: {{value}}",
 
         check_in: "Check-in",
+        check_in_check_out: "Check-in / Check-out",
         check_out: "Check-out",
         check_out_do_agendamento: "Check-out do agendamento",
 
@@ -165,6 +167,7 @@ export const resources = {
         nao_foi_possivel_carregar: "Não foi possível carregar",
         nao_foi_possivel_gerar_a_foto: "Não foi possível gerar a foto.",
         nao_foi_possivel_iniciar_a_camera: "Não foi possível iniciar a câmera.",
+        nao_foi_possivel_salvar_a_foto: "Não foi possível salvar a foto.",
 
         nao_informado: "Não informado",
         nao_realizado: "Não realizado",
@@ -227,6 +230,9 @@ export const resources = {
 
         registrar_ausencia: "Registrar ausência",
         registro_visual_do_apontamento: "Registro visual do apontamento.",
+        registro: "Registro",
+        registro_numero: "Registro {{numero}}",
+        registros_count: "{{count}} de 3 registros",
 
         resumo_do_apontamento: "Resumo do apontamento",
         resumo_geral: "Resumo geral",
@@ -365,6 +371,8 @@ export const resources = {
           "Não foi possível ler o tamanho da imagem.",
         nao_foi_possivel_obter_a_localizacao_verifique_o_gps_e_tente_novamente:
           "Não foi possível obter a localização. Verifique o GPS e tente novamente.",
+        localizacao_indisponivel_salvando_sem_localizacao:
+          "Localização indisponível, salvando sem localização...",
         nao_foi_possivel_processar_a_imagem:
           "Não foi possível processar a imagem.",
         nao_foi_possivel_registrar_a_ausencia:

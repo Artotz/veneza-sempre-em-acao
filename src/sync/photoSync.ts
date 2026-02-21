@@ -32,7 +32,12 @@ export const flushUploads = async (): Promise<void> => {
 
   for (const item of pending as PendingUpload[]) {
     const apontamentoId = item.apontamentoId ?? item.entityRef;
-    const kind = item.kind as "checkin" | "checkout" | "absence" | undefined;
+    const kind = item.kind as
+      | "checkin"
+      | "checkout"
+      | "absence"
+      | "registro"
+      | undefined;
     const consultantId = item.consultantId;
 
     if (!apontamentoId || !kind || !consultantId) {

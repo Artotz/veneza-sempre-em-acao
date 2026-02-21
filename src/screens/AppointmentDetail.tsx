@@ -76,7 +76,7 @@ const oportunidadeLabels = Object.fromEntries(
   oportunidadeOptions.map((option) => [option.value, option.label]),
 ) as Record<string, string>;
 
-type MediaKind = "checkin" | "checkout" | "absence";
+type MediaKind = "checkin" | "checkout" | "absence" | "registro";
 
 type ApontamentoMediaRow = {
   id?: string;
@@ -107,6 +107,7 @@ const mediaKindLabels: Record<MediaKind, string> = {
   checkin: t("ui.check_in"),
   checkout: t("ui.check_out"),
   absence: t("ui.ausencia"),
+  registro: t("ui.registro"),
 };
 
 const markerIconOptions: L.IconOptions = {
@@ -197,7 +198,7 @@ export default function AppointmentDetail() {
   );
   const [photoStatus, setPhotoStatus] = useState<string | null>(null);
   const [cameraIntent, setCameraIntent] = useState<
-    "checkin" | "checkout" | null
+    "checkout" | "registro" | null
   >(null);
   const [mediaItems, setMediaItems] = useState<AppointmentMediaItem[]>([]);
   const [mediaLoading, setMediaLoading] = useState(false);
@@ -212,7 +213,9 @@ export default function AppointmentDetail() {
     typeof navigator === "undefined" ? true : navigator.onLine,
   );
   const pendingPreviewUrlsRef = useRef<Record<string, string>>({});
-  const [isActionsOpen, setIsActionsOpen] = useState(false);
+  const [detailsTab, setDetailsTab] = useState<
+    "fotos" | "mapa" | "recursos"
+  >("fotos");
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isAbsenceOpen, setIsAbsenceOpen] = useState(false);
   const [checkoutOpportunities, setCheckoutOpportunities] = useState<string[]>(
@@ -228,9 +231,7 @@ export default function AppointmentDetail() {
   const [showCheckOutMarker, setShowCheckOutMarker] = useState(true);
 
   const geo = useGeolocation();
-  useLockBodyScroll(
-    isActionsOpen || isCheckoutOpen || isAbsenceOpen || cameraIntent !== null,
-  );
+  useLockBodyScroll(isCheckoutOpen || isAbsenceOpen || cameraIntent !== null);
   const isCameraOpen = cameraIntent !== null;
 
   useEffect(() => {
@@ -701,7 +702,6 @@ export default function AppointmentDetail() {
 
   const syncCheckIn = useCallback(
     async (params: {
-      shot: CapturePhotoResult;
       at: string;
       position: { lat: number; lng: number; accuracy: number } | null;
     }) => {
@@ -714,11 +714,9 @@ export default function AppointmentDetail() {
         });
 
         if (typeof navigator !== "undefined" && !navigator.onLine) {
-          await queuePendingActionWithPhoto({
+          await queuePendingActionOnly({
             actionType: "checkIn",
             changes,
-            kind: "checkin",
-            shot: params.shot,
           });
           return;
         }
@@ -726,20 +724,10 @@ export default function AppointmentDetail() {
         try {
           await updateAppointmentRemote(changes);
         } catch (error) {
-          await queuePendingActionWithPhoto({
+          await queuePendingActionOnly({
             actionType: "checkIn",
             changes,
-            kind: "checkin",
-            shot: params.shot,
           });
-          return;
-        }
-
-        try {
-          await uploadPhotoRemote("checkin", params.shot);
-          await loadMedia();
-        } catch (error) {
-          await queuePendingPhotoOnly({ kind: "checkin", shot: params.shot });
         }
       } catch (error) {
         setSyncStatus(
@@ -749,14 +737,7 @@ export default function AppointmentDetail() {
         );
       }
     },
-    [
-      buildCheckInRemoteChanges,
-      loadMedia,
-      queuePendingActionWithPhoto,
-      queuePendingPhotoOnly,
-      updateAppointmentRemote,
-      uploadPhotoRemote,
-    ],
+    [buildCheckInRemoteChanges, queuePendingActionOnly, updateAppointmentRemote],
   );
 
   const syncCheckOut = useCallback(
@@ -1011,7 +992,7 @@ export default function AppointmentDetail() {
   const handleCheckIn = () => {
     if (!canCheckIn || busy || geo.isCapturing || isPhotoBusy) return;
     setError(null);
-    setCameraIntent("checkin");
+    void performCheckIn();
   };
 
   const handleCheckOut = () => {
@@ -1022,7 +1003,21 @@ export default function AppointmentDetail() {
     setCheckoutObservation(appointment?.notes ?? "");
     setPendingCheckoutObservation(null);
     setIsCheckoutOpen(true);
-    setIsActionsOpen(false);
+  };
+
+  const handleCheckInOut = () => {
+    if (canCheckIn) {
+      handleCheckIn();
+      return;
+    }
+    if (canCheckOut) {
+      handleCheckOut();
+    }
+  };
+
+  const handleAddRegistroPhoto = () => {
+    if (isPhotoBusy || registroCount >= 3) return;
+    setCameraIntent("registro");
   };
 
   const handleCloseCheckout = () => {
@@ -1093,7 +1088,7 @@ export default function AppointmentDetail() {
     }
   };
 
-  const performCheckIn = async (shot: CapturePhotoResult) => {
+  const performCheckIn = async () => {
     if (!canCheckIn || busy || geo.isCapturing) return;
     setError(null);
     setSyncStatus(null);
@@ -1107,9 +1102,7 @@ export default function AppointmentDetail() {
       } catch (geoError) {
         if (isGeoError(geoError)) {
           geo.resetError();
-          setPhotoStatus(
-            "Localizacao indisponivel, salvando sem localizacao...",
-          );
+          setPhotoStatus(t("ui.localizacao_indisponivel_salvando_sem_localizacao"));
         } else {
           throw geoError;
         }
@@ -1123,7 +1116,7 @@ export default function AppointmentDetail() {
       });
       setGeoIntent(null);
       setPhotoStatus(null);
-      void syncCheckIn({ shot, at: now, position });
+      void syncCheckIn({ at: now, position });
     } catch (actionError) {
       setError(
         actionError instanceof Error
@@ -1155,7 +1148,7 @@ export default function AppointmentDetail() {
         if (isGeoError(geoError)) {
           geo.resetError();
           setPhotoStatus(
-            "Localizacao indisponivel, salvando sem localizacao...",
+            t("ui.localizacao_indisponivel_salvando_sem_localizacao"),
           );
         } else {
           throw geoError;
@@ -1196,18 +1189,43 @@ export default function AppointmentDetail() {
     }
   };
 
+  const performRegistroUpload = async (shot: CapturePhotoResult) => {
+    if (!appointment) return;
+    setError(null);
+    setSyncStatus(null);
+    try {
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        await queuePendingPhotoOnly({ kind: "registro", shot });
+        return;
+      }
+
+      try {
+        await uploadPhotoRemote("registro", shot);
+        await loadMedia();
+      } catch (error) {
+        await queuePendingPhotoOnly({ kind: "registro", shot });
+      }
+    } catch (actionError) {
+      setError(
+        actionError instanceof Error
+          ? actionError.message
+          : t("ui.nao_foi_possivel_salvar_a_foto"),
+      );
+    }
+  };
+
   const handleCameraConfirm = async (shot: CapturePhotoResult) => {
     const intent = cameraIntent;
     setCameraIntent(null);
     if (!intent) return;
 
-    if (intent === "checkin") {
-      await performCheckIn(shot);
+    if (intent === "checkout") {
+      await performCheckOut(shot);
       return;
     }
 
-    if (intent === "checkout") {
-      await performCheckOut(shot);
+    if (intent === "registro") {
+      await performRegistroUpload(shot);
     }
   };
 
@@ -1252,18 +1270,9 @@ export default function AppointmentDetail() {
     setCameraIntent("checkout");
   };
 
-  const handleOpenActions = () => {
-    setIsActionsOpen(true);
-  };
-
-  const handleCloseActions = () => {
-    setIsActionsOpen(false);
-  };
-
   const handleOpenAbsence = () => {
     if (!canAbsence || busy || isPhotoBusy) return;
     setIsAbsenceOpen(true);
-    setIsActionsOpen(false);
   };
 
   const handleCloseAbsence = () => {
@@ -1288,17 +1297,39 @@ export default function AppointmentDetail() {
   const hasFilteredMapPoints = filteredMapPoints.length > 0;
   const companyDisplayName =
     company?.name ?? appointment.companyName ?? t("ui.empresa");
+  const pendingRegistroCount = pendingPhotos.filter(
+    (item) => item.kind === "registro",
+  ).length;
+  const registroCount =
+    pendingRegistroCount +
+    mediaItems.filter((item) => item.kind === "registro").length;
+  const checkInTimeLabel = appointment.checkInAt
+    ? formatTime(new Date(appointment.checkInAt))
+    : t("ui.nao_realizado");
+  const checkOutTimeLabel = appointment.checkOutAt
+    ? formatTime(new Date(appointment.checkOutAt))
+    : t("ui.nao_realizado");
+  const canCheckInOut = canCheckIn || canCheckOut;
+  const checkInOutLabel = (isCheckInCapturing || isCheckOutCapturing)
+    ? t("ui.capturando_localizacao")
+    : canCheckIn
+      ? t("ui.fazer_check_in")
+      : canCheckOut
+        ? t("ui.fazer_check_out")
+        : t("ui.check_in_check_out");
   const pendingItemBase = pendingPhotos.length + pendingActionCount;
   const pendingItemCount =
     pendingItemBase +
     (appointment.pendingSync && pendingItemBase === 0 ? 1 : 0);
 
   const cameraTitle =
-    cameraIntent === "checkin"
-      ? t("ui.foto_do_check_in")
-      : cameraIntent === "checkout"
-        ? t("ui.foto_do_check_out")
+    cameraIntent === "checkout"
+      ? t("ui.foto_do_check_out")
+      : cameraIntent === "registro"
+        ? t("ui.nova_foto")
         : t("ui.capturar_foto");
+  let pendingRegistroIndex = 0;
+  let uploadedRegistroIndex = pendingRegistroCount;
 
   return (
     <AppShell
@@ -1379,6 +1410,24 @@ export default function AppointmentDetail() {
           </div>
 
           <div className="mt-3 space-y-2 text-sm text-foreground-muted">
+            <div className="grid grid-cols-2 gap-3 rounded-2xl border border-border bg-surface-muted px-3 py-2">
+              <div>
+                <p className="text-[11px] font-semibold text-foreground-soft">
+                  {t("ui.check_in")}
+                </p>
+                <p className="mt-1 text-sm font-semibold text-foreground">
+                  {checkInTimeLabel}
+                </p>
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold text-foreground-soft">
+                  {t("ui.check_out")}
+                </p>
+                <p className="mt-1 text-sm font-semibold text-foreground">
+                  {checkOutTimeLabel}
+                </p>
+              </div>
+            </div>
             <div className="flex items-center justify-between">
               <span>{t("ui.consultor")}</span>
               <span className="font-semibold text-foreground">
@@ -1403,7 +1452,7 @@ export default function AppointmentDetail() {
             ) : null}
           </div>
 
-          {blocked ? (
+          {/* {blocked ? (
             <div className="rounded-2xl border border-danger/30 bg-danger/10 p-3 text-xs text-danger">
               {t(
                 "ui.este_agendamento_esta_bloqueado_conclua_o_pendente_anterior_no_mesmo_dia_para_liberar_as_acoes",
@@ -1416,7 +1465,7 @@ export default function AppointmentDetail() {
                 "ui.check_in_e_check_out_so_podem_ser_feitos_no_dia_do_apontamento",
               )}
             </div>
-          ) : null}
+          ) : null} */}
         </section>
 
         {/* <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
@@ -1486,235 +1535,371 @@ export default function AppointmentDetail() {
             title={t("ui.acoes")}
             // subtitle={t("ui.sincroniza_com_o_supabase")}
           />
-          <button
-            type="button"
-            onClick={handleOpenActions}
-            className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm font-semibold text-foreground transition hover:border-accent"
-          >
-            {t("ui.acoes")}
-          </button>
-        </section>
-
-        <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
-          <SectionHeader
-            title={t("ui.mapa")}
-            subtitle={t("ui.pinos_do_atendimento")}
-          />
-          <div className="flex flex-wrap gap-2">
+          <div className="grid gap-2">
             <button
               type="button"
-              onClick={() => setShowCheckInMarker((current) => !current)}
-              className={`rounded-full border px-3 py-1 text-[10px] font-semibold transition ${
-                showCheckInMarker
-                  ? "border-success/50 bg-success/10 text-success"
-                  : "border-border bg-white text-foreground-soft"
+              disabled={
+                !canCheckInOut || busy || geo.isCapturing || isPhotoBusy
+              }
+              onClick={handleCheckInOut}
+              className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                canCheckInOut && !busy && !geo.isCapturing && !isPhotoBusy
+                  ? canCheckIn
+                    ? "bg-success text-white"
+                    : "bg-info text-white"
+                  : "cursor-not-allowed bg-surface-muted text-foreground-muted"
               }`}
             >
-              {t("ui.check_in")}
+              {checkInOutLabel}
             </button>
             <button
               type="button"
-              onClick={() => setShowCheckOutMarker((current) => !current)}
-              className={`rounded-full border px-3 py-1 text-[10px] font-semibold transition ${
-                showCheckOutMarker
-                  ? "border-info/50 bg-info/10 text-info"
-                  : "border-border bg-white text-foreground-soft"
+              disabled={!canAbsence || busy || isPhotoBusy}
+              onClick={handleOpenAbsence}
+              className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                canAbsence && !busy && !isPhotoBusy
+                  ? "bg-danger text-white"
+                  : "cursor-not-allowed bg-surface-muted text-foreground-muted"
               }`}
             >
-              {t("ui.check_out")}
+              {t("ui.justificar_ausencia")}
             </button>
-          </div>
-          {hasFilteredMapPoints ? (
-            <div className="relative z-0 overflow-hidden rounded-2xl border border-border">
-              <MapContainer
-                center={filteredMapPoints[0].position}
-                zoom={13}
-                scrollWheelZoom={false}
-                zoomAnimation={false}
-                fadeAnimation={false}
-                className="h-64 w-full"
-              >
-                <TileLayer
-                  attribution="&copy; OpenStreetMap contributors"
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                />
-                <MapFitBounds points={filteredMapPoints} />
-                {filteredMapPoints.map((point) => (
-                  <Marker
-                    key={point.id}
-                    position={point.position}
-                    icon={mapMarkerIcons[point.kind]}
+            {geo.isCapturing ? (
+              <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
+                {t("ui.capturando_localizacao_aguarde_alguns_segundos")}
+              </div>
+            ) : null}
+            {photoStatus ? (
+              <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
+                {photoStatus}
+              </div>
+            ) : null}
+            {geo.error ? (
+              <div className="rounded-2xl border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-foreground-soft">
+                <p className="font-semibold text-foreground">
+                  {geo.error.message}
+                </p>
+                <p className="mt-1 text-foreground-soft">
+                  {geo.error.code === "PERMISSION_DENIED"
+                    ? t(
+                        "ui.permita_localizacao_no_navegador_para_concluir_o_registro",
+                      )
+                    : t("ui.voce_pode_tentar_novamente_ou_cancelar")}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={handleRetryGeo}
+                    className="rounded-full border border-border bg-white px-3 py-1 text-[10px] font-semibold text-foreground"
                   >
-                    <Popup>
-                      <div className="space-y-1 text-xs">
-                        <p className="font-semibold text-foreground">
-                          {point.label}
-                        </p>
-                        <p className="text-foreground-muted">
-                          {point.timestampLabel}
-                        </p>
-                      </div>
-                    </Popup>
-                  </Marker>
-                ))}
-              </MapContainer>
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
-              {hasMapPoints
-                ? t("ui.nenhum_pino_visivel_com_os_filtros_atuais")
-                : t("ui.sem_coordenadas_para_exibir_no_mapa")}
-            </div>
-          )}
-        </section>
-
-        <section className="rounded-3xl border border-border bg-white p-4 shadow-sm">
-          <SectionHeader
-            title={t("ui.recursos")}
-            subtitle={t("ui.geolocalizacao_registrada")}
-          />
-          <div className="mt-3 space-y-3 text-xs text-foreground-muted">
-            <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2">
-              <p className="text-[11px] font-semibold text-foreground">
-                {t("ui.check_in")}
-              </p>
-              <div className="mt-2 space-y-1">
-                <div className="flex items-center justify-between">
-                  <span>{t("ui.geo")}</span>
-                  <span className="font-semibold text-foreground">
-                    {formatCoordinates(
-                      appointment.checkInLat,
-                      appointment.checkInLng,
-                    )}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>{t("ui.precisao")}</span>
-                  <span className="font-semibold text-foreground">
-                    {formatAccuracy(appointment.checkInAccuracyM)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>{t("ui.horario")}</span>
-                  <span className="font-semibold text-foreground">
-                    {formatGeoTime(appointment.checkInAt)}
-                  </span>
+                    {t("ui.tentar_novamente")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCancelGeo}
+                    className="rounded-full border border-border bg-white px-3 py-1 text-[10px] font-semibold text-foreground-soft"
+                  >
+                    {t("ui.cancelar")}
+                  </button>
                 </div>
               </div>
-            </div>
-            <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2">
-              <p className="text-[11px] font-semibold text-foreground">
-                {t("ui.check_out")}
-              </p>
-              <div className="mt-2 space-y-1">
-                <div className="flex items-center justify-between">
-                  <span>{t("ui.geo")}</span>
-                  <span className="font-semibold text-foreground">
-                    {formatCoordinates(
-                      appointment.checkOutLat,
-                      appointment.checkOutLng,
-                    )}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>{t("ui.precisao")}</span>
-                  <span className="font-semibold text-foreground">
-                    {formatAccuracy(appointment.checkOutAccuracyM)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>{t("ui.horario")}</span>
-                  <span className="font-semibold text-foreground">
-                    {formatGeoTime(appointment.checkOutAt)}
-                  </span>
-                </div>
-              </div>
-            </div>
+            ) : null}
           </div>
         </section>
-
         <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
-          <SectionHeader
-            title={t("ui.fotos")}
-            subtitle={t("ui.registro_visual_do_apontamento")}
-          />
-          {mediaLoading || pendingLoading ? (
-            <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
-              {t("ui.carregando_fotos")}
-            </div>
-          ) : null}
-          {pendingError ? (
-            <div className="rounded-2xl border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-foreground-soft">
-              {pendingError}
-            </div>
-          ) : null}
-          {mediaError ? (
-            <div className="rounded-2xl border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-foreground-soft">
-              {mediaError}
-            </div>
-          ) : null}
-          {!mediaLoading &&
-          !pendingLoading &&
-          mediaItems.length === 0 &&
-          pendingPhotos.length === 0 ? (
-            <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
-              {t("ui.nenhuma_foto_registrada_ainda")}
-            </div>
-          ) : null}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {pendingPhotos.map((item) => {
-              const kindLabel =
-                (item.kind &&
-                  (mediaKindLabels as Record<string, string>)[item.kind]) ||
-                t("ui.foto");
-              return (
-                <div
+          <div
+            className="rounded-2xl border border-border bg-surface-muted p-1"
+            role="tablist"
+            aria-label={t("ui.alternar_visualizacao")}
+          >
+            <div className="grid grid-cols-3 gap-1">
+              {([
+                { id: "fotos", label: t("ui.fotos") },
+                { id: "mapa", label: t("ui.mapa") },
+                { id: "recursos", label: t("ui.recursos") },
+              ] as const).map((item) => (
+                <button
                   key={item.id}
-                  className="overflow-hidden rounded-2xl border border-border bg-white"
+                  type="button"
+                  role="tab"
+                  aria-selected={detailsTab === item.id}
+                  onClick={() => setDetailsTab(item.id)}
+                  className={`rounded-xl px-3 py-2 text-xs font-semibold transition ${
+                    detailsTab === item.id
+                      ? "bg-white text-foreground shadow-sm"
+                      : "text-foreground-soft hover:bg-white/60"
+                  }`}
                 >
-                  {item.previewUrl ? (
-                    <img
-                      src={item.previewUrl}
-                      alt={t("ui.foto_pendente_kind", { kind: kindLabel })}
-                      className="h-28 w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-28 items-center justify-center text-[10px] text-foreground-soft">
-                      {t("ui.sem_preview")}
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {detailsTab === "fotos" ? (
+            <div className="space-y-3">
+              <SectionHeader
+                title={t("ui.fotos")}
+                subtitle={t("ui.registro_visual_do_apontamento")}
+              />
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={handleAddRegistroPhoto}
+                  disabled={isPhotoBusy || registroCount >= 3}
+                  className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
+                    !isPhotoBusy && registroCount < 3
+                      ? "bg-accent text-white"
+                      : "cursor-not-allowed bg-surface-muted text-foreground-muted"
+                  }`}
+                >
+                  {t("ui.adicionar_foto")}
+                </button>
+                <span className="text-[11px] text-foreground-soft">
+                  {t("ui.registros_count", { count: registroCount })}
+                </span>
+              </div>
+              {mediaLoading || pendingLoading ? (
+                <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
+                  {t("ui.carregando_fotos")}
+                </div>
+              ) : null}
+              {pendingError ? (
+                <div className="rounded-2xl border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-foreground-soft">
+                  {pendingError}
+                </div>
+              ) : null}
+              {mediaError ? (
+                <div className="rounded-2xl border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-foreground-soft">
+                  {mediaError}
+                </div>
+              ) : null}
+              {!mediaLoading &&
+              !pendingLoading &&
+              mediaItems.length === 0 &&
+              pendingPhotos.length === 0 ? (
+                <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
+                  {t("ui.nenhuma_foto_registrada_ainda")}
+                </div>
+              ) : null}
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {pendingPhotos.map((item) => {
+                  const isRegistro = item.kind === "registro";
+                  const kindLabel = isRegistro
+                    ? (() => {
+                        pendingRegistroIndex += 1;
+                        return t("ui.registro_numero", {
+                          numero: pendingRegistroIndex,
+                        });
+                      })()
+                    : (item.kind &&
+                        (mediaKindLabels as Record<string, string>)[
+                          item.kind
+                        ]) ||
+                      t("ui.foto");
+                  return (
+                    <div
+                      key={item.id}
+                      className="overflow-hidden rounded-2xl border border-border bg-white"
+                    >
+                      {item.previewUrl ? (
+                        <img
+                          src={item.previewUrl}
+                          alt={t("ui.foto_pendente_kind", { kind: kindLabel })}
+                          className="h-28 w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-28 items-center justify-center text-[10px] text-foreground-soft">
+                          {t("ui.sem_preview")}
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between px-2 py-1 text-[10px] font-semibold text-foreground">
+                        <span>{kindLabel}</span>
+                        <span className="text-warning">{t("ui.pendente")}</span>
+                      </div>
                     </div>
-                  )}
-                  <div className="flex items-center justify-between px-2 py-1 text-[10px] font-semibold text-foreground">
-                    <span>{kindLabel}</span>
-                    <span className="text-warning">{t("ui.pendente")}</span>
+                  );
+                })}
+                {mediaItems.map((item) => {
+                  const isRegistro = item.kind === "registro";
+                  const kindLabel = isRegistro
+                    ? (() => {
+                        uploadedRegistroIndex += 1;
+                        return t("ui.registro_numero", {
+                          numero: uploadedRegistroIndex,
+                        });
+                      })()
+                    : mediaKindLabels[item.kind];
+                  return (
+                    <div
+                      key={item.path}
+                      className="overflow-hidden rounded-2xl border border-border bg-white"
+                    >
+                      {item.signedUrl ? (
+                        <img
+                          src={item.signedUrl}
+                          alt={t("ui.foto_kind", {
+                            kind: kindLabel,
+                          })}
+                          className="h-28 w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-28 items-center justify-center text-[10px] text-foreground-soft">
+                          {t("ui.url_expirada")}
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between px-2 py-1 text-[10px] font-semibold text-foreground">
+                        <span>{kindLabel}</span>
+                        <span className="text-success">{t("ui.enviado")}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+
+          {detailsTab === "mapa" ? (
+            <div className="space-y-3">
+              <SectionHeader
+                title={t("ui.mapa")}
+                subtitle={t("ui.pinos_do_atendimento")}
+              />
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCheckInMarker((current) => !current)}
+                  className={`rounded-full border px-3 py-1 text-[10px] font-semibold transition ${
+                    showCheckInMarker
+                      ? "border-success/50 bg-success/10 text-success"
+                      : "border-border bg-white text-foreground-soft"
+                  }`}
+                >
+                  {t("ui.check_in")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowCheckOutMarker((current) => !current)}
+                  className={`rounded-full border px-3 py-1 text-[10px] font-semibold transition ${
+                    showCheckOutMarker
+                      ? "border-info/50 bg-info/10 text-info"
+                      : "border-border bg-white text-foreground-soft"
+                  }`}
+                >
+                  {t("ui.check_out")}
+                </button>
+              </div>
+              {hasFilteredMapPoints ? (
+                <div className="relative z-0 overflow-hidden rounded-2xl border border-border">
+                  <MapContainer
+                    center={filteredMapPoints[0].position}
+                    zoom={13}
+                    scrollWheelZoom={false}
+                    zoomAnimation={false}
+                    fadeAnimation={false}
+                    className="h-64 w-full"
+                  >
+                    <TileLayer
+                      attribution="&copy; OpenStreetMap contributors"
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+                    <MapFitBounds points={filteredMapPoints} />
+                    {filteredMapPoints.map((point) => (
+                      <Marker
+                        key={point.id}
+                        position={point.position}
+                        icon={mapMarkerIcons[point.kind]}
+                      >
+                        <Popup>
+                          <div className="space-y-1 text-xs">
+                            <p className="font-semibold text-foreground">
+                              {point.label}
+                            </p>
+                            <p className="text-foreground-muted">
+                              {point.timestampLabel}
+                            </p>
+                          </div>
+                        </Popup>
+                      </Marker>
+                    ))}
+                  </MapContainer>
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
+                  {hasMapPoints
+                    ? t("ui.nenhum_pino_visivel_com_os_filtros_atuais")
+                    : t("ui.sem_coordenadas_para_exibir_no_mapa")}
+                </div>
+              )}
+            </div>
+          ) : null}
+
+          {detailsTab === "recursos" ? (
+            <div className="space-y-3">
+              <SectionHeader
+                title={t("ui.recursos")}
+                subtitle={t("ui.geolocalizacao_registrada")}
+              />
+              <div className="space-y-3 text-xs text-foreground-muted">
+                <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2">
+                  <p className="text-[11px] font-semibold text-foreground">
+                    {t("ui.check_in")}
+                  </p>
+                  <div className="mt-2 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span>{t("ui.geo")}</span>
+                      <span className="font-semibold text-foreground">
+                        {formatCoordinates(
+                          appointment.checkInLat,
+                          appointment.checkInLng,
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>{t("ui.precisao")}</span>
+                      <span className="font-semibold text-foreground">
+                        {formatAccuracy(appointment.checkInAccuracyM)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>{t("ui.horario")}</span>
+                      <span className="font-semibold text-foreground">
+                        {formatGeoTime(appointment.checkInAt)}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              );
-            })}
-            {mediaItems.map((item) => (
-              <div
-                key={item.path}
-                className="overflow-hidden rounded-2xl border border-border bg-white"
-              >
-                {item.signedUrl ? (
-                  <img
-                    src={item.signedUrl}
-                    alt={t("ui.foto_kind", {
-                      kind: mediaKindLabels[item.kind],
-                    })}
-                    className="h-28 w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-28 items-center justify-center text-[10px] text-foreground-soft">
-                    {t("ui.url_expirada")}
+                <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2">
+                  <p className="text-[11px] font-semibold text-foreground">
+                    {t("ui.check_out")}
+                  </p>
+                  <div className="mt-2 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span>{t("ui.geo")}</span>
+                      <span className="font-semibold text-foreground">
+                        {formatCoordinates(
+                          appointment.checkOutLat,
+                          appointment.checkOutLng,
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>{t("ui.precisao")}</span>
+                      <span className="font-semibold text-foreground">
+                        {formatAccuracy(appointment.checkOutAccuracyM)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>{t("ui.horario")}</span>
+                      <span className="font-semibold text-foreground">
+                        {formatGeoTime(appointment.checkOutAt)}
+                      </span>
+                    </div>
                   </div>
-                )}
-                <div className="flex items-center justify-between px-2 py-1 text-[10px] font-semibold text-foreground">
-                  <span>{mediaKindLabels[item.kind]}</span>
-                  <span className="text-success">{t("ui.enviado")}</span>
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
+          ) : null}
         </section>
       </div>
       {isCheckoutOpen ? (
@@ -1977,125 +2162,6 @@ export default function AppointmentDetail() {
         onConfirm={handleCameraConfirm}
         onError={(message) => setError(message)}
       />
-      {isActionsOpen ? (
-        <div
-          className="fixed inset-0 z-40 flex items-end justify-center bg-black/50 px-4 py-6 sm:items-center"
-          onClick={handleCloseActions}
-        >
-          <div
-            className="w-full max-w-md overflow-hidden rounded-3xl border border-border bg-white shadow-xl"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="border-b border-border px-5 py-4">
-              <h3 className="text-base font-semibold text-foreground">
-                {t("ui.acoes_do_agendamento")}
-              </h3>
-              {/* <p className="mt-1 text-xs text-foreground-muted">
-                {t("ui.sincroniza_com_o_supabase")}
-              </p> */}
-            </div>
-
-            <div className="px-5 py-4">
-              <div className="grid gap-2">
-                <button
-                  type="button"
-                  disabled={
-                    !canCheckIn || busy || geo.isCapturing || isPhotoBusy
-                  }
-                  onClick={handleCheckIn}
-                  className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${
-                    canCheckIn && !busy && !geo.isCapturing && !isPhotoBusy
-                      ? "bg-success text-white"
-                      : "cursor-not-allowed bg-surface-muted text-foreground-muted"
-                  }`}
-                >
-                  {isCheckInCapturing
-                    ? t("ui.capturando_localizacao")
-                    : t("ui.fazer_check_in")}
-                </button>
-                <button
-                  type="button"
-                  disabled={
-                    !canCheckOut || busy || geo.isCapturing || isPhotoBusy
-                  }
-                  onClick={handleCheckOut}
-                  className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${
-                    canCheckOut && !busy && !geo.isCapturing && !isPhotoBusy
-                      ? "bg-info text-white"
-                      : "cursor-not-allowed bg-surface-muted text-foreground-muted"
-                  }`}
-                >
-                  {isCheckOutCapturing
-                    ? t("ui.capturando_localizacao")
-                    : t("ui.fazer_check_out")}
-                </button>
-                <button
-                  type="button"
-                  disabled={!canAbsence || busy || isPhotoBusy}
-                  onClick={handleOpenAbsence}
-                  className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${
-                    canAbsence && !busy && !isPhotoBusy
-                      ? "bg-danger text-white"
-                      : "cursor-not-allowed bg-surface-muted text-foreground-muted"
-                  }`}
-                >
-                  {t("ui.justificar_ausencia")}
-                </button>
-                {geo.isCapturing ? (
-                  <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
-                    {t("ui.capturando_localizacao_aguarde_alguns_segundos")}
-                  </div>
-                ) : null}
-                {photoStatus ? (
-                  <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
-                    {photoStatus}
-                  </div>
-                ) : null}
-                {geo.error ? (
-                  <div className="rounded-2xl border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-foreground-soft">
-                    <p className="font-semibold text-foreground">
-                      {geo.error.message}
-                    </p>
-                    <p className="mt-1 text-foreground-soft">
-                      {geo.error.code === "PERMISSION_DENIED"
-                        ? t(
-                            "ui.permita_localizacao_no_navegador_para_concluir_o_registro",
-                          )
-                        : t("ui.voce_pode_tentar_novamente_ou_cancelar")}
-                    </p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={handleRetryGeo}
-                        className="rounded-full border border-border bg-white px-3 py-1 text-[10px] font-semibold text-foreground"
-                      >
-                        {t("ui.tentar_novamente")}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleCancelGeo}
-                        className="rounded-full border border-border bg-white px-3 py-1 text-[10px] font-semibold text-foreground-soft"
-                      >
-                        {t("ui.cancelar")}
-                      </button>
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end border-t border-border px-5 py-4">
-              <button
-                type="button"
-                onClick={handleCloseActions}
-                className="rounded-full border border-border px-4 py-2 text-xs font-semibold text-foreground-soft"
-              >
-                {t("ui.fechar")}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </AppShell>
   );
 }

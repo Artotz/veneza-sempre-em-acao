@@ -25,7 +25,7 @@ export const AppointmentCard = ({
   const status = getAppointmentStatus(appointment);
   // const resolvedDetailLabel = detailLabel ?? getAppointmentTitle(appointment);
   const highlightClasses = highlight
-    ? "border-warning/80 bg-white/95 ring-1 ring-warning/30"
+    ? "border-warning/80 bg-amber-100 ring-1 ring-warning/30"
     : "border-border bg-white";
 
   return (

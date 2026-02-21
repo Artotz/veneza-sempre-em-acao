@@ -1,6 +1,6 @@
 ﻿import { createSupabaseBrowserClient } from "../lib/supabaseClient";
 
-type UploadKind = "checkin" | "checkout" | "absence";
+type UploadKind = "checkin" | "checkout" | "absence" | "registro";
 
 type UploadArgs = {
   apontamentoId: string;
