@@ -145,6 +145,7 @@ export const resources = {
 
         ir_para_empresas: "Ir para empresas",
         ir_para_home: "Ir para home",
+        ir_para_apontamento: "Ir para apontamento",
         justificar_ausencia: "Justificar ausência",
 
         lamina: "Lâmina",

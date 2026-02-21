@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { AppShell } from "../components/AppShell";
 import { t } from "../i18n";
 import { isSameDay } from "../lib/date";
@@ -22,6 +23,7 @@ const formatDuration = (valueMs: number) => {
 export default function Home() {
   const { state } = useSchedule();
   const [now, setNow] = useState(() => new Date());
+  const navigate = useNavigate();
 
   useEffect(() => {
     const interval = window.setInterval(() => setNow(new Date()), 1000);
@@ -53,6 +55,8 @@ export default function Home() {
       return endMs >= nowMs;
     });
   }, [now, todayAppointments]);
+
+  const focusAppointment = activeAppointment ?? nextPendingAppointment;
 
   const actionMessage = useMemo(() => {
     const nowMs = now.getTime();
@@ -93,6 +97,24 @@ export default function Home() {
         <p className="text-base font-semibold text-foreground">
           {actionMessage}
         </p>
+        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          {focusAppointment ? (
+            <button
+              type="button"
+              onClick={() => navigate(`/apontamentos/${focusAppointment.id}`)}
+              className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm font-semibold text-foreground shadow-sm transition hover:bg-surface-muted"
+            >
+              {t("ui.ir_para_apontamento")}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => navigate("/apontamentos/novo")}
+            className="w-full rounded-2xl bg-foreground px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-foreground/90"
+          >
+            {t("ui.novo_apontamento")}
+          </button>
+        </div>
       </div>
     </AppShell>
   );

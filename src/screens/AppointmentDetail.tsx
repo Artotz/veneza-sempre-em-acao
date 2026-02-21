@@ -1419,7 +1419,7 @@ export default function AppointmentDetail() {
           ) : null}
         </section>
 
-        <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
+        {/* <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
           <SectionHeader title={t("ui.linha_do_tempo")} />
           <div className="space-y-2 text-sm">
             <div className="flex items-center justify-between rounded-2xl bg-surface-muted px-3 py-2">
@@ -1450,7 +1450,7 @@ export default function AppointmentDetail() {
               </div>
             ) : null}
           </div>
-        </section>
+        </section> */}
 
         {showOportunidades ? (
           <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
