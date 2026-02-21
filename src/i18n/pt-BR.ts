@@ -262,6 +262,8 @@ export const resources = {
         senha: "Senha",
 
         sincroniza_com_o_supabase: "Sincroniza com o Supabase.",
+        sincronizacao_concluida: "Sincronização concluída.",
+        sincronizar_visita: "Sincronizar visita",
         sincronizando_apontamento: "Sincronizando apontamento...",
 
         status_e_sugestoes: "Status e sugestões.",

@@ -954,9 +954,7 @@ export default function AppointmentDetail() {
     isTodayAppointment &&
     (appointment.status ?? "scheduled") === "in_progress";
   const canAbsence =
-    !blocked &&
-    (appointment.status ?? "scheduled") !== "done" &&
-    (appointment.status ?? "scheduled") !== "absent";
+    !blocked && (status === "agendado" || status === "expirado");
   const isCheckInCapturing = geo.isCapturing && geoIntent === "check_in";
   const isCheckOutCapturing = geo.isCapturing && geoIntent === "check_out";
   const isPhotoBusy = Boolean(photoStatus) || isCameraOpen;
@@ -1016,7 +1014,7 @@ export default function AppointmentDetail() {
   };
 
   const handleAddRegistroPhoto = () => {
-    if (isPhotoBusy || registroCount >= 3) return;
+    if (!canAddPhoto || isPhotoBusy || registroCount >= 3) return;
     setCameraIntent("registro");
   };
 
@@ -1047,6 +1045,7 @@ export default function AppointmentDetail() {
     setPendingCheckoutObservation(
       normalizedObservation.length ? normalizedObservation : null,
     );
+    setIsCheckoutOpen(false);
     setCameraIntent("checkout");
   };
 
@@ -1061,7 +1060,7 @@ export default function AppointmentDetail() {
       setSyncStatus(t("ui.usuario_nao_autenticado"));
       return;
     }
-    setSyncStatus("Sincronizando apontamento...");
+    setSyncStatus(t("ui.sincronizando_apontamento"));
     setIsSyncing(true);
     try {
       const result = await syncAppointment({
@@ -1076,7 +1075,7 @@ export default function AppointmentDetail() {
       await loadMedia();
       await loadPendingPhotos();
       await loadPendingActions();
-      setSyncStatus("Sincronizacao concluida.");
+      setSyncStatus(t("ui.sincronizacao_concluida"));
     } catch (syncError) {
       setSyncStatus(
         syncError instanceof Error
@@ -1328,6 +1327,8 @@ export default function AppointmentDetail() {
       : cameraIntent === "registro"
         ? t("ui.nova_foto")
         : t("ui.capturar_foto");
+  const canAddPhoto = status === "em_execucao";
+  const inlineActionCols = "grid-cols-3";
   let pendingRegistroIndex = 0;
   let uploadedRegistroIndex = pendingRegistroCount;
 
@@ -1337,41 +1338,6 @@ export default function AppointmentDetail() {
       subtitle={getAppointmentTitle(appointment)}
     >
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          {/* <Link
-            to="/calendario/dia"
-            className="inline-flex items-center gap-2 text-xs font-semibold text-foreground-soft"
-          >
-            {t("ui.voltar_para_o_dia")}
-          </Link> */}
-          <div className="flex flex-wrap items-center gap-2">
-            <span
-              className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-wide ${
-                isOnline
-                  ? "bg-success/15 text-success"
-                  : "bg-warning/15 text-warning"
-              }`}
-            >
-              {isOnline ? t("ui.online") : t("ui.offline")}
-            </span>
-            <button
-              type="button"
-              onClick={handleSyncAppointment}
-              disabled={isSyncing || pendingItemCount === 0}
-              className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
-                isSyncing || pendingItemCount === 0
-                  ? "cursor-not-allowed bg-surface-muted text-foreground-muted"
-                  : "bg-accent text-white"
-              }`}
-            >
-              {isSyncing
-                ? t("ui.sincronizando_apontamento")
-                : t("ui.sincronizar_apontamento_pendencias_count", {
-                    count: pendingItemCount,
-                  })}
-            </button>
-          </div>
-        </div>
         {syncStatus ? (
           <div className="w-full rounded-none border border-border bg-surface-muted px-3 py-1 text-[11px] text-foreground-soft">
             {syncStatus}
@@ -1542,7 +1508,7 @@ export default function AppointmentDetail() {
                 !canCheckInOut || busy || geo.isCapturing || isPhotoBusy
               }
               onClick={handleCheckInOut}
-              className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+              className={`rounded-2xl px-4 py-4 text-base font-semibold transition ${
                 canCheckInOut && !busy && !geo.isCapturing && !isPhotoBusy
                   ? canCheckIn
                     ? "bg-success text-white"
@@ -1552,18 +1518,46 @@ export default function AppointmentDetail() {
             >
               {checkInOutLabel}
             </button>
-            <button
-              type="button"
-              disabled={!canAbsence || busy || isPhotoBusy}
-              onClick={handleOpenAbsence}
-              className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${
-                canAbsence && !busy && !isPhotoBusy
-                  ? "bg-danger text-white"
-                  : "cursor-not-allowed bg-surface-muted text-foreground-muted"
-              }`}
-            >
-              {t("ui.justificar_ausencia")}
-            </button>
+            <div className={`grid gap-2 ${inlineActionCols}`}>
+              <button
+                type="button"
+                onClick={handleAddRegistroPhoto}
+                disabled={!canAddPhoto || isPhotoBusy || registroCount >= 3}
+                className={`min-h-[56px] rounded-2xl px-2 py-3 text-center text-xs font-semibold leading-tight whitespace-normal break-words transition ${
+                  canAddPhoto && !isPhotoBusy && registroCount < 3
+                    ? "bg-accent text-white"
+                    : "cursor-not-allowed bg-surface-muted text-foreground-muted"
+                }`}
+              >
+                {t("ui.adicionar_foto")}
+              </button>
+              <button
+                type="button"
+                onClick={handleSyncAppointment}
+                disabled={isSyncing || pendingItemCount === 0}
+                className={`min-h-[56px] rounded-2xl px-2 py-3 text-center text-xs font-semibold leading-tight whitespace-normal break-words transition ${
+                  isSyncing || pendingItemCount === 0
+                    ? "cursor-not-allowed bg-surface-muted text-foreground-muted"
+                    : "bg-accent text-white"
+                }`}
+              >
+                {isSyncing
+                  ? t("ui.sincronizando_apontamento")
+                  : t("ui.sincronizar_visita")}
+              </button>
+              <button
+                type="button"
+                disabled={!canAbsence || busy || isPhotoBusy}
+                onClick={handleOpenAbsence}
+                className={`min-h-[56px] rounded-2xl px-2 py-3 text-center text-xs font-semibold leading-tight whitespace-normal break-words transition ${
+                  canAbsence && !busy && !isPhotoBusy
+                    ? "bg-danger text-white"
+                    : "cursor-not-allowed bg-surface-muted text-foreground-muted"
+                }`}
+              >
+                {t("ui.justificar_ausencia")}
+              </button>
+            </div>
             {geo.isCapturing ? (
               <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
                 {t("ui.capturando_localizacao_aguarde_alguns_segundos")}
@@ -1642,22 +1636,8 @@ export default function AppointmentDetail() {
                 title={t("ui.fotos")}
                 subtitle={t("ui.registro_visual_do_apontamento")}
               />
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <button
-                  type="button"
-                  onClick={handleAddRegistroPhoto}
-                  disabled={isPhotoBusy || registroCount >= 3}
-                  className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
-                    !isPhotoBusy && registroCount < 3
-                      ? "bg-accent text-white"
-                      : "cursor-not-allowed bg-surface-muted text-foreground-muted"
-                  }`}
-                >
-                  {t("ui.adicionar_foto")}
-                </button>
-                <span className="text-[11px] text-foreground-soft">
-                  {t("ui.registros_count", { count: registroCount })}
-                </span>
+              <div className="text-[11px] text-foreground-soft">
+                {t("ui.registros_count", { count: registroCount })}
               </div>
               {mediaLoading || pendingLoading ? (
                 <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
