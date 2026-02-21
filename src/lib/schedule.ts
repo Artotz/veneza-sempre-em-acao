@@ -53,15 +53,35 @@ export const getFirstPendingId = (appointments: Appointment[]) => {
   return pending?.id ?? null;
 };
 
+export const getAppointmentWindow = (appointment: Appointment) => {
+  const checkInAt = appointment.checkInAt
+    ? new Date(appointment.checkInAt)
+    : null;
+  const checkOutAt = appointment.checkOutAt
+    ? new Date(appointment.checkOutAt)
+    : null;
+  if (
+    checkInAt &&
+    checkOutAt &&
+    !Number.isNaN(checkInAt.getTime()) &&
+    !Number.isNaN(checkOutAt.getTime())
+  ) {
+    return { start: checkInAt, end: checkOutAt };
+  }
+  return { start: new Date(appointment.startAt), end: new Date(appointment.endAt) };
+};
+
 export const isBlocked = (
   appointment: Appointment,
   appointments: Appointment[]
 ) => {
-  // Restricao por ordem de horario desativada: check-in/out nao dependem mais
-  // do primeiro pendente do dia.
-  void appointment;
-  void appointments;
-  return false;
+  const hasActiveAppointment = appointments.some(
+    (item) =>
+      item.id !== appointment.id &&
+      getAppointmentStatus(item) === "em_execucao"
+  );
+  if (!hasActiveAppointment) return false;
+  return getAppointmentStatus(appointment) !== "em_execucao";
 };
 
 export const formatAppointmentWindow = (appointment: Appointment) => {

@@ -15,7 +15,11 @@ import {
   isSameDay,
   parseMonthParam,
 } from "../lib/date";
-import { getAppointmentStatus, sortByStart } from "../lib/schedule";
+import {
+  getAppointmentStatus,
+  getAppointmentWindow,
+  sortByStart,
+} from "../lib/schedule";
 import type { AppointmentStatus } from "../lib/types";
 import { useSchedule } from "../state/useSchedule";
 import { t } from "../i18n";
@@ -120,8 +124,7 @@ export default function WeekView() {
       dayEnd.setDate(dayEnd.getDate() + 1);
 
       const items = state.appointments.flatMap((appointment) => {
-        const start = new Date(appointment.startAt);
-        const end = new Date(appointment.endAt);
+        const { start, end } = getAppointmentWindow(appointment);
         if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
           return [];
         }
@@ -149,8 +152,7 @@ export default function WeekView() {
   const weekAppointments = useMemo(() => {
     return state.appointments
       .filter((appointment) => {
-        const start = new Date(appointment.startAt);
-        const end = new Date(appointment.endAt);
+        const { start, end } = getAppointmentWindow(appointment);
         if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
           return false;
         }

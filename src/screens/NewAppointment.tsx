@@ -14,7 +14,11 @@ import {
   savePendingAppointment,
 } from "../storage/offlineSchedule";
 import { formatDateShort, isSameDay } from "../lib/date";
-import { formatAppointmentWindow, getAppointmentStatus } from "../lib/schedule";
+import {
+  formatAppointmentWindow,
+  getAppointmentStatus,
+  getAppointmentWindow,
+} from "../lib/schedule";
 import { t } from "../i18n";
 
 const buildAddressSnapshot = (company: Company): string | null => {
@@ -218,8 +222,8 @@ export default function NewAppointment() {
       ) {
         return false;
       }
-      const existingStart = new Date(appointment.startAt);
-      const existingEnd = new Date(appointment.endAt);
+      const { start: existingStart, end: existingEnd } =
+        getAppointmentWindow(appointment);
       if (
         Number.isNaN(existingStart.getTime()) ||
         Number.isNaN(existingEnd.getTime())

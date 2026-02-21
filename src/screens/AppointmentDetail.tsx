@@ -213,9 +213,9 @@ export default function AppointmentDetail() {
     typeof navigator === "undefined" ? true : navigator.onLine,
   );
   const pendingPreviewUrlsRef = useRef<Record<string, string>>({});
-  const [detailsTab, setDetailsTab] = useState<
-    "fotos" | "mapa" | "recursos"
-  >("fotos");
+  const [detailsTab, setDetailsTab] = useState<"fotos" | "mapa" | "recursos">(
+    "fotos",
+  );
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isAbsenceOpen, setIsAbsenceOpen] = useState(false);
   const [checkoutOpportunities, setCheckoutOpportunities] = useState<string[]>(
@@ -737,7 +737,11 @@ export default function AppointmentDetail() {
         );
       }
     },
-    [buildCheckInRemoteChanges, queuePendingActionOnly, updateAppointmentRemote],
+    [
+      buildCheckInRemoteChanges,
+      queuePendingActionOnly,
+      updateAppointmentRemote,
+    ],
   );
 
   const syncCheckOut = useCallback(
@@ -953,8 +957,7 @@ export default function AppointmentDetail() {
     !blocked &&
     isTodayAppointment &&
     (appointment.status ?? "scheduled") === "in_progress";
-  const canAbsence =
-    !blocked && (status === "agendado" || status === "expirado");
+  const canAbsence = status === "agendado" || status === "expirado";
   const isCheckInCapturing = geo.isCapturing && geoIntent === "check_in";
   const isCheckOutCapturing = geo.isCapturing && geoIntent === "check_out";
   const isPhotoBusy = Boolean(photoStatus) || isCameraOpen;
@@ -1101,7 +1104,9 @@ export default function AppointmentDetail() {
       } catch (geoError) {
         if (isGeoError(geoError)) {
           geo.resetError();
-          setPhotoStatus(t("ui.localizacao_indisponivel_salvando_sem_localizacao"));
+          setPhotoStatus(
+            t("ui.localizacao_indisponivel_salvando_sem_localizacao"),
+          );
         } else {
           throw geoError;
         }
@@ -1309,13 +1314,14 @@ export default function AppointmentDetail() {
     ? formatTime(new Date(appointment.checkOutAt))
     : t("ui.nao_realizado");
   const canCheckInOut = canCheckIn || canCheckOut;
-  const checkInOutLabel = (isCheckInCapturing || isCheckOutCapturing)
-    ? t("ui.capturando_localizacao")
-    : canCheckIn
-      ? t("ui.fazer_check_in")
-      : canCheckOut
-        ? t("ui.fazer_check_out")
-        : t("ui.check_in_check_out");
+  const checkInOutLabel =
+    isCheckInCapturing || isCheckOutCapturing
+      ? t("ui.capturando_localizacao")
+      : canCheckIn
+        ? t("ui.fazer_check_in")
+        : canCheckOut
+          ? t("ui.fazer_check_out")
+          : t("ui.check_in_check_out");
   const pendingItemBase = pendingPhotos.length + pendingActionCount;
   const pendingItemCount =
     pendingItemBase +
@@ -1558,11 +1564,11 @@ export default function AppointmentDetail() {
                 {t("ui.justificar_ausencia")}
               </button>
             </div>
-            {geo.isCapturing ? (
+            {/* {geo.isCapturing ? (
               <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
                 {t("ui.capturando_localizacao_aguarde_alguns_segundos")}
               </div>
-            ) : null}
+            ) : null} */}
             {photoStatus ? (
               <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
                 {photoStatus}
@@ -1607,11 +1613,13 @@ export default function AppointmentDetail() {
             aria-label={t("ui.alternar_visualizacao")}
           >
             <div className="grid grid-cols-3 gap-1">
-              {([
-                { id: "fotos", label: t("ui.fotos") },
-                { id: "mapa", label: t("ui.mapa") },
-                { id: "recursos", label: t("ui.recursos") },
-              ] as const).map((item) => (
+              {(
+                [
+                  { id: "fotos", label: t("ui.fotos") },
+                  { id: "mapa", label: t("ui.mapa") },
+                  { id: "recursos", label: t("ui.recursos") },
+                ] as const
+              ).map((item) => (
                 <button
                   key={item.id}
                   type="button"
@@ -1980,11 +1988,11 @@ export default function AppointmentDetail() {
                 />
               </div>
 
-              {geo.isCapturing && geoIntent === "check_out" ? (
+              {/* {geo.isCapturing && geoIntent === "check_out" ? (
                 <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
                   {t("ui.capturando_localizacao_aguarde_alguns_segundos")}
                 </div>
-              ) : null}
+              ) : null} */}
               {photoStatus ? (
                 <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
                   {photoStatus}

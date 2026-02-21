@@ -68,6 +68,13 @@ export const resources = {
           "Seu pr\u00f3ximo agendamento est\u00e1 atrasado em {{time}}.",
         home_in_appointment_for:
           "Voc\u00ea est\u00e1 em um agendamento h\u00e1 {{time}}.",
+        home_in_appointment_since: "Voc\u00ea est\u00e1 em um agendamento em:",
+        home_next_appointment_in_label:
+          "Seu pr\u00f3ximo agendamento de hoje \u00e9 em:",
+        home_next_appointment_late_by_label:
+          "Seu pr\u00f3ximo agendamento est\u00e1 atrasado em:",
+        home_in_appointment_now:
+          "Voc\u00ea est\u00e1 em um agendamento \u2014 {{time}}.",
         home_no_more_appointments_today:
           "Voc\u00ea n\u00e3o tem mais agendamentos hoje.",
         calendario: "Calendário",
@@ -143,6 +150,7 @@ export const resources = {
         hoje: "Hoje",
         hora: "Hora",
         horario: "Horário",
+        horario_atual: "Horário atual",
         inicio: "Início",
 
         ir_para_empresas: "Ir para empresas",
@@ -168,6 +176,7 @@ export const resources = {
         nao_foi_possivel_gerar_a_foto: "Não foi possível gerar a foto.",
         nao_foi_possivel_iniciar_a_camera: "Não foi possível iniciar a câmera.",
         nao_foi_possivel_salvar_a_foto: "Não foi possível salvar a foto.",
+        nao_ha_apontamentos_hoje: "Não há apontamentos hoje",
 
         nao_informado: "Não informado",
         nao_realizado: "Não realizado",
