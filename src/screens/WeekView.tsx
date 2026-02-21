@@ -23,8 +23,8 @@ import { t } from "../i18n";
 const clamp = (value: number, min: number, max: number) =>
   Math.min(Math.max(value, min), max);
 
-const DEFAULT_MIN_HOUR = 0;
-const DEFAULT_MAX_HOUR = 24;
+const DEFAULT_MIN_HOUR = 8;
+const DEFAULT_MAX_HOUR = 18;
 const SLOT_MINUTES = 30;
 const HOUR_HEIGHT = 28;
 const GRID_PADDING = 8;
@@ -113,20 +113,78 @@ export default function WeekView() {
   }, [actions, week.endAt, week.startAt]);
 
   const dayGroups = useMemo(() => {
-    return week.days.map((day) =>
-      state.appointments
-        .filter((appointment) =>
-          isSameDay(new Date(appointment.startAt), day.date),
-        )
-        .sort(sortByStart),
-    );
+    return week.days.map((day) => {
+      const dayStart = new Date(day.date);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(dayStart);
+      dayEnd.setDate(dayEnd.getDate() + 1);
+
+      const items = state.appointments.flatMap((appointment) => {
+        const start = new Date(appointment.startAt);
+        const end = new Date(appointment.endAt);
+        if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+          return [];
+        }
+        if (end <= dayStart || start >= dayEnd) return [];
+        const segmentStart = start > dayStart ? start : dayStart;
+        const segmentEnd = end < dayEnd ? end : dayEnd;
+        if (segmentEnd <= segmentStart) return [];
+        return [
+          {
+            appointment,
+            segmentStart,
+            segmentEnd,
+            endsAtDayEnd: segmentEnd.getTime() === dayEnd.getTime(),
+          },
+        ];
+      });
+
+      items.sort(
+        (a, b) => a.segmentStart.getTime() - b.segmentStart.getTime(),
+      );
+      return items;
+    });
   }, [state.appointments, week]);
 
-  const weekAppointments = dayGroups.flat();
-  const timeRange = useMemo(
-    () => ({ minHour: DEFAULT_MIN_HOUR, maxHour: DEFAULT_MAX_HOUR }),
-    [],
-  );
+  const weekAppointments = useMemo(() => {
+    return state.appointments
+      .filter((appointment) => {
+        const start = new Date(appointment.startAt);
+        const end = new Date(appointment.endAt);
+        if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+          return false;
+        }
+        return start <= week.endAt && end >= week.startAt;
+      })
+      .sort(sortByStart);
+  }, [state.appointments, week.endAt, week.startAt]);
+
+  const timeRange = useMemo(() => {
+    let minHour = DEFAULT_MIN_HOUR;
+    let maxHour = DEFAULT_MAX_HOUR;
+    dayGroups.forEach((dayAppointments) => {
+      dayAppointments.forEach(({ segmentStart, segmentEnd, endsAtDayEnd }) => {
+        const startHour =
+          segmentStart.getHours() + segmentStart.getMinutes() / 60;
+        minHour = Math.min(minHour, Math.floor(startHour));
+
+        if (endsAtDayEnd) {
+          maxHour = Math.max(maxHour, 24);
+          return;
+        }
+
+        const endHour =
+          segmentEnd.getHours() + segmentEnd.getMinutes() / 60;
+        maxHour = Math.max(maxHour, Math.ceil(endHour));
+      });
+    });
+    minHour = Math.max(0, minHour);
+    maxHour = Math.min(24, maxHour);
+    if (maxHour <= minHour) {
+      return { minHour: DEFAULT_MIN_HOUR, maxHour: DEFAULT_MAX_HOUR };
+    }
+    return { minHour, maxHour };
+  }, [dayGroups]);
   const slotMarkers = useMemo(() => {
     const totalMinutes = (timeRange.maxHour - timeRange.minHour) * 60;
     const totalSlots = Math.ceil(totalMinutes / SLOT_MINUTES);
@@ -157,19 +215,18 @@ export default function WeekView() {
     currentMinutes >= timeRange.minHour * 60 &&
     currentMinutes <= timeRange.maxHour * 60;
   const getAppointmentStyle = useCallback(
-    (appointment: (typeof weekAppointments)[number]) => {
-      const start = new Date(appointment.startAt);
-      const end = new Date(appointment.endAt);
-      if (
-        Number.isNaN(start.getTime()) ||
-        Number.isNaN(end.getTime())
-      ) {
-        return null;
-      }
+    (
+      segment: (typeof dayGroups)[number][number],
+    ) => {
       const rangeStartMinutes = timeRange.minHour * 60;
       const rangeEndMinutes = timeRange.maxHour * 60;
-      const startMinutes = start.getHours() * 60 + start.getMinutes();
-      const endMinutes = end.getHours() * 60 + end.getMinutes();
+      const startMinutes =
+        segment.segmentStart.getHours() * 60 +
+        segment.segmentStart.getMinutes();
+      const endMinutes = segment.endsAtDayEnd
+        ? 24 * 60
+        : segment.segmentEnd.getHours() * 60 +
+          segment.segmentEnd.getMinutes();
       const clampedStart = Math.max(startMinutes, rangeStartMinutes);
       const clampedEnd = Math.min(endMinutes, rangeEndMinutes);
       if (clampedEnd <= clampedStart) return null;
@@ -341,14 +398,15 @@ export default function WeekView() {
                                   }}
                                 />
                               ))}
-                              {dayAppointments.map((appointment) => {
+                              {dayAppointments.map((segment) => {
+                                const appointment = segment.appointment;
                                 const companyName =
                                   appointment.companyName ??
                                   selectors.getCompany(appointment.companyId)
                                     ?.name ??
                                   t("ui.empresa");
                                 const status = getAppointmentStatus(appointment);
-                                const style = getAppointmentStyle(appointment);
+                                const style = getAppointmentStyle(segment);
                                 if (!style) return null;
                                 return (
                                   <button
