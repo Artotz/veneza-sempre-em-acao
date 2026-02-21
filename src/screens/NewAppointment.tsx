@@ -244,8 +244,9 @@ export default function NewAppointment() {
 
     if (isOffline) {
       const nowIso = new Date().toISOString();
+      const localAppointmentId = generateLocalAppointmentId();
       await savePendingAppointment(userEmail, {
-        id: generateLocalAppointmentId(),
+        id: localAppointmentId,
         companyId: selectedCompanyId,
         companyName: company.name ?? null,
         appointmentId: null,
@@ -263,20 +264,24 @@ export default function NewAppointment() {
       });
       setSaving(false);
       await actions.refresh();
-      navigate("/calendario/dia", { replace: true });
+      navigate(`/apontamentos/${localAppointmentId}`, { replace: true });
       return;
     }
 
-    const { error: insertError } = await supabase.from("apontamentos").insert({
-      company_id: selectedCompanyId,
-      starts_at: startsAtDate.toISOString(),
-      ends_at: endsAtDate.toISOString(),
-      consultant_id: user?.id ?? null,
-      consultant_name: userEmail,
-      created_by: userEmail,
-      status: "scheduled",
-      address_snapshot: addressSnapshot,
-    });
+    const { data: insertData, error: insertError } = await supabase
+      .from("apontamentos")
+      .insert({
+        company_id: selectedCompanyId,
+        starts_at: startsAtDate.toISOString(),
+        ends_at: endsAtDate.toISOString(),
+        consultant_id: user?.id ?? null,
+        consultant_name: userEmail,
+        created_by: userEmail,
+        status: "scheduled",
+        address_snapshot: addressSnapshot,
+      })
+      .select("id")
+      .single();
 
     setSaving(false);
 
@@ -284,9 +289,13 @@ export default function NewAppointment() {
       setError(insertError.message);
       return;
     }
+    if (!insertData?.id) {
+      setError(t("ui.nao_foi_possivel_criar_o_apontamento"));
+      return;
+    }
 
     await actions.refresh();
-    navigate("/calendario/dia", { replace: true });
+    navigate(`/apontamentos/${insertData.id}`, { replace: true });
   };
 
   if (companiesLoading) {
