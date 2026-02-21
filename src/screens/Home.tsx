@@ -173,7 +173,9 @@ export default function Home() {
               t("ui.empresa")
             }
             blocked={isBlocked(focusAppointment, todayAppointments)}
-            headerLabel={formatAppointmentWindow(focusAppointment)}
+            headerLabel={`${formatDateShort(
+              new Date(focusAppointment.startAt),
+            )} - ${formatAppointmentWindow(focusAppointment)}`}
             detailLabel={getAppointmentTitle(focusAppointment)}
             onClick={() =>
               navigate(`/apontamentos/${focusAppointment.id}`)

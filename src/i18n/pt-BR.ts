@@ -78,7 +78,7 @@ export const resources = {
           "Voc\u00ea est\u00e1 em um agendamento \u2014 {{time}}.",
         home_no_more_appointments_today:
           "Voc\u00ea n\u00e3o tem mais agendamentos hoje.",
-        seus_outros_agendamentos_de_hoje: "Seus outros agendamentos de hoje",
+        seus_outros_agendamentos_de_hoje: "Seus agendamentos de hoje",
         calendario: "Calendário",
         agenda: "Agenda",
         hello_world: "Hello world",
