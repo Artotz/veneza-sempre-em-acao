@@ -110,27 +110,6 @@ export default function Login() {
     <div className="app-background flex min-h-screen items-center justify-center bg-background px-4 py-10">
       <div className="w-full max-w-xl overflow-hidden rounded-3xl border border-border bg-white shadow-2xl">
         <div className="grid gap-6 bg-gradient-to-br from-accent to-brand px-8 py-10 text-white md:grid-cols-[1.1fr_1fr] md:gap-0">
-          <div className="flex flex-col justify-between gap-6">
-            <div className="space-y-3">
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-white/70">
-                {t("ui.pwa_cronograma")}
-              </p>
-              {/* <h1 className="text-3xl font-semibold leading-tight">
-                {t("ui.acesse_o_painel_seguro")}
-              </h1>
-              <p className="text-sm text-white/80">
-                {t(
-                  "ui.entre_com_as_credenciais_do_crm_para_acessar_empresas_e_agendamentos",
-                )}
-              </p> */}
-            </div>
-            {/* <div className="rounded-2xl bg-white/10 p-4 text-sm text-white/90 shadow-inner">
-              {t(
-                "ui.sessoes_sao_preservadas_pelo_supabase_faca_login_para_continuar",
-              )}
-            </div> */}
-          </div>
-
           <div className="rounded-2xl border border-white/30 bg-white p-6 text-foreground shadow-lg shadow-brand/20">
             <div className="space-y-4">
               <div>

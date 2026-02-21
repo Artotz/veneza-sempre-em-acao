@@ -270,16 +270,16 @@ export default function DayView() {
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold text-foreground">
+                      <p className="text-sm font-semibold text-white">
                         {activeDay.full}
                       </p>
                       {isActiveDayToday ? (
-                        <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-semibold text-foreground">
+                        <span className="rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-semibold text-white">
                           {t("ui.hoje")}
                         </span>
                       ) : null}
                     </div>
-                    <p className="text-xs text-foreground-muted">
+                    <p className="text-xs text-white/70">
                       {t("ui.agendamentos_label_count", {
                         label: activeDay.label,
                         count: activeDayAppointments.length,
