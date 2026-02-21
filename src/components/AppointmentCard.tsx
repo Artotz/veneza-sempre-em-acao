@@ -27,6 +27,22 @@ export const AppointmentCard = ({
   const highlightClasses = highlight
     ? "border-warning/80 bg-amber-100 ring-1 ring-warning/30"
     : "border-border bg-white";
+  const visitMatch = headerLabel.match(/^(#\d+)/);
+  const visitSegment = visitMatch?.[1] ?? "";
+  const hasVisitSegment = Boolean(visitSegment);
+  const labelWithoutVisit = hasVisitSegment
+    ? headerLabel
+        .slice(visitSegment.length)
+        .trim()
+        .replace(/^[-\s]+/, "")
+    : headerLabel;
+  const labelSegments = labelWithoutVisit.split(" - ");
+  const headerBadge = hasVisitSegment
+    ? visitSegment
+    : (labelSegments[0] ?? "");
+  const headerTail = hasVisitSegment
+    ? labelWithoutVisit
+    : labelSegments.slice(1).join(" - ");
 
   return (
     <button
@@ -37,11 +53,18 @@ export const AppointmentCard = ({
       }`}
     >
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold text-foreground-soft">
-            {headerLabel}
-          </p>
-          <h3 className="mt-1 text-base font-semibold text-foreground">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-foreground-soft">
+            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+              {headerBadge}
+            </span>
+            {headerTail ? (
+              <span className="text-xs font-semibold text-foreground-soft">
+                {headerTail}
+              </span>
+            ) : null}
+          </div>
+          <h3 className="mt-1 truncate text-base font-semibold text-foreground">
             {companyName}
           </h3>
           <div className="mt-1 space-y-1 text-sm text-foreground-muted">
