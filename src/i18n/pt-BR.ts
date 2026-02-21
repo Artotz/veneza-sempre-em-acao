@@ -63,20 +63,22 @@ export const resources = {
         criar_apontamento: "Criar apontamento",
         cronograma: "Cronograma",
         home: "Home",
-        home_next_appointment_in: "Seu pr\u00f3ximo agendamento de hoje \u00e9 em {{time}}.",
+        home_next_appointment_in:
+          "Seu pr\u00f3ximo agendamento de hoje \u00e9 em {{time}}.",
         home_next_appointment_late_by:
-          "Seu pr\u00f3ximo agendamento est\u00e1 atrasado em {{time}}.",
+          "Seu pr\u00f3ximo agendamento era há {{time}}.",
         home_in_appointment_for:
           "Voc\u00ea est\u00e1 em um agendamento h\u00e1 {{time}}.",
-        home_in_appointment_since: "Voc\u00ea est\u00e1 em um agendamento em:",
+        home_in_appointment_since: "Voc\u00ea est\u00e1 em um agendamento há:",
         home_next_appointment_in_label:
           "Seu pr\u00f3ximo agendamento de hoje \u00e9 em:",
         home_next_appointment_late_by_label:
-          "Seu pr\u00f3ximo agendamento est\u00e1 atrasado em:",
+          "Seu pr\u00f3ximo agendamento era há:",
         home_in_appointment_now:
           "Voc\u00ea est\u00e1 em um agendamento \u2014 {{time}}.",
         home_no_more_appointments_today:
           "Voc\u00ea n\u00e3o tem mais agendamentos hoje.",
+        seus_outros_agendamentos_de_hoje: "Seus outros agendamentos de hoje",
         calendario: "Calendário",
         agenda: "Agenda",
         hello_world: "Hello world",

@@ -49,7 +49,7 @@ export const AppointmentCard = ({
       type="button"
       onClick={onClick}
       className={`w-full rounded-2xl border p-4 text-left shadow-sm transition ${highlightClasses} ${
-        blocked ? "opacity-70" : "hover:-translate-y-0.5 hover:shadow-md"
+        blocked ? "" : "hover:-translate-y-0.5 hover:shadow-md"
       }`}
     >
       <div className="flex items-start justify-between gap-3">

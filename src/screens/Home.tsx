@@ -6,12 +6,7 @@ import { EmptyState } from "../components/EmptyState";
 import { StatusFilters } from "../components/StatusFilters";
 import { t } from "../i18n";
 import { useAuth } from "../contexts/useAuth";
-import {
-  getDayIndexMonday,
-  isSameDay,
-  formatDateShort,
-  WEEK_DAYS,
-} from "../lib/date";
+import { isSameDay, formatDateShort } from "../lib/date";
 import {
   formatAppointmentWindow,
   getAppointmentStatus,
@@ -40,7 +35,7 @@ export default function Home() {
   const navigate = useNavigate();
   const [statusFilters, setStatusFilters] = useState<
     ReturnType<typeof getAppointmentStatus>[]
-  >(() => ["em_execucao", "agendado"]);
+  >(() => ["agendado"]);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
   useEffect(() => {
@@ -116,8 +111,6 @@ export default function Home() {
   }, [activeAppointment, nextPendingAppointment, now]);
 
   const showCreateButton = todayAppointments.length === 0;
-  const todayIndex = getDayIndexMonday(now);
-  const todayMeta = WEEK_DAYS[todayIndex];
   const todayLabel = formatDateShort(now);
   const daySummary = useMemo(() => {
     return todayAppointments.reduce(
@@ -163,7 +156,7 @@ export default function Home() {
         </p>
         {actionState.timer ? (
           <div className="mt-4 w-full rounded-2xl border border-border bg-foreground px-4 py-4 text-center shadow-sm">
-            <p className="text-3xl font-semibold tracking-[0.35em] text-white sm:text-4xl">
+            <p className="text-3xl font-semibold font-mono tracking-[0.35em] text-white sm:text-4xl">
               {actionState.timer}
             </p>
           </div>
@@ -190,14 +183,9 @@ export default function Home() {
         <section className="space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-semibold text-white">
-                  {todayMeta?.full ?? t("ui.hoje")}
-                </p>
-                <span className="rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-semibold text-white">
-                  {t("ui.hoje")}
-                </span>
-              </div>
+              <p className="text-sm font-semibold text-white">
+                {t("ui.seus_outros_agendamentos_de_hoje")}
+              </p>
               <p className="text-xs text-white/70">
                 {t("ui.agendamentos_label_count", {
                   label: todayLabel,
