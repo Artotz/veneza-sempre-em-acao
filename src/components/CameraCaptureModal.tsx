@@ -79,6 +79,7 @@ export const CameraCaptureModal = ({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const previewUrlRef = useRef<string | null>(null);
+  const startIdRef = useRef(0);
   const [isStarting, setIsStarting] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -87,9 +88,14 @@ export const CameraCaptureModal = ({
   const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
 
   const stopStream = useCallback(() => {
+    startIdRef.current += 1;
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.srcObject = null;
     }
   }, []);
 
@@ -102,13 +108,15 @@ export const CameraCaptureModal = ({
     setShot(null);
   }, []);
 
-  const resetState = useCallback(() => {
+  const resetState = useCallback((resetFacingMode: boolean) => {
     stopStream();
     clearPreview();
     setError(null);
     setIsStarting(false);
     setIsCapturing(false);
-    setFacingMode("user");
+    if (resetFacingMode) {
+      setFacingMode("user");
+    }
   }, [clearPreview, stopStream]);
 
   const startCamera = useCallback(async () => {
@@ -117,6 +125,7 @@ export const CameraCaptureModal = ({
     setError(null);
     clearPreview();
     stopStream();
+    const startId = startIdRef.current;
 
     if (!navigator.mediaDevices?.getUserMedia) {
       const message = t("ui.camera_indisponivel");
@@ -131,6 +140,11 @@ export const CameraCaptureModal = ({
         video: { facingMode: { ideal: facingMode } },
         audio: false,
       });
+
+      if (startId !== startIdRef.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
 
       streamRef.current = stream;
 
@@ -156,12 +170,12 @@ export const CameraCaptureModal = ({
 
   useEffect(() => {
     if (!open) {
-      resetState();
+      resetState(true);
       return;
     }
     void startCamera();
     return () => {
-      resetState();
+      resetState(false);
     };
   }, [facingMode, open, resetState, startCamera]);
 

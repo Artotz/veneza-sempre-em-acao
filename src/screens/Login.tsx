@@ -4,8 +4,8 @@ import { createSupabaseBrowserClient } from "../lib/supabaseClient";
 import { useAuth } from "../contexts/useAuth";
 import { t } from "../i18n";
 import { getCurrentPosition } from "../services/geolocation";
-import logoText from "../assets/logo_text.svg";
-import cscLogo from "../assets/csc_logo.svg";
+import logoText from "../assets/logo_text.png";
+import cscLogo from "../assets/csc_logo.png";
 
 type BannerState =
   | { variant: "error"; message: string }
@@ -161,7 +161,7 @@ export default function Login() {
           src={logoText}
           alt=""
           aria-hidden="true"
-          className="mx-auto mb-6 w-48"
+          className="mx-auto mb-2 w-72"
         />
         <div className="overflow-hidden rounded-3xl border border-border bg-white shadow-2xl">
           <div className="grid gap-6 bg-gradient-to-br from-accent to-brand px-8 py-10 text-white md:grid-cols-[1.1fr_1fr] md:gap-0">
