@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { createSupabaseBrowserClient } from "../lib/supabaseClient";
 import { useAuth } from "../contexts/useAuth";
 import { t } from "../i18n";
+import { getCurrentPosition } from "../services/geolocation";
 import logoText from "../assets/logo_text.svg";
 import cscLogo from "../assets/csc_logo.svg";
 
@@ -35,6 +36,7 @@ export default function Login() {
     useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
   const [installing, setInstalling] = useState(false);
+  const didRequestPermissions = useRef(false);
 
   useEffect(() => {
     const checkStandalone = () => {
@@ -65,6 +67,44 @@ export default function Login() {
       );
       window.removeEventListener("appinstalled", handleAppInstalled);
     };
+  }, []);
+
+  useEffect(() => {
+    if (didRequestPermissions.current) return;
+    didRequestPermissions.current = true;
+
+    const requestLocationPermission = async () => {
+      if (!navigator.geolocation) return;
+      try {
+        await getCurrentPosition({
+          enableHighAccuracy: false,
+          timeout: 4000,
+          maximumAge: 0,
+        });
+      } catch {
+        // Ignora erros aqui: o objetivo é só disparar o prompt inicial.
+      }
+    };
+
+    const requestCameraPermission = async () => {
+      if (!navigator.mediaDevices?.getUserMedia) return;
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false,
+        });
+        stream.getTracks().forEach((track) => track.stop());
+      } catch {
+        // Ignora erros aqui: o objetivo é só disparar o prompt inicial.
+      }
+    };
+
+    const requestPermissions = async () => {
+      await requestLocationPermission();
+      await requestCameraPermission();
+    };
+
+    void requestPermissions();
   }, []);
 
   const handlePasswordSignIn = async (event: FormEvent<HTMLFormElement>) => {
