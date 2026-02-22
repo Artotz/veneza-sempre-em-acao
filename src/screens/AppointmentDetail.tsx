@@ -25,7 +25,6 @@ import { useAuth } from "../contexts/useAuth";
 import {
   APPOINTMENT_SELECT,
   COMPANY_SELECT,
-  absenceReasonLabels,
   mapAppointment,
   mapCompany,
 } from "../lib/supabase";
@@ -1285,11 +1284,6 @@ export default function AppointmentDetail() {
   };
 
   const snapshotLabel = appointment.addressSnapshot ?? null;
-
-  const absenceLabel =
-    absenceReasonLabels[appointment.absenceReason ?? ""] ??
-    appointment.absenceReason ??
-    t("ui.nenhuma");
 
   const oportunidades = appointment.oportunidades ?? [];
   const showOportunidades = Boolean(
