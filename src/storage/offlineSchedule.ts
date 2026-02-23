@@ -23,7 +23,7 @@ export type PendingScheduleAction = {
   id: string;
   userEmail: string;
   appointmentId: string;
-  actionType: "checkIn" | "checkOut" | "absence";
+  actionType: "checkIn" | "checkOut" | "absence" | "reschedule";
   changes: Record<string, unknown>;
   createdAt: number;
 };

@@ -251,6 +251,21 @@ const applyPendingActionsToAppointments = (
     const sorted = [...actions].sort((a, b) => a.createdAt - b.createdAt);
     const next = sorted.reduce<Appointment>((current, action) => {
       const changes = action.changes ?? {};
+      if (action.actionType === "reschedule") {
+        const startAt =
+          toStringValue(changes.starts_at) ??
+          toStringValue(changes.startAt) ??
+          current.startAt;
+        const endAt =
+          toStringValue(changes.ends_at) ??
+          toStringValue(changes.endAt) ??
+          current.endAt;
+        return {
+          ...current,
+          startAt,
+          endAt,
+        };
+      }
       if (action.actionType === "checkIn") {
         return {
           ...current,
@@ -570,6 +585,18 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
           const base =
             state.appointments.find((appointment) => appointment.id === id) ?? null;
           const { localChanges } = buildAbsenceChanges(reason, note);
+          const updatedLocal = base ? { ...base, ...localChanges } : null;
+          applyLocalUpdate(id, localChanges);
+          return updatedLocal;
+        }),
+      reschedule: async (id: string, payload: { startAt: string; endAt: string }) =>
+        runUpdate(id, async () => {
+          const base =
+            state.appointments.find((appointment) => appointment.id === id) ?? null;
+          const localChanges: Partial<Appointment> = {
+            startAt: payload.startAt,
+            endAt: payload.endAt,
+          };
           const updatedLocal = base ? { ...base, ...localChanges } : null;
           applyLocalUpdate(id, localChanges);
           return updatedLocal;

@@ -45,6 +45,10 @@ export type ScheduleContextValue = {
       reason: string,
       note?: string
     ) => Promise<Appointment | null>;
+    reschedule: (
+      id: string,
+      payload: { startAt: string; endAt: string }
+    ) => Promise<Appointment | null>;
     setPendingSync: (id: string, pending: boolean) => void;
   };
   selectors: {

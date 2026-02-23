@@ -85,6 +85,18 @@ export const resources = {
 
         dados_da_empresa: "Dados da empresa",
         dados_do_apontamento: "Dados do apontamento",
+        editar_visita: "Editar visita",
+        salvar_alteracoes: "Salvar alterações",
+        atualize_os_horarios_do_apontamento:
+          "Atualize os horários do apontamento.",
+        edicao_disponivel_apenas_para_agendados:
+          "Edição disponível apenas para apontamentos agendados.",
+        edicao_apenas_para_horarios_no_mesmo_dia:
+          "A edição permite alterar apenas horários no mesmo dia.",
+        edite_apenas_os_horarios_do_apontamento:
+          "Edite apenas os horários do apontamento.",
+        alteracao_salva_pendente_para_sincronizar:
+          "Alteração salva e pendente para sincronizar.",
 
         data_hora_invalida: "Data/hora inválida",
         data_hora_nao_registrada: "Data/hora não registrada",

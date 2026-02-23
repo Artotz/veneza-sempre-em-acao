@@ -9,6 +9,7 @@ import Home from "./screens/Home";
 import { ScheduleProvider } from "./state/ScheduleProvider";
 import Login from "./screens/Login";
 import NewAppointment from "./screens/NewAppointment";
+import EditAppointment from "./screens/EditAppointment";
 import { AuthProvider } from "./contexts/AuthProvider";
 import { RequireAuth } from "./components/RequireAuth";
 import CompanyDetail from "./screens/CompanyDetail";
@@ -155,6 +156,14 @@ export default function App() {
               element={
                 <RequireAuth>
                   <AppointmentDetail />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/apontamentos/:id/editar"
+              element={
+                <RequireAuth>
+                  <EditAppointment />
                 </RequireAuth>
               }
             />

@@ -957,6 +957,9 @@ export default function AppointmentDetail() {
     isTodayAppointment &&
     (appointment.status ?? "scheduled") === "in_progress";
   const canAbsence = status === "agendado" || status === "expirado";
+  const canEditVisit = status === "agendado";
+  const showAddPhoto = status === "em_execucao";
+  const showEditVisit = status !== "em_execucao";
   const isCheckInCapturing = geo.isCapturing && geoIntent === "check_in";
   const isCheckOutCapturing = geo.isCapturing && geoIntent === "check_out";
   const isPhotoBusy = Boolean(photoStatus) || isCameraOpen;
@@ -1018,6 +1021,11 @@ export default function AppointmentDetail() {
   const handleAddRegistroPhoto = () => {
     if (!canAddPhoto || isPhotoBusy || registroCount >= 3) return;
     setCameraIntent("registro");
+  };
+
+  const handleEditVisit = () => {
+    if (!canEditVisit) return;
+    navigate(`/apontamentos/${appointment.id}/editar`);
   };
 
   const handleCloseCheckout = () => {
@@ -1519,18 +1527,20 @@ export default function AppointmentDetail() {
               {checkInOutLabel}
             </button>
             <div className={`grid gap-2 ${inlineActionCols}`}>
-              <button
-                type="button"
-                onClick={handleAddRegistroPhoto}
-                disabled={!canAddPhoto || isPhotoBusy || registroCount >= 3}
-                className={`min-h-[56px] rounded-2xl px-2 py-3 text-center text-xs font-semibold leading-tight whitespace-normal break-words transition ${
-                  canAddPhoto && !isPhotoBusy && registroCount < 3
-                    ? "bg-accent text-white"
-                    : "cursor-not-allowed bg-surface-muted text-foreground-muted"
-                }`}
-              >
-                {t("ui.adicionar_foto")}
-              </button>
+              {showAddPhoto ? (
+                <button
+                  type="button"
+                  onClick={handleAddRegistroPhoto}
+                  disabled={!canAddPhoto || isPhotoBusy || registroCount >= 3}
+                  className={`min-h-[56px] rounded-2xl px-2 py-3 text-center text-xs font-semibold leading-tight whitespace-normal break-words transition ${
+                    canAddPhoto && !isPhotoBusy && registroCount < 3
+                      ? "bg-accent text-white"
+                      : "cursor-not-allowed bg-surface-muted text-foreground-muted"
+                  }`}
+                >
+                  {t("ui.adicionar_foto")}
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={handleSyncAppointment}
@@ -1557,6 +1567,20 @@ export default function AppointmentDetail() {
               >
                 {t("ui.justificar_ausencia")}
               </button>
+              {showEditVisit ? (
+                <button
+                  type="button"
+                  onClick={handleEditVisit}
+                  disabled={!canEditVisit || busy}
+                  className={`min-h-[56px] rounded-2xl px-2 py-3 text-center text-xs font-semibold leading-tight whitespace-normal break-words transition ${
+                    canEditVisit && !busy
+                      ? "bg-foreground text-white"
+                      : "cursor-not-allowed bg-surface-muted text-foreground-muted"
+                  }`}
+                >
+                  {t("ui.editar_visita")}
+                </button>
+              ) : null}
             </div>
             {/* {geo.isCapturing ? (
               <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
