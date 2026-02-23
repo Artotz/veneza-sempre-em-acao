@@ -169,6 +169,8 @@ export const resources = {
         horario: "Horário",
         horario_atual: "Horário atual",
         inicio: "Início",
+        inicio_e_fim_precisam_ser_no_mesmo_dia:
+          "Início e fim precisam ser no mesmo dia.",
 
         ir_para_empresas: "Ir para empresas",
         ir_para_home: "Ir para home",

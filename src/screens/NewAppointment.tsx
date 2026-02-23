@@ -224,6 +224,11 @@ export default function NewAppointment() {
       return;
     }
 
+    if (!isSameDay(startsAtDate, endsAtDate)) {
+      setError(t("ui.inicio_e_fim_precisam_ser_no_mesmo_dia"));
+      return;
+    }
+
     if (endsAtDate <= startsAtDate) {
       setError(t("ui.fim_precisa_ser_depois_do_inicio"));
       return;
