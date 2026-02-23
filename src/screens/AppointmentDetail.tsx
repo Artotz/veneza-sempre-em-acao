@@ -1021,8 +1021,9 @@ export default function AppointmentDetail() {
     (appointment.status ?? "scheduled") === "in_progress";
   const canAbsence = status === "agendado" || status === "expirado";
   const canEditVisit = status === "agendado";
-  const showAddPhoto = status === "em_execucao" || status === "done";
+  const showAddPhoto = status === "em_execucao" || status === "concluido";
   const showEditVisit = status !== "em_execucao";
+  const showAbsenceButton = status !== "concluido";
   const isCheckInCapturing = geo.isCapturing && geoIntent === "check_in";
   const isCheckOutCapturing = geo.isCapturing && geoIntent === "check_out";
   const isPhotoBusy = Boolean(photoStatus) || isCameraOpen;
@@ -1466,7 +1467,7 @@ export default function AppointmentDetail() {
       : cameraIntent === "registro"
         ? t("ui.nova_foto")
         : t("ui.capturar_foto");
-  const canAddPhoto = status === "em_execucao" || status === "done";
+  const canAddPhoto = status === "em_execucao" || status === "concluido";
   const inlineActionCols = "grid-cols-3";
   let pendingRegistroIndex = 0;
   let uploadedRegistroIndex = pendingRegistroCount;
@@ -1688,18 +1689,20 @@ export default function AppointmentDetail() {
                   ? t("ui.sincronizando_apontamento")
                   : t("ui.sincronizar_visita")}
               </button>
-              <button
-                type="button"
-                disabled={!canAbsence || busy || isPhotoBusy}
-                onClick={handleOpenAbsence}
-                className={`min-h-[56px] rounded-2xl px-2 py-3 text-center text-xs font-semibold leading-tight whitespace-normal break-words transition ${
-                  canAbsence && !busy && !isPhotoBusy
-                    ? "bg-danger text-white"
-                    : "cursor-not-allowed bg-surface-muted text-foreground-muted"
-                }`}
-              >
-                {t("ui.justificar_ausencia")}
-              </button>
+              {showAbsenceButton ? (
+                <button
+                  type="button"
+                  disabled={!canAbsence || busy || isPhotoBusy}
+                  onClick={handleOpenAbsence}
+                  className={`min-h-[56px] rounded-2xl px-2 py-3 text-center text-xs font-semibold leading-tight whitespace-normal break-words transition ${
+                    canAbsence && !busy && !isPhotoBusy
+                      ? "bg-danger text-white"
+                      : "cursor-not-allowed bg-surface-muted text-foreground-muted"
+                  }`}
+                >
+                  {t("ui.justificar_ausencia")}
+                </button>
+              ) : null}
               {showEditVisit ? (
                 <button
                   type="button"

@@ -57,6 +57,8 @@ export default function NewAppointment() {
   const [companiesLoading, setCompaniesLoading] = useState(true);
   const [companiesError, setCompaniesError] = useState<string | null>(null);
   const [selectedCompanyId, setSelectedCompanyId] = useState(id ?? "");
+  const [companyQuery, setCompanyQuery] = useState("");
+  const [debouncedCompanyQuery, setDebouncedCompanyQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const [startsAt, setStartsAt] = useState("");
@@ -149,8 +151,43 @@ export default function NewAppointment() {
     setEndsAt(endValue);
   }, [startsAt, endsAt]);
 
+  const filterCompanies = (items: Company[], term: string) => {
+    const trimmed = term.trim().toLowerCase();
+    if (!trimmed) return items;
+    return items.filter((item) => {
+      const name = item.name?.toLowerCase() ?? "";
+      const document = item.document?.toLowerCase() ?? "";
+      return name.includes(trimmed) || document.includes(trimmed);
+    });
+  };
+
   const company =
     companies.find((item) => item.id === selectedCompanyId) ?? null;
+
+  const filteredCompanies = useMemo(() => {
+    const filtered = filterCompanies(companies, debouncedCompanyQuery);
+    if (!company || filtered.some((item) => item.id === company.id)) {
+      return filtered;
+    }
+    return [company, ...filtered];
+  }, [companies, company, debouncedCompanyQuery]);
+
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      setDebouncedCompanyQuery(companyQuery);
+    }, companyQuery.trim().length ? 300 : 0);
+    return () => clearTimeout(handle);
+  }, [companyQuery]);
+
+  useEffect(() => {
+    if (!selectedCompanyId) return;
+    const stillVisible = filteredCompanies.some(
+      (item) => item.id === selectedCompanyId,
+    );
+    if (!stillVisible) {
+      setSelectedCompanyId("");
+    }
+  }, [filteredCompanies, selectedCompanyId]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -358,6 +395,18 @@ export default function NewAppointment() {
               {companiesError}
             </div>
           ) : null}
+          <div className="space-y-2">
+            <SectionHeader
+              title={t("ui.busca_rapida")}
+              subtitle={t("ui.nome_ou_documento")}
+            />
+            <input
+              value={companyQuery}
+              onChange={(event) => setCompanyQuery(event.target.value)}
+              placeholder={t("ui.buscar_empresa")}
+              className="w-full rounded-2xl border border-border bg-surface-muted px-4 py-3 text-sm text-foreground outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
+            />
+          </div>
           <label className="space-y-2 text-sm font-semibold text-foreground">
             {/* <span>Empresa</span> */}
             <select
@@ -366,9 +415,11 @@ export default function NewAppointment() {
               className="w-full rounded-2xl border border-border bg-surface-muted px-4 py-3 text-sm font-normal text-foreground outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
             >
               <option value="" disabled>
-                {t("ui.selecione_uma_empresa")}
+                {filteredCompanies.length
+                  ? t("ui.selecione_uma_empresa")
+                  : t("ui.nenhuma_empresa_encontrada")}
               </option>
-              {companies.map((item) => (
+              {filteredCompanies.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.name ?? t("ui.empresa")}
                   {item.document ? ` (${item.document})` : ""}
