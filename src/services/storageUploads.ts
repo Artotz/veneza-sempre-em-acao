@@ -24,9 +24,26 @@ const generateUuid = () => {
 };
 
 const extensionForMime = (mimeType: string) => {
-  if (mimeType === "image/webp") return "webp";
-  if (mimeType === "image/jpeg" || mimeType === "image/jpg") return "jpg";
-  return "jpg";
+  const normalized = mimeType.toLowerCase();
+  const mapping: Record<string, string> = {
+    "image/webp": "webp",
+    "image/jpeg": "jpg",
+    "image/jpg": "jpg",
+    "image/png": "png",
+    "application/pdf": "pdf",
+    "application/msword": "doc",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+      "docx",
+    "application/vnd.ms-excel": "xls",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
+    "application/vnd.ms-powerpoint": "ppt",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation":
+      "pptx",
+    "text/csv": "csv",
+    "text/plain": "txt",
+  };
+
+  return mapping[normalized] ?? "bin";
 };
 
 export const uploadApontamentoImage = async (

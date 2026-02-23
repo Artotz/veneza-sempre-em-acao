@@ -10,9 +10,9 @@ type Canvas2DContext =
   | CanvasRenderingContext2D
   | OffscreenCanvasRenderingContext2D;
 
-const DEFAULT_MAX_W = 1600;
-const DEFAULT_MAX_H = 1600;
-const DEFAULT_QUALITY = 0.78;
+const DEFAULT_MAX_W = 1440;
+const DEFAULT_MAX_H = 1440;
+const DEFAULT_QUALITY = 0.72;
 
 const isOffscreenCanvas = (
   canvas: HTMLCanvasElement | OffscreenCanvas

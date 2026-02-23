@@ -38,9 +38,10 @@ export const resources = {
         capturando_localizacao: "Capturando localização...",
         capturar_foto: "Capturar foto",
         adicionar_foto: "Adicionar foto",
+        adicionar_arquivo: "Adicionar arquivo",
         carregando_detalhes: "Carregando detalhes.",
         carregando_empresa: "Carregando empresa...",
-        carregando_fotos: "Carregando fotos...",
+        carregando_fotos: "Carregando registros...",
         carregando: "Carregando...",
 
         carteira_2_value: "Carteira 2: {{value}}",
@@ -148,9 +149,11 @@ export const resources = {
         foto: "Foto",
         foto_do_check_in: "Foto do check-in",
         foto_do_check_out: "Foto do check-out",
-        foto_pendente_kind: "Foto pendente {{kind}}",
-        foto_kind: "Foto {{kind}}",
-        fotos: "Fotos",
+        foto_pendente_kind: "Registro pendente {{kind}}",
+        foto_kind: "Registro {{kind}}",
+        fotos: "Registros",
+        arquivo: "Arquivo",
+        abrir_arquivo: "Abrir arquivo",
 
         garantia_basica: "Garantia básica",
         garantia_estendida: "Garantia estendida",
@@ -190,6 +193,11 @@ export const resources = {
         nao_foi_possivel_gerar_a_foto: "Não foi possível gerar a foto.",
         nao_foi_possivel_iniciar_a_camera: "Não foi possível iniciar a câmera.",
         nao_foi_possivel_salvar_a_foto: "Não foi possível salvar a foto.",
+        formato_de_arquivo_nao_suportado:
+          "Formato de arquivo não suportado.",
+        arquivo_muito_grande: "Arquivo maior que {{max}}MB.",
+        limite_de_registros_atingido:
+          "Limite de {{max}} registros atingido.",
         nao_ha_apontamentos_hoje: "Não há apontamentos hoje",
 
         nao_informado: "Não informado",
@@ -198,7 +206,7 @@ export const resources = {
 
         nenhuma: "Nenhuma",
         nenhuma_empresa_encontrada: "Nenhuma empresa encontrada",
-        nenhuma_foto_registrada_ainda: "Nenhuma foto registrada ainda.",
+        nenhuma_foto_registrada_ainda: "Nenhum registro enviado ainda.",
 
         nome_ou_documento: "Nome ou documento.",
         nova_foto: "Nova foto",
@@ -255,7 +263,7 @@ export const resources = {
         registro_visual_do_apontamento: "Registro visual do apontamento.",
         registro: "Registro",
         registro_numero: "Registro {{numero}}",
-        registros_count: "{{count}} de 3 registros",
+        registros_count: "{{count}} de {{max}} registros",
 
         resumo_do_apontamento: "Resumo do apontamento",
         resumo_geral: "Resumo geral",
@@ -381,7 +389,7 @@ export const resources = {
         nao_foi_possivel_capturar_a_localizacao_tente_novamente:
           "Não foi possível capturar a localização. Tente novamente.",
         nao_foi_possivel_carregar_as_fotos_pendentes:
-          "Não foi possível carregar as fotos pendentes.",
+          "Não foi possível carregar os registros pendentes.",
         nao_foi_possivel_carregar_o_cronograma:
           "Não foi possível carregar o cronograma.",
         nao_foi_possivel_comprimir_a_imagem:

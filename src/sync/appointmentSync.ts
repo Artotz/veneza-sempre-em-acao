@@ -117,7 +117,12 @@ export const syncAppointment = async (
     }
 
     const consultantId = item.consultantId ?? params.consultantId;
-    const kind = item.kind as "checkin" | "checkout" | "absence" | undefined;
+    const kind = item.kind as
+      | "checkin"
+      | "checkout"
+      | "absence"
+      | "registro"
+      | undefined;
 
     if (!consultantId || !kind) {
       console.warn("Foto pendente sem metadados suficientes", item);

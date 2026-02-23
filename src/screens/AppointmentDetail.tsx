@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+} from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
@@ -44,6 +51,7 @@ import {
   savePendingAction,
 } from "../storage/offlineSchedule";
 import { syncAppointment } from "../sync/appointmentSync";
+import { compressImage } from "../utils/photoCompress";
 import { t } from "../i18n";
 
 const absenceOptions = [
@@ -107,6 +115,60 @@ const mediaKindLabels: Record<MediaKind, string> = {
   checkout: t("ui.check_out"),
   absence: t("ui.ausencia"),
   registro: t("ui.registro"),
+};
+
+const MAX_REGISTROS = 10;
+const NON_IMAGE_MAX_BYTES = 25 * 1024 * 1024;
+const ACCEPTED_FILE_TYPES = [
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "text/csv",
+  "text/plain",
+];
+const ACCEPTED_FILE_TYPES_INPUT = [
+  "image/*",
+  ...ACCEPTED_FILE_TYPES,
+].join(", ");
+
+const isImageMime = (mimeType?: string | null) =>
+  Boolean(mimeType && mimeType.startsWith("image/"));
+
+const isSupportedMime = (mimeType: string) =>
+  mimeType.startsWith("image/") || ACCEPTED_FILE_TYPES.includes(mimeType);
+
+const mimeToExtension = (mimeType: string) => {
+  const normalized = mimeType.toLowerCase();
+  if (normalized.startsWith("image/")) return "jpg";
+  if (normalized === "application/pdf") return "pdf";
+  if (normalized === "application/msword") return "doc";
+  if (
+    normalized ===
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  ) {
+    return "docx";
+  }
+  if (normalized === "application/vnd.ms-excel") return "xls";
+  if (
+    normalized ===
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  ) {
+    return "xlsx";
+  }
+  if (normalized === "application/vnd.ms-powerpoint") return "ppt";
+  if (
+    normalized ===
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+  ) {
+    return "pptx";
+  }
+  if (normalized === "text/csv") return "csv";
+  if (normalized === "text/plain") return "txt";
+  return "bin";
 };
 
 const markerIconOptions: L.IconOptions = {
@@ -212,6 +274,7 @@ export default function AppointmentDetail() {
     typeof navigator === "undefined" ? true : navigator.onLine,
   );
   const pendingPreviewUrlsRef = useRef<Record<string, string>>({});
+  const registroFileInputRef = useRef<HTMLInputElement | null>(null);
   const [detailsTab, setDetailsTab] = useState<"fotos" | "mapa" | "recursos">(
     "fotos",
   );
@@ -428,7 +491,7 @@ export default function AppointmentDetail() {
         scoped.map(async (item) => {
           const blob = await getPhotoBlob(item.id);
           let previewUrl: string | null = null;
-          if (blob) {
+          if (blob && isImageMime(blob.type)) {
             previewUrl = URL.createObjectURL(blob);
             pendingPreviewUrlsRef.current[item.id] = previewUrl;
           }
@@ -958,7 +1021,7 @@ export default function AppointmentDetail() {
     (appointment.status ?? "scheduled") === "in_progress";
   const canAbsence = status === "agendado" || status === "expirado";
   const canEditVisit = status === "agendado";
-  const showAddPhoto = status === "em_execucao";
+  const showAddPhoto = status === "em_execucao" || status === "done";
   const showEditVisit = status !== "em_execucao";
   const isCheckInCapturing = geo.isCapturing && geoIntent === "check_in";
   const isCheckOutCapturing = geo.isCapturing && geoIntent === "check_out";
@@ -1019,8 +1082,76 @@ export default function AppointmentDetail() {
   };
 
   const handleAddRegistroPhoto = () => {
-    if (!canAddPhoto || isPhotoBusy || registroCount >= 3) return;
+    if (!canAddPhoto || isPhotoBusy || registroCount >= MAX_REGISTROS) return;
     setCameraIntent("registro");
+  };
+
+  const handleAddRegistroFile = () => {
+    if (!canAddPhoto || isPhotoBusy || registroCount >= MAX_REGISTROS) return;
+    registroFileInputRef.current?.click();
+  };
+
+  const handleRegistroFileChange = async (
+    event: ChangeEvent<HTMLInputElement>,
+  ) => {
+    setError(null);
+    const files = Array.from(event.target.files ?? []);
+    event.target.value = "";
+
+    if (!files.length) return;
+
+    if (registroCount >= MAX_REGISTROS) {
+      setError(
+        t("ui.limite_de_registros_atingido", { max: MAX_REGISTROS }),
+      );
+      return;
+    }
+
+    const available = Math.max(0, MAX_REGISTROS - registroCount);
+    const toProcess = files.slice(0, available);
+
+    if (files.length > available) {
+      setError(
+        t("ui.limite_de_registros_atingido", { max: MAX_REGISTROS }),
+      );
+    }
+
+    for (const file of toProcess) {
+      const mimeType = file.type?.trim() ?? "";
+      const normalizedMime = mimeType.toLowerCase();
+
+      if (!normalizedMime || !isSupportedMime(normalizedMime)) {
+        setError(t("ui.formato_de_arquivo_nao_suportado"));
+        continue;
+      }
+
+      if (!isImageMime(normalizedMime) && file.size > NON_IMAGE_MAX_BYTES) {
+        setError(
+          t("ui.arquivo_muito_grande", {
+            max: Math.round(NON_IMAGE_MAX_BYTES / (1024 * 1024)),
+          }),
+        );
+        continue;
+      }
+
+      try {
+        const blob = isImageMime(normalizedMime)
+          ? await compressImage(file)
+          : file;
+        const shot: CapturePhotoResult = {
+          blob,
+          mimeType: blob.type || normalizedMime,
+          extension: mimeToExtension(blob.type || normalizedMime),
+        };
+        await performRegistroUpload(shot);
+      } catch (error) {
+        setError(
+          error instanceof Error
+            ? error.message
+            : t("ui.nao_foi_possivel_salvar_a_foto"),
+        );
+      }
+    }
   };
 
   const handleEditVisit = () => {
@@ -1335,7 +1466,7 @@ export default function AppointmentDetail() {
       : cameraIntent === "registro"
         ? t("ui.nova_foto")
         : t("ui.capturar_foto");
-  const canAddPhoto = status === "em_execucao";
+  const canAddPhoto = status === "em_execucao" || status === "done";
   const inlineActionCols = "grid-cols-3";
   let pendingRegistroIndex = 0;
   let uploadedRegistroIndex = pendingRegistroCount;
@@ -1531,9 +1662,11 @@ export default function AppointmentDetail() {
                 <button
                   type="button"
                   onClick={handleAddRegistroPhoto}
-                  disabled={!canAddPhoto || isPhotoBusy || registroCount >= 3}
+                  disabled={
+                    !canAddPhoto || isPhotoBusy || registroCount >= MAX_REGISTROS
+                  }
                   className={`min-h-[56px] rounded-2xl px-2 py-3 text-center text-xs font-semibold leading-tight whitespace-normal break-words transition ${
-                    canAddPhoto && !isPhotoBusy && registroCount < 3
+                    canAddPhoto && !isPhotoBusy && registroCount < MAX_REGISTROS
                       ? "bg-accent text-white"
                       : "cursor-not-allowed bg-surface-muted text-foreground-muted"
                   }`}
@@ -1662,8 +1795,43 @@ export default function AppointmentDetail() {
                 title={t("ui.fotos")}
                 subtitle={t("ui.registro_visual_do_apontamento")}
               />
-              <div className="text-[11px] text-foreground-soft">
-                {t("ui.registros_count", { count: registroCount })}
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-[11px] text-foreground-soft">
+                  {t("ui.registros_count", {
+                    count: registroCount,
+                    max: MAX_REGISTROS,
+                  })}
+                </div>
+                {showAddPhoto ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleAddRegistroFile}
+                      disabled={
+                        !canAddPhoto ||
+                        isPhotoBusy ||
+                        registroCount >= MAX_REGISTROS
+                      }
+                      className={`rounded-full border px-3 py-1 text-[10px] font-semibold transition ${
+                        canAddPhoto &&
+                        !isPhotoBusy &&
+                        registroCount < MAX_REGISTROS
+                          ? "border-accent bg-white text-foreground"
+                          : "cursor-not-allowed border-border bg-surface-muted text-foreground-muted"
+                      }`}
+                    >
+                      {t("ui.adicionar_arquivo")}
+                    </button>
+                    <input
+                      ref={registroFileInputRef}
+                      type="file"
+                      accept={ACCEPTED_FILE_TYPES_INPUT}
+                      multiple
+                      onChange={handleRegistroFileChange}
+                      className="hidden"
+                    />
+                  </>
+                ) : null}
               </div>
               {mediaLoading || pendingLoading ? (
                 <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
@@ -1691,6 +1859,7 @@ export default function AppointmentDetail() {
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {pendingPhotos.map((item) => {
                   const isRegistro = item.kind === "registro";
+                  const isImage = isImageMime(item.mime);
                   const kindLabel = isRegistro
                     ? (() => {
                         pendingRegistroIndex += 1;
@@ -1702,21 +1871,24 @@ export default function AppointmentDetail() {
                         (mediaKindLabels as Record<string, string>)[
                           item.kind
                         ]) ||
-                      t("ui.foto");
+                      t("ui.registro");
                   return (
                     <div
                       key={item.id}
                       className="overflow-hidden rounded-2xl border border-border bg-white"
                     >
-                      {item.previewUrl ? (
+                      {item.previewUrl && isImage ? (
                         <img
                           src={item.previewUrl}
                           alt={t("ui.foto_pendente_kind", { kind: kindLabel })}
                           className="h-28 w-full object-cover"
                         />
                       ) : (
-                        <div className="flex h-28 items-center justify-center text-[10px] text-foreground-soft">
-                          {t("ui.sem_preview")}
+                        <div className="flex h-28 flex-col items-center justify-center gap-1 text-[10px] text-foreground-soft">
+                          <span className="text-[11px] font-semibold text-foreground">
+                            {t("ui.arquivo")}
+                          </span>
+                          <span>{t("ui.sem_preview")}</span>
                         </div>
                       )}
                       <div className="flex items-center justify-between px-2 py-1 text-[10px] font-semibold text-foreground">
@@ -1728,6 +1900,7 @@ export default function AppointmentDetail() {
                 })}
                 {mediaItems.map((item) => {
                   const isRegistro = item.kind === "registro";
+                  const isImage = isImageMime(item.mimeType);
                   const kindLabel = isRegistro
                     ? (() => {
                         uploadedRegistroIndex += 1;
@@ -1742,6 +1915,7 @@ export default function AppointmentDetail() {
                       className="overflow-hidden rounded-2xl border border-border bg-white"
                     >
                       {item.signedUrl ? (
+                        isImage ? (
                         <img
                           src={item.signedUrl}
                           alt={t("ui.foto_kind", {
@@ -1749,6 +1923,21 @@ export default function AppointmentDetail() {
                           })}
                           className="h-28 w-full object-cover"
                         />
+                        ) : (
+                          <a
+                            href={item.signedUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex h-28 flex-col items-center justify-center gap-1 text-[10px] text-foreground-soft"
+                          >
+                            <span className="text-[11px] font-semibold text-foreground">
+                              {t("ui.arquivo")}
+                            </span>
+                            <span className="font-semibold text-info">
+                              {t("ui.abrir_arquivo")}
+                            </span>
+                          </a>
+                        )
                       ) : (
                         <div className="flex h-28 items-center justify-center text-[10px] text-foreground-soft">
                           {t("ui.url_expirada")}
