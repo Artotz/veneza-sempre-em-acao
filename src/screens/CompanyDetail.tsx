@@ -8,7 +8,11 @@ import { StatusFilters } from "../components/StatusFilters";
 import { useAuth } from "../contexts/useAuth";
 import { buildMonthWeeks, formatDateShort, formatMonthYear } from "../lib/date";
 import { formatCurrencyBRL, formatQuantity } from "../lib/format";
-import { buildDocumentVariants, splitProtheusSeries } from "../lib/protheus";
+import {
+  buildDocumentVariants,
+  normalizeDocument,
+  splitProtheusSeries,
+} from "../lib/protheus";
 import {
   formatAppointmentWindow,
   getAppointmentStatus,
@@ -38,6 +42,23 @@ type OpportunityItem = {
   detail?: string;
   createdAt?: string;
 };
+type OrcamentoItem = {
+  id: string;
+  codigo?: string | null;
+  descricao?: string | null;
+  quantidade?: number | null;
+  valor?: number | null;
+};
+type OrcamentoGroup = {
+  id: string;
+  numero?: number | null;
+  filial?: number | null;
+  data?: number | null;
+  total?: number | null;
+  status?: string | null;
+  consultor?: string | null;
+  itens: OrcamentoItem[];
+};
 
 const buildDayGroups = (appointments: Appointment[]) => {
   const groups = new Map<string, Appointment[]>();
@@ -49,6 +70,23 @@ const buildDayGroups = (appointments: Appointment[]) => {
   });
   groups.forEach((list) => list.sort(sortByStart));
   return groups;
+};
+
+const parseOrcamentoDate = (value?: number | null) => {
+  if (!value) return null;
+  const raw = String(value).padStart(8, "0");
+  if (!/^\d{8}$/.test(raw)) return null;
+  const year = Number(raw.slice(0, 4));
+  const month = Number(raw.slice(4, 6)) - 1;
+  const day = Number(raw.slice(6, 8));
+  const date = new Date(year, month, day);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const parseOrcamentoNumber = (value: unknown) => {
+  if (value == null || value === "") return null;
+  const parsed = Number(value);
+  return Number.isNaN(parsed) ? null : parsed;
 };
 
 export default function CompanyDetail() {
@@ -68,25 +106,15 @@ export default function CompanyDetail() {
   const [companyTab, setCompanyTab] = useState<CompanyTab>("agendamentos");
   const [opportunityTab, setOpportunityTab] =
     useState<OpportunityTab>("cotacoes");
+  const [orcamentos, setOrcamentos] = useState<OrcamentoGroup[]>([]);
+  const [orcamentosLoading, setOrcamentosLoading] = useState(false);
+  const [orcamentosError, setOrcamentosError] = useState<string | null>(null);
   const [protheusSeries, setProtheusSeries] = useState<{
     preventivas: string[];
     reconexoes: string[];
   }>({ preventivas: [], reconexoes: [] });
 
   const opportunities = useMemo(() => {
-    const cotacoes: OpportunityItem[] = [
-      {
-        id: "cotacao-valor",
-        title: t("ui.valor_cot_1m"),
-        detail: formatCurrencyBRL(company?.vlrUltimos3Meses),
-      },
-      {
-        id: "cotacao-qtd",
-        title: t("ui.qtd_cot_1m"),
-        detail: formatQuantity(company?.qtdUltimos3Meses),
-      },
-    ];
-
     const preventivas: OpportunityItem[] = protheusSeries.preventivas.map(
       (serie, index) => ({
         id: `preventiva-${serie}-${index}`,
@@ -102,13 +130,11 @@ export default function CompanyDetail() {
     );
 
     return {
-      cotacoes,
+      cotacoes: [],
       preventivas,
       reconexoes,
     } satisfies Record<OpportunityTab, OpportunityItem[]>;
   }, [
-    company?.qtdUltimos3Meses,
-    company?.vlrUltimos3Meses,
     protheusSeries,
     t,
   ]);
@@ -252,6 +278,97 @@ export default function CompanyDetail() {
     };
   }, [company?.document, supabase]);
 
+  useEffect(() => {
+    let active = true;
+
+    const loadOrcamentos = async () => {
+      const document = normalizeDocument(company?.document);
+      const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
+      if (!document) {
+        setOrcamentos([]);
+        setOrcamentosError(null);
+        setOrcamentosLoading(false);
+        return;
+      }
+
+      if (isOffline) {
+        setOrcamentos([]);
+        setOrcamentosError(t("ui.sem_conexao_e_sem_cache_local"));
+        setOrcamentosLoading(false);
+        return;
+      }
+
+      setOrcamentosLoading(true);
+      setOrcamentosError(null);
+
+      const { data, error: requestError } = await supabase
+        .from("base_csa_orc")
+        .select(
+          [
+            "vs1_numorc",
+            "vs1_filial",
+            "vs1_datorc",
+            "vs1_vtotnf",
+            "status",
+            "consultor_bd",
+            "vs3_codite",
+            "descricao",
+            "vs3_qtdite",
+            "vs3_valtot",
+          ].join(","),
+        )
+        .eq("cnpj", document)
+        .order("vs1_numorc", { ascending: false })
+        .order("vs3_codite", { ascending: true });
+
+      if (!active) return;
+
+      if (requestError) {
+        setOrcamentos([]);
+        setOrcamentosError(requestError.message);
+        setOrcamentosLoading(false);
+        return;
+      }
+
+      const groups = new Map<string, OrcamentoGroup>();
+      (data ?? []).forEach((row, index) => {
+        const numero = parseOrcamentoNumber(row.vs1_numorc);
+        const filial = parseOrcamentoNumber(row.vs1_filial);
+        const key = `${numero ?? "sem"}-${filial ?? "sem"}`;
+        const current =
+          groups.get(key) ??
+          ({
+            id: key,
+            numero,
+            filial,
+            data: parseOrcamentoNumber(row.vs1_datorc),
+            total: parseOrcamentoNumber(row.vs1_vtotnf),
+            status: row.status ?? null,
+            consultor: row.consultor_bd ?? null,
+            itens: [],
+          } satisfies OrcamentoGroup);
+
+        current.itens.push({
+          id: `${key}-${row.vs3_codite ?? "item"}-${index}`,
+          codigo: row.vs3_codite ?? null,
+          descricao: row.descricao ?? null,
+          quantidade: parseOrcamentoNumber(row.vs3_qtdite),
+          valor: parseOrcamentoNumber(row.vs3_valtot),
+        });
+        groups.set(key, current);
+      });
+
+      setOrcamentos(Array.from(groups.values()));
+      setOrcamentosLoading(false);
+    };
+
+    void loadOrcamentos();
+
+    return () => {
+      active = false;
+    };
+  }, [company?.document, supabase, t]);
+
   const orderedAppointments = useMemo(() => {
     if (!id) return [];
     return state.appointments
@@ -308,7 +425,12 @@ export default function CompanyDetail() {
     navigate(`/apontamentos/${appointmentId}`);
   };
 
-  const activeOpportunities = opportunities[opportunityTab];
+  const activeOpportunities =
+    opportunityTab === "cotacoes" ? [] : opportunities[opportunityTab];
+  const opportunityCount =
+    opportunityTab === "cotacoes"
+      ? orcamentos.length
+      : activeOpportunities.length;
 
   if (!id) {
     return (
@@ -565,7 +687,7 @@ export default function CompanyDetail() {
             <SectionHeader
               title={t("ui.oportunidades")}
               rightSlot={t("ui.op_count", {
-                count: activeOpportunities.length,
+                count: opportunityCount,
               })}
             />
 
@@ -617,7 +739,120 @@ export default function CompanyDetail() {
               </div>
             </div>
 
-            {activeOpportunities.length ? (
+            {opportunityTab === "cotacoes" ? (
+              orcamentosLoading ? (
+                <div className="space-y-3">
+                  <div className="h-24 animate-pulse rounded-3xl bg-surface-muted" />
+                  <div className="h-24 animate-pulse rounded-3xl bg-surface-muted" />
+                </div>
+              ) : orcamentosError ? (
+                <EmptyState
+                  title={t("ui.nao_foi_possivel_carregar")}
+                  description={orcamentosError}
+                />
+              ) : orcamentos.length ? (
+                <div className="space-y-3">
+                  {orcamentos.map((orcamento) => {
+                    const dataOrcamento = parseOrcamentoDate(orcamento.data);
+                    return (
+                      <div
+                        key={orcamento.id}
+                        className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm"
+                      >
+                        <div className="space-y-1">
+                          <p className="text-sm font-semibold text-foreground">
+                            {t("ui.orcamento_numero", {
+                              numero: orcamento.numero ?? t("ui.nao_informado"),
+                            })}
+                          </p>
+                          <div className="flex flex-wrap gap-2 text-xs text-foreground-muted">
+                            <span>
+                              {t("ui.filial_value", {
+                                value:
+                                  orcamento.filial ?? t("ui.nao_informado"),
+                              })}
+                            </span>
+                            <span>
+                              {t("ui.status_value", {
+                                value:
+                                  orcamento.status ?? t("ui.nao_informado"),
+                              })}
+                            </span>
+                            <span>
+                              {t("ui.total_value", {
+                                value: formatCurrencyBRL(orcamento.total),
+                              })}
+                            </span>
+                            {dataOrcamento ? (
+                              <span>
+                                {t("ui.data_value", {
+                                  value: formatDateShort(dataOrcamento),
+                                })}
+                              </span>
+                            ) : null}
+                          </div>
+                          {orcamento.consultor ? (
+                            <p className="text-xs text-foreground-soft">
+                              {t("ui.consultor_value", {
+                                value: orcamento.consultor,
+                              })}
+                            </p>
+                          ) : null}
+                        </div>
+
+                        {orcamento.itens.length ? (
+                          <div className="space-y-2">
+                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-foreground-soft">
+                              {t("ui.itens")}
+                            </p>
+                            <div className="space-y-2">
+                              {orcamento.itens.map((item) => (
+                                <div
+                                  key={item.id}
+                                  className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs"
+                                >
+                                  <p className="text-sm font-semibold text-foreground">
+                                    {item.descricao ??
+                                      t("ui.descricao_nao_informada")}
+                                  </p>
+                                  <div className="flex flex-wrap gap-2 text-[11px] text-foreground-soft">
+                                    <span>
+                                      {t("ui.codigo_value", {
+                                        value:
+                                          item.codigo ?? t("ui.nao_informado"),
+                                      })}
+                                    </span>
+                                    <span>
+                                      {t("ui.quantidade_value", {
+                                        value: formatQuantity(item.quantidade),
+                                      })}
+                                    </span>
+                                    <span>
+                                      {t("ui.valor_value", {
+                                        value: formatCurrencyBRL(item.valor),
+                                      })}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-foreground-soft">
+                            {t("ui.nenhum_item_encontrado")}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <EmptyState
+                  title={t("ui.nenhum_orcamento_encontrado")}
+                  description={t("ui.nenhum_orcamento_disponivel_no_momento")}
+                />
+              )
+            ) : activeOpportunities.length ? (
               <div className="space-y-3">
                 {activeOpportunities.map((item) => (
                   <div

@@ -16,8 +16,6 @@ type CompanyRow = {
   classe_cliente?: string | null;
   validacao?: string | null;
   referencia?: string | null;
-  qtd_ultimos_3_meses?: number | string | null;
-  vlr_ultimos_3_meses?: number | string | null;
   created_at?: string | null;
 };
 
@@ -51,10 +49,10 @@ type AppointmentRow = {
 };
 
 export const COMPANY_LIST_SELECT =
-  "id, document, name, state, lat, lng, csa, qtd_ultimos_3_meses, vlr_ultimos_3_meses";
+  "id, document, name, state, lat, lng, csa";
 
 export const COMPANY_DETAIL_SELECT =
-  "id, document, name, state, lat, lng, csa, email_csa, carteira_def, client_class, carteira_def2, classe_cliente, validacao, referencia, qtd_ultimos_3_meses, vlr_ultimos_3_meses, created_at";
+  "id, document, name, state, lat, lng, csa, email_csa, carteira_def, client_class, carteira_def2, classe_cliente, validacao, referencia, created_at";
 
 export const APPOINTMENT_LIST_SELECT =
   "id, company_id, appointment_id, consultant_id, consultant_name, created_by, starts_at, ends_at, status, check_in_at, check_out_at, absence_reason, absence_note, created_at, updated_at";
@@ -64,12 +62,6 @@ export const APPOINTMENT_DETAIL_SELECT =
 
 // Backward compatibility for older imports.
 export const APPOINTMENT_SELECT = APPOINTMENT_DETAIL_SELECT;
-
-const parseNumber = (value?: number | string | null) => {
-  if (value == null) return null;
-  const parsed = Number(value);
-  return Number.isNaN(parsed) ? null : parsed;
-};
 
 export const mapCompany = (row: CompanyRow): Company => ({
   id: row.id,
@@ -86,8 +78,6 @@ export const mapCompany = (row: CompanyRow): Company => ({
   classeCliente: row.classe_cliente ?? null,
   validacao: row.validacao ?? null,
   referencia: row.referencia ?? null,
-  qtdUltimos3Meses: parseNumber(row.qtd_ultimos_3_meses),
-  vlrUltimos3Meses: parseNumber(row.vlr_ultimos_3_meses),
   createdAt: row.created_at ?? null,
 });
 

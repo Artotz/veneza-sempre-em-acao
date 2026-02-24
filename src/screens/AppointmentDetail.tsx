@@ -351,7 +351,7 @@ export default function AppointmentDetail() {
   );
   const [photoStatus, setPhotoStatus] = useState<string | null>(null);
   const [cameraIntent, setCameraIntent] = useState<
-    "checkout" | "registro" | null
+    "checkin" | "registro" | null
   >(null);
   const [mediaItems, setMediaItems] = useState<AppointmentMediaItem[]>([]);
   const [mediaLoading, setMediaLoading] = useState(false);
@@ -878,6 +878,7 @@ export default function AppointmentDetail() {
 
   const syncCheckIn = useCallback(
     async (params: {
+      shot: CapturePhotoResult;
       at: string;
       position: { lat: number; lng: number; accuracy: number } | null;
     }) => {
@@ -890,9 +891,11 @@ export default function AppointmentDetail() {
         });
 
         if (typeof navigator !== "undefined" && !navigator.onLine) {
-          await queuePendingActionOnly({
+          await queuePendingActionWithPhoto({
             actionType: "checkIn",
             changes,
+            kind: "checkin",
+            shot: params.shot,
           });
           return;
         }
@@ -900,10 +903,20 @@ export default function AppointmentDetail() {
         try {
           await updateAppointmentRemote(changes);
         } catch (error) {
-          await queuePendingActionOnly({
+          await queuePendingActionWithPhoto({
             actionType: "checkIn",
             changes,
+            kind: "checkin",
+            shot: params.shot,
           });
+          return;
+        }
+
+        try {
+          await uploadPhotoRemote("checkin", params.shot);
+          await loadMedia();
+        } catch (error) {
+          await queuePendingPhotoOnly({ kind: "checkin", shot: params.shot });
         }
       } catch (error) {
         setSyncStatus(
@@ -915,14 +928,16 @@ export default function AppointmentDetail() {
     },
     [
       buildCheckInRemoteChanges,
-      queuePendingActionOnly,
+      loadMedia,
+      queuePendingActionWithPhoto,
+      queuePendingPhotoOnly,
       updateAppointmentRemote,
+      uploadPhotoRemote,
     ],
   );
 
   const syncCheckOut = useCallback(
     async (params: {
-      shot: CapturePhotoResult;
       at: string;
       position: { lat: number; lng: number; accuracy: number } | null;
       oportunidades: string[];
@@ -939,11 +954,9 @@ export default function AppointmentDetail() {
         });
 
         if (typeof navigator !== "undefined" && !navigator.onLine) {
-          await queuePendingActionWithPhoto({
+          await queuePendingActionOnly({
             actionType: "checkOut",
             changes,
-            kind: "checkout",
-            shot: params.shot,
           });
           return;
         }
@@ -951,20 +964,10 @@ export default function AppointmentDetail() {
         try {
           await updateAppointmentRemote(changes);
         } catch (error) {
-          await queuePendingActionWithPhoto({
+          await queuePendingActionOnly({
             actionType: "checkOut",
             changes,
-            kind: "checkout",
-            shot: params.shot,
           });
-          return;
-        }
-
-        try {
-          await uploadPhotoRemote("checkout", params.shot);
-          await loadMedia();
-        } catch (error) {
-          await queuePendingPhotoOnly({ kind: "checkout", shot: params.shot });
         }
       } catch (error) {
         setSyncStatus(
@@ -974,14 +977,7 @@ export default function AppointmentDetail() {
         );
       }
     },
-    [
-      buildCheckOutRemoteChanges,
-      loadMedia,
-      queuePendingActionWithPhoto,
-      queuePendingPhotoOnly,
-      updateAppointmentRemote,
-      uploadPhotoRemote,
-    ],
+    [buildCheckOutRemoteChanges, queuePendingActionOnly, updateAppointmentRemote],
   );
 
   const syncAbsence = useCallback(
@@ -1173,7 +1169,7 @@ export default function AppointmentDetail() {
   const handleCheckIn = () => {
     if (!canCheckIn || busy || geo.isCapturing || isPhotoBusy) return;
     setError(null);
-    void performCheckIn();
+    setCameraIntent("checkin");
   };
 
   const handleCheckOut = () => {
@@ -1302,8 +1298,7 @@ export default function AppointmentDetail() {
     setPendingCheckoutObservation(
       normalizedObservation.length ? normalizedObservation : null,
     );
-    setIsCheckoutOpen(false);
-    setCameraIntent("checkout");
+    void performCheckOut();
   };
 
   const handleSyncAppointment = async () => {
@@ -1344,7 +1339,7 @@ export default function AppointmentDetail() {
     }
   };
 
-  const performCheckIn = async () => {
+  const performCheckIn = async (shot: CapturePhotoResult) => {
     if (!canCheckIn || busy || geo.isCapturing) return;
     setError(null);
     setSyncStatus(null);
@@ -1374,7 +1369,7 @@ export default function AppointmentDetail() {
       });
       setGeoIntent(null);
       setPhotoStatus(null);
-      void syncCheckIn({ at: now, position });
+      void syncCheckIn({ shot, at: now, position });
     } catch (actionError) {
       setError(
         actionError instanceof Error
@@ -1387,7 +1382,7 @@ export default function AppointmentDetail() {
     }
   };
 
-  const performCheckOut = async (shot: CapturePhotoResult) => {
+  const performCheckOut = async () => {
     if (!canCheckOut || busy || geo.isCapturing) return;
     setError(null);
     setSyncStatus(null);
@@ -1429,7 +1424,6 @@ export default function AppointmentDetail() {
       setPendingCheckoutObservation(null);
       setPhotoStatus(null);
       void syncCheckOut({
-        shot,
         at: now,
         position,
         oportunidades: oportunidades ?? [],
@@ -1477,8 +1471,8 @@ export default function AppointmentDetail() {
     setCameraIntent(null);
     if (!intent) return;
 
-    if (intent === "checkout") {
-      await performCheckOut(shot);
+    if (intent === "checkin") {
+      await performCheckIn(shot);
       return;
     }
 
@@ -1525,7 +1519,7 @@ export default function AppointmentDetail() {
   const handleRetryCheckoutGeo = () => {
     if (!canCheckOut || busy || isCheckoutBusy) return;
     geo.resetError();
-    setCameraIntent("checkout");
+    void performCheckOut();
   };
 
   const handleOpenAbsence = () => {
@@ -1577,8 +1571,8 @@ export default function AppointmentDetail() {
     (appointment.pendingSync && pendingItemBase === 0 ? 1 : 0);
 
   const cameraTitle =
-    cameraIntent === "checkout"
-      ? t("ui.foto_do_check_out")
+    cameraIntent === "checkin"
+      ? t("ui.foto_do_check_in")
       : cameraIntent === "registro"
         ? t("ui.nova_foto")
         : t("ui.capturar_foto");

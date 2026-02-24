@@ -57,8 +57,6 @@ export type Company = {
   classeCliente?: string | null;
   validacao?: string | null;
   referencia?: string | null;
-  qtdUltimos3Meses?: number | null;
-  vlrUltimos3Meses?: number | null;
   createdAt?: string | null;
   segment?: string | null;
 };

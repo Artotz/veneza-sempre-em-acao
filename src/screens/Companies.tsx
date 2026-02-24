@@ -4,7 +4,7 @@ import { AppShell } from "../components/AppShell";
 import { EmptyState } from "../components/EmptyState";
 import { SectionHeader } from "../components/SectionHeader";
 import { useAuth } from "../contexts/useAuth";
-import { formatCurrencyBRL, formatQuantity } from "../lib/format";
+import { formatQuantity } from "../lib/format";
 import {
   buildProtheusCounts,
   buildDocumentVariants,
@@ -28,9 +28,9 @@ export default function Companies() {
   const { user, loading: authLoading } = useAuth();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [query, setQuery] = useState("");
-  const [sortBy, setSortBy] = useState<
-    "valor" | "quantidade" | "preventivas" | "reconexoes"
-  >("valor");
+  const [sortBy, setSortBy] = useState<"preventivas" | "reconexoes">(
+    "preventivas",
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [protheusCounts, setProtheusCounts] = useState<ProtheusCountMap>({});
@@ -180,15 +180,9 @@ export default function Companies() {
   const sortedCompanies = useMemo(() => {
     const items = [...filteredCompanies];
     const getMetric = (company: Company) =>
-      sortBy === "valor"
-        ? (company.vlrUltimos3Meses ?? 0)
-        : sortBy === "quantidade"
-          ? (company.qtdUltimos3Meses ?? 0)
-          : sortBy === "preventivas"
-            ? (protheusCounts[getProtheusKey(company.document)]?.preventivas ??
-                0)
-            : (protheusCounts[getProtheusKey(company.document)]?.reconexoes ??
-                0);
+      sortBy === "preventivas"
+        ? (protheusCounts[getProtheusKey(company.document)]?.preventivas ?? 0)
+        : (protheusCounts[getProtheusKey(company.document)]?.reconexoes ?? 0);
     items.sort((a, b) => {
       const diff = getMetric(b) - getMetric(a);
       if (diff !== 0) return diff;
@@ -221,17 +215,11 @@ export default function Companies() {
             value={sortBy}
             onChange={(event) =>
               setSortBy(
-                event.target.value as
-                  | "valor"
-                  | "quantidade"
-                  | "preventivas"
-                  | "reconexoes",
+                event.target.value as "preventivas" | "reconexoes",
               )
             }
             className="w-full flex-1 rounded-2xl border border-border bg-white px-3 py-2 text-xs font-semibold text-foreground shadow-sm outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
           >
-            <option value="valor">{t("ui.valor_cot_1m")}</option>
-            <option value="quantidade">{t("ui.quantidade_cot_1m")}</option>
             <option value="preventivas">{t("ui.qtd_preventivas")}</option>
             <option value="reconexoes">{t("ui.qtd_reconexoes")}</option>
           </select>
@@ -279,28 +267,18 @@ export default function Companies() {
 
               <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
-                  {sortBy === "valor"
-                    ? t("ui.valor_cot_1m")
-                    : sortBy === "quantidade"
-                      ? t("ui.qtd_cot_1m")
-                      : sortBy === "preventivas"
-                        ? t("ui.qtd_preventivas")
-                        : t("ui.qtd_reconexoes")}
+                  {sortBy === "preventivas"
+                    ? t("ui.qtd_preventivas")
+                    : t("ui.qtd_reconexoes")}
                 </p>
                 <p className="text-sm font-semibold text-foreground">
-                  {sortBy === "valor"
-                    ? formatCurrencyBRL(company.vlrUltimos3Meses)
-                    : sortBy === "quantidade"
-                      ? formatQuantity(company.qtdUltimos3Meses)
-                      : sortBy === "preventivas"
-                        ? formatQuantity(
-                            protheusCounts[getProtheusKey(company.document)]
-                              ?.preventivas ?? 0,
-                          )
-                        : formatQuantity(
-                            protheusCounts[getProtheusKey(company.document)]
-                              ?.reconexoes ?? 0,
-                          )}
+                  {formatQuantity(
+                    sortBy === "preventivas"
+                      ? protheusCounts[getProtheusKey(company.document)]
+                          ?.preventivas ?? 0
+                      : protheusCounts[getProtheusKey(company.document)]
+                          ?.reconexoes ?? 0,
+                  )}
                 </p>
               </div>
 

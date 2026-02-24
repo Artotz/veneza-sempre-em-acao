@@ -58,6 +58,7 @@ export const resources = {
         concluidos: "Concluídos",
         confirmar_check_out: "Confirmar check-out",
         consultor: "Consultor",
+        consultor_value: "Consultor: {{value}}",
 
         criado_por: "Criado por",
         criado_por_name: "Criado por {{name}}",
@@ -256,6 +257,18 @@ export const resources = {
         qtd_cot_1m: "Qtd Cot (1m)",
         quantidade_cot_3m: "Quantidade Cot (3m)",
         quantidade_cot_1m: "Quantidade Cot (1m)",
+        quantidade_value: "Quantidade: {{value}}",
+
+        codigo_value: "CÃ³digo: {{value}}",
+        data_value: "Data: {{value}}",
+        descricao_nao_informada: "DescriÃ§Ã£o nÃ£o informada",
+        filial_value: "Filial: {{value}}",
+        itens: "Itens",
+        nenhum_item_encontrado: "Nenhum item encontrado",
+        nenhum_orcamento_disponivel_no_momento:
+          "Nenhum orÃ§amento disponÃ­vel no momento.",
+        nenhum_orcamento_encontrado: "Nenhum orÃ§amento encontrado",
+        orcamento_numero: "OrÃ§amento {{numero}}",
 
         reconexao: "Reconexão",
         reconexoes: "Reconexões",
@@ -301,6 +314,7 @@ export const resources = {
         sincronizando_apontamento: "Sincronizando apontamento...",
 
         status_e_sugestoes: "Status e sugestões.",
+        status_value: "Status: {{value}}",
         sugestoes: "Sugestões",
 
         tentar_novamente: "Tentar novamente",
@@ -320,6 +334,8 @@ export const resources = {
         validacao_value: "Validação: {{value}}",
         valor_cot_3m: "Valor Cot (3m)",
         valor_cot_1m: "Valor Cot (1m)",
+        valor_value: "Valor: {{value}}",
+        total_value: "Total: {{value}}",
         qtd_preventivas: "Qtd Preventivas",
         qtd_reconexoes: "Qtd Reconexões",
 
