@@ -57,6 +57,7 @@ export const resources = {
         concluido: "Concluído",
         concluidos: "Concluídos",
         confirmar_check_out: "Confirmar check-out",
+        continuar_check_out: "Continuar check-out",
         consultor: "Consultor",
         consultor_value: "Consultor: {{value}}",
 

@@ -1293,12 +1293,13 @@ export default function AppointmentDetail() {
   const handleConfirmCheckout = () => {
     if (!canCheckOut || busy || geo.isCapturing || isPhotoBusy) return;
     setError(null);
-    setPendingCheckoutOpportunities([...checkoutOpportunities]);
+    const oportunidades = [...checkoutOpportunities];
+    setPendingCheckoutOpportunities(oportunidades);
     const normalizedObservation = checkoutObservation.trim();
-    setPendingCheckoutObservation(
-      normalizedObservation.length ? normalizedObservation : null,
-    );
-    void performCheckOut();
+    const notes = normalizedObservation.length ? normalizedObservation : null;
+    setPendingCheckoutObservation(notes);
+    setIsCheckoutOpen(false);
+    void performCheckOut({ oportunidades, notes });
   };
 
   const handleSyncAppointment = async () => {
@@ -1361,12 +1362,27 @@ export default function AppointmentDetail() {
         }
       }
       const now = new Date().toISOString();
-      await actions.checkIn(appointment.id, {
+      setAppointment((current) =>
+        current
+          ? {
+              ...current,
+              checkInAt: now,
+              status: "in_progress",
+              checkInLat: position?.lat ?? null,
+              checkInLng: position?.lng ?? null,
+              checkInAccuracyM: position?.accuracy ?? null,
+            }
+          : current,
+      );
+      const updated = await actions.checkIn(appointment.id, {
         at: now,
         lat: position?.lat ?? null,
         lng: position?.lng ?? null,
         accuracy: position?.accuracy ?? null,
       });
+      if (updated) {
+        setAppointment(updated);
+      }
       setGeoIntent(null);
       setPhotoStatus(null);
       void syncCheckIn({ shot, at: now, position });
@@ -1382,14 +1398,21 @@ export default function AppointmentDetail() {
     }
   };
 
-  const performCheckOut = async () => {
+  const performCheckOut = async (overrides?: {
+    oportunidades: string[];
+    notes: string | null;
+  }) => {
     if (!canCheckOut || busy || geo.isCapturing) return;
     setError(null);
     setSyncStatus(null);
     geo.resetError();
     setGeoIntent("check_out");
-    const oportunidades = pendingCheckoutOpportunities ?? checkoutOpportunities;
-    const observationSource = pendingCheckoutObservation ?? checkoutObservation;
+    const oportunidades =
+      overrides?.oportunidades ??
+      pendingCheckoutOpportunities ??
+      checkoutOpportunities;
+    const observationSource =
+      overrides?.notes ?? pendingCheckoutObservation ?? checkoutObservation;
     const normalizedObservation = observationSource.trim();
     const notes = normalizedObservation.length ? normalizedObservation : null;
     try {
@@ -1408,7 +1431,21 @@ export default function AppointmentDetail() {
         }
       }
       const now = new Date().toISOString();
-      await actions.checkOut(appointment.id, {
+      setAppointment((current) =>
+        current
+          ? {
+              ...current,
+              checkOutAt: now,
+              status: "done",
+              checkOutLat: position?.lat ?? null,
+              checkOutLng: position?.lng ?? null,
+              checkOutAccuracyM: position?.accuracy ?? null,
+              oportunidades: oportunidades ?? [],
+              notes,
+            }
+          : current,
+      );
+      const updated = await actions.checkOut(appointment.id, {
         at: now,
         lat: position?.lat ?? null,
         lng: position?.lng ?? null,
@@ -1416,8 +1453,10 @@ export default function AppointmentDetail() {
         oportunidades: oportunidades ?? [],
         notes,
       });
+      if (updated) {
+        setAppointment(updated);
+      }
       setGeoIntent(null);
-      setIsCheckoutOpen(false);
       setCheckoutOpportunities([]);
       setPendingCheckoutOpportunities(null);
       setCheckoutObservation("");
@@ -2370,7 +2409,7 @@ export default function AppointmentDetail() {
                     : "cursor-not-allowed bg-surface-muted text-foreground-muted"
                 }`}
               >
-                {t("ui.confirmar_check_out")}
+                {t("ui.continuar_check_out")}
               </button>
             </div>
           </div>
