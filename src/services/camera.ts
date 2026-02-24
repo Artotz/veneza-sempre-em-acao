@@ -5,6 +5,7 @@ export type CapturePhotoResult = {
   blob: Blob;
   mimeType: string;
   extension: string;
+  originalName?: string;
 };
 
 const jpegMimeType = "image/jpeg";

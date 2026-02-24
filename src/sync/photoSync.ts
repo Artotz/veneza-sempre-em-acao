@@ -13,6 +13,7 @@ type PendingUpload = {
   id: string;
   mime: string;
   size: number;
+  originalName?: string;
   kind?: string;
   consultantId?: string;
   apontamentoId?: string;
@@ -58,6 +59,7 @@ export const flushUploads = async (): Promise<void> => {
         kind,
         blob,
         mimeType: item.mime || blob.type || "image/jpeg",
+        originalName: item.originalName,
       });
 
       const { error: insertError } = await supabase

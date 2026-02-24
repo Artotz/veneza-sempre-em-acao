@@ -30,8 +30,8 @@ import { useLockBodyScroll } from "../hooks/useLockBodyScroll";
 import { useSchedule } from "../state/useSchedule";
 import { useAuth } from "../contexts/useAuth";
 import {
-  APPOINTMENT_SELECT,
-  COMPANY_SELECT,
+  APPOINTMENT_DETAIL_SELECT,
+  COMPANY_DETAIL_SELECT,
   mapAppointment,
   mapCompany,
 } from "../lib/supabase";
@@ -104,6 +104,7 @@ type AppointmentMediaItem = {
   bytes: number;
   createdAt?: string | null;
   signedUrl: string | null;
+  fileName?: string | null;
 };
 
 type OfflinePhotoPreview = OfflinePhotoMeta & {
@@ -140,6 +141,13 @@ const isImageMime = (mimeType?: string | null) =>
 
 const isSupportedMime = (mimeType: string) =>
   mimeType.startsWith("image/") || ACCEPTED_FILE_TYPES.includes(mimeType);
+
+const filenameFromPath = (path?: string | null) => {
+  if (!path) return null;
+  const parts = path.split("/");
+  const last = parts[parts.length - 1]?.trim();
+  return last || null;
+};
 
 const mimeToExtension = (mimeType: string) => {
   const normalized = mimeType.toLowerCase();
@@ -310,14 +318,14 @@ export default function AppointmentDetail() {
   const loadDetail = useCallback(async () => {
     if (!id) return;
     if (authLoading) return;
-    if (appointmentFromState) {
+    const hasLocal = Boolean(appointmentFromState);
+    if (hasLocal) {
       setError(null);
-      setAppointment(appointmentFromState);
+      setAppointment(appointmentFromState ?? null);
       if (companyFromState) {
         setCompany(companyFromState);
       }
       setLoading(false);
-      return;
     }
     if (state.loading) {
       return;
@@ -333,24 +341,30 @@ export default function AppointmentDetail() {
       setLoading(false);
       return;
     }
-    setLoading(true);
+    if (!hasLocal) {
+      setLoading(true);
+    }
     setError(null);
     const { data, error: requestError } = await supabase
       .from("apontamentos")
-      .select(`${APPOINTMENT_SELECT}, companies(${COMPANY_SELECT})`)
+      .select(`${APPOINTMENT_DETAIL_SELECT}, companies(${COMPANY_DETAIL_SELECT})`)
       .eq("id", id)
       .eq("consultant_name", userEmail)
       .maybeSingle();
 
     if (requestError) {
-      setError(requestError.message);
-      setLoading(false);
+      if (!hasLocal) {
+        setError(requestError.message);
+        setLoading(false);
+      }
       return;
     }
 
     if (!data) {
-      setError(t("ui.agendamento_nao_encontrado_2"));
-      setLoading(false);
+      if (!hasLocal) {
+        setError(t("ui.agendamento_nao_encontrado_2"));
+        setLoading(false);
+      }
       return;
     }
 
@@ -418,6 +432,7 @@ export default function AppointmentDetail() {
           bytes: item.bytes ?? 0,
           createdAt: item.created_at ?? null,
           signedUrl: signedError ? null : (signedData?.signedUrl ?? null),
+          fileName: filenameFromPath(item.path),
         } as AppointmentMediaItem;
       }),
     );
@@ -554,6 +569,7 @@ export default function AppointmentDetail() {
         apontamentoId: appointment.id,
         kind,
         consultantId,
+        originalName: shot.originalName,
       });
 
       await loadPendingPhotos();
@@ -656,6 +672,7 @@ export default function AppointmentDetail() {
         kind,
         blob: shot.blob,
         mimeType: shot.mimeType,
+        originalName: shot.originalName,
       });
 
       const { error: insertError } = await supabase
@@ -732,6 +749,7 @@ export default function AppointmentDetail() {
           apontamentoId: appointment.id,
           kind: params.kind,
           consultantId,
+          originalName: params.shot.originalName,
         });
       } catch (error) {
         await removePendingAction(pendingAction.id);
@@ -1143,6 +1161,7 @@ export default function AppointmentDetail() {
           blob,
           mimeType: blob.type || normalizedMime,
           extension: mimeToExtension(blob.type || normalizedMime),
+          originalName: file.name,
         };
         await performRegistroUpload(shot);
       } catch (error) {
@@ -1863,6 +1882,7 @@ export default function AppointmentDetail() {
                 {pendingPhotos.map((item) => {
                   const isRegistro = item.kind === "registro";
                   const isImage = isImageMime(item.mime);
+                  const pendingFileName = item.originalName ?? null;
                   const kindLabel = isRegistro
                     ? (() => {
                         pendingRegistroIndex += 1;
@@ -1887,9 +1907,9 @@ export default function AppointmentDetail() {
                           className="h-28 w-full object-cover"
                         />
                       ) : (
-                        <div className="flex h-28 flex-col items-center justify-center gap-1 text-[10px] text-foreground-soft">
-                          <span className="text-[11px] font-semibold text-foreground">
-                            {t("ui.arquivo")}
+                        <div className="flex h-28 flex-col items-center justify-center gap-1 px-2 text-[10px] text-foreground-soft">
+                          <span className="text-[11px] font-semibold text-foreground text-center break-words">
+                            {pendingFileName ?? t("ui.arquivo")}
                           </span>
                           <span>{t("ui.sem_preview")}</span>
                         </div>
@@ -1931,13 +1951,10 @@ export default function AppointmentDetail() {
                             href={item.signedUrl}
                             target="_blank"
                             rel="noreferrer"
-                            className="flex h-28 flex-col items-center justify-center gap-1 text-[10px] text-foreground-soft"
+                            className="flex h-28 flex-col items-center justify-center gap-1 px-2 text-[10px] text-foreground-soft"
                           >
-                            <span className="text-[11px] font-semibold text-foreground">
-                              {t("ui.arquivo")}
-                            </span>
-                            <span className="font-semibold text-info">
-                              {t("ui.abrir_arquivo")}
+                            <span className="text-[11px] font-semibold text-foreground text-center break-words">
+                              {item.fileName ?? t("ui.arquivo")}
                             </span>
                           </a>
                         )

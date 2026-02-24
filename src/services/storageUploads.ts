@@ -8,6 +8,7 @@ type UploadArgs = {
   kind: UploadKind;
   blob: Blob;
   mimeType: string;
+  originalName?: string;
 };
 
 export type UploadResult = {
@@ -46,13 +47,35 @@ const extensionForMime = (mimeType: string) => {
   return mapping[normalized] ?? "bin";
 };
 
+const sanitizeFilename = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  return trimmed.replace(/[\\/]/g, "_");
+};
+
+const ensureExtension = (filename: string, extension: string) => {
+  if (!filename) return filename;
+  if (filename.includes(".")) return filename;
+  return `${filename}.${extension}`;
+};
+
 export const uploadApontamentoImage = async (
   args: UploadArgs
 ): Promise<UploadResult> => {
   const supabase = createSupabaseBrowserClient();
   const bucket = "apontamentos";
-  const filename = `${generateUuid()}.${extensionForMime(args.mimeType)}`;
-  const path = `consultants/${args.consultantId}/apontamentos/${args.apontamentoId}/${args.kind}/${filename}`;
+  const extension = extensionForMime(args.mimeType);
+  const sanitizedOriginal = args.originalName
+    ? sanitizeFilename(args.originalName)
+    : "";
+  const filename = sanitizedOriginal
+    ? ensureExtension(sanitizedOriginal, extension)
+    : `${generateUuid()}.${extension}`;
+  const uniqueFolder = sanitizedOriginal ? generateUuid() : null;
+  const basePath = `consultants/${args.consultantId}/apontamentos/${args.apontamentoId}/${args.kind}`;
+  const path = uniqueFolder
+    ? `${basePath}/${uniqueFolder}/${filename}`
+    : `${basePath}/${filename}`;
 
   const { error } = await supabase.storage
     .from(bucket)

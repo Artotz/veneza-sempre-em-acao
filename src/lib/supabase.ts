@@ -50,11 +50,20 @@ type AppointmentRow = {
   appointments?: { title?: string | null } | { title?: string | null }[] | null;
 };
 
-export const COMPANY_SELECT =
+export const COMPANY_LIST_SELECT =
+  "id, document, name, state, lat, lng, csa, qtd_ultimos_3_meses, vlr_ultimos_3_meses";
+
+export const COMPANY_DETAIL_SELECT =
   "id, document, name, state, lat, lng, csa, email_csa, carteira_def, client_class, carteira_def2, classe_cliente, validacao, referencia, qtd_ultimos_3_meses, vlr_ultimos_3_meses, created_at";
 
-export const APPOINTMENT_SELECT =
+export const APPOINTMENT_LIST_SELECT =
+  "id, company_id, appointment_id, consultant_id, consultant_name, created_by, starts_at, ends_at, status, check_in_at, check_out_at, absence_reason, absence_note, created_at, updated_at";
+
+export const APPOINTMENT_DETAIL_SELECT =
   "id, company_id, appointment_id, consultant_id, consultant_name, created_by, starts_at, ends_at, status, check_in_at, check_out_at, check_in_lat, check_in_lng, check_in_accuracy_m, check_out_lat, check_out_lng, check_out_accuracy_m, address_snapshot, absence_reason, absence_note, notes, oportunidades, created_at, updated_at";
+
+// Backward compatibility for older imports.
+export const APPOINTMENT_SELECT = APPOINTMENT_DETAIL_SELECT;
 
 const parseNumber = (value?: number | string | null) => {
   if (value == null) return null;

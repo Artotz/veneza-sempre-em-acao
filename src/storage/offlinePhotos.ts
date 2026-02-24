@@ -12,6 +12,7 @@ export type OfflinePhotoMeta = {
   size: number;
   uploaded: boolean;
   remotePath?: string;
+  originalName?: string;
   entityRef?: string;
   kind?: string;
   consultantId?: string;
@@ -19,7 +20,10 @@ export type OfflinePhotoMeta = {
 };
 
 export type OfflinePhotoMetaExtras = Partial<
-  Pick<OfflinePhotoMeta, "entityRef" | "kind" | "consultantId" | "apontamentoId">
+  Pick<
+    OfflinePhotoMeta,
+    "entityRef" | "kind" | "consultantId" | "apontamentoId" | "originalName"
+  >
 > &
   Record<string, unknown>;
 

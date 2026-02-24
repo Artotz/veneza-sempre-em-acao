@@ -14,7 +14,7 @@ import {
   type ProtheusCountMap,
 } from "../lib/protheus";
 import { createSupabaseBrowserClient } from "../lib/supabaseClient";
-import { COMPANY_SELECT, mapCompany } from "../lib/supabase";
+import { COMPANY_LIST_SELECT, mapCompany } from "../lib/supabase";
 import type { Company } from "../lib/types";
 import {
   getCompaniesSnapshot,
@@ -47,13 +47,11 @@ export default function Companies() {
 
   useEffect(() => {
     let active = true;
-    let handle: ReturnType<typeof setTimeout> | undefined;
 
     if (authLoading) {
       setLoading(true);
       return () => {
         active = false;
-        if (handle) clearTimeout(handle);
       };
     }
 
@@ -64,73 +62,62 @@ export default function Companies() {
       setLoading(false);
       return () => {
         active = false;
-        if (handle) clearTimeout(handle);
       };
     }
 
-    handle = setTimeout(
-      async () => {
-        setLoading(true);
-        setError(null);
-        const trimmed = query.trim();
-        const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
+    const loadCompanies = async () => {
+      setLoading(true);
+      setError(null);
+      const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
 
-        if (isOffline) {
-          const cached = await getCompaniesSnapshot(userEmail);
-          if (!active) return;
-          if (!cached) {
-            setCompanies([]);
-            setError(t("ui.sem_conexao_e_sem_cache_local"));
-            setLoading(false);
-            return;
-          }
-          setCompanies(filterCompanies(cached.companies, trimmed));
-          setLoading(false);
-          return;
-        }
-        let request = supabase
-          .from("companies")
-          .select(COMPANY_SELECT)
-          .eq("email_csa", userEmail)
-          .order("name", { ascending: true });
-
-        if (trimmed.length) {
-          request = request.or(
-            `name.ilike.%${trimmed}%,document.ilike.%${trimmed}%`,
-          );
-        }
-
-        const { data, error: requestError } = await request;
-
+      if (isOffline) {
+        const cached = await getCompaniesSnapshot(userEmail);
         if (!active) return;
-
-        if (requestError) {
-          const cached = await getCompaniesSnapshot(userEmail);
-          if (!active) return;
-          if (cached) {
-            setCompanies(filterCompanies(cached.companies, trimmed));
-            setLoading(false);
-            return;
-          }
-          setError(requestError.message);
+        if (!cached) {
           setCompanies([]);
+          setError(t("ui.sem_conexao_e_sem_cache_local"));
           setLoading(false);
           return;
         }
-
-        const mapped = (data ?? []).map(mapCompany);
-        setCompanies(filterCompanies(mapped, trimmed));
-        await saveCompaniesSnapshot(userEmail, mapped);
+        setCompanies(cached.companies);
         setLoading(false);
-      },
-      query.trim().length ? 300 : 0,
-    );
+        return;
+      }
+
+      const { data, error: requestError } = await supabase
+        .from("companies")
+        .select(COMPANY_LIST_SELECT)
+        .eq("email_csa", userEmail)
+        .order("name", { ascending: true });
+
+      if (!active) return;
+
+      if (requestError) {
+        const cached = await getCompaniesSnapshot(userEmail);
+        if (!active) return;
+        if (cached) {
+          setCompanies(cached.companies);
+          setLoading(false);
+          return;
+        }
+        setError(requestError.message);
+        setCompanies([]);
+        setLoading(false);
+        return;
+      }
+
+      const mapped = (data ?? []).map(mapCompany);
+      setCompanies(mapped);
+      await saveCompaniesSnapshot(userEmail, mapped);
+      setLoading(false);
+    };
+
+    void loadCompanies();
 
     return () => {
       active = false;
-      if (handle) clearTimeout(handle);
     };
-  }, [authLoading, query, supabase, user?.email]);
+  }, [authLoading, supabase, user?.email]);
 
   useEffect(() => {
     let active = true;
@@ -185,8 +172,13 @@ export default function Companies() {
     };
   }, [companies, supabase]);
 
+  const filteredCompanies = useMemo(
+    () => filterCompanies(companies, query),
+    [companies, query],
+  );
+
   const sortedCompanies = useMemo(() => {
-    const items = [...companies];
+    const items = [...filteredCompanies];
     const getMetric = (company: Company) =>
       sortBy === "valor"
         ? (company.vlrUltimos3Meses ?? 0)
@@ -203,7 +195,7 @@ export default function Companies() {
       return (a.name ?? "").localeCompare(b.name ?? "", "pt-BR");
     });
     return items;
-  }, [companies, protheusCounts, sortBy]);
+  }, [filteredCompanies, protheusCounts, sortBy]);
 
   return (
     <AppShell

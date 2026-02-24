@@ -154,6 +154,7 @@ export const resources = {
         fotos: "Registros",
         arquivo: "Arquivo",
         abrir_arquivo: "Abrir arquivo",
+        nome_arquivo: "Nome do arquivo",
 
         garantia_basica: "Garantia básica",
         garantia_estendida: "Garantia estendida",

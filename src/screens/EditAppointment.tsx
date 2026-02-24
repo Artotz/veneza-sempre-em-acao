@@ -13,8 +13,8 @@ import { useAuth } from "../contexts/useAuth";
 import { useSchedule } from "../state/useSchedule";
 import { createSupabaseBrowserClient } from "../lib/supabaseClient";
 import {
-  APPOINTMENT_SELECT,
-  COMPANY_SELECT,
+  APPOINTMENT_DETAIL_SELECT,
+  COMPANY_DETAIL_SELECT,
   mapAppointment,
   mapCompany,
 } from "../lib/supabase";
@@ -125,7 +125,7 @@ export default function EditAppointment() {
     setError(null);
     const { data, error: requestError } = await supabase
       .from("apontamentos")
-      .select(`${APPOINTMENT_SELECT}, companies(${COMPANY_SELECT})`)
+      .select(`${APPOINTMENT_DETAIL_SELECT}, companies(${COMPANY_DETAIL_SELECT})`)
       .eq("id", id)
       .eq("consultant_name", userEmail)
       .maybeSingle();

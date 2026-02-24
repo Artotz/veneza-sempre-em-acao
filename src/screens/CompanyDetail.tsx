@@ -17,7 +17,7 @@ import {
   isSuggested,
   sortByStart,
 } from "../lib/schedule";
-import { COMPANY_SELECT, mapCompany } from "../lib/supabase";
+import { COMPANY_DETAIL_SELECT, mapCompany } from "../lib/supabase";
 import { createSupabaseBrowserClient } from "../lib/supabaseClient";
 import type { Appointment, AppointmentStatus, Company } from "../lib/types";
 import { useSchedule } from "../state/useSchedule";
@@ -175,7 +175,7 @@ export default function CompanyDetail() {
 
       const { data, error: requestError } = await supabase
         .from("companies")
-        .select(COMPANY_SELECT)
+        .select(COMPANY_DETAIL_SELECT)
         .eq("id", id)
         .eq("email_csa", userEmail)
         .maybeSingle();

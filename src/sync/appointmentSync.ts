@@ -1,7 +1,6 @@
 import { createSupabaseBrowserClient } from "../lib/supabaseClient";
-import { APPOINTMENT_SELECT, mapAppointment } from "../lib/supabase";
-import { uploadApontamentoImage } from "../services/storageUploads";
 import { t } from "../i18n";
+import { uploadApontamentoImage } from "../services/storageUploads";
 import {
   getPhotoBlob,
   listPendingPhotos,
@@ -57,19 +56,18 @@ export const syncAppointment = async (
         status: pendingAppointment.status ?? "scheduled",
         address_snapshot: pendingAppointment.addressSnapshot ?? null,
       })
-      .select(APPOINTMENT_SELECT)
+      .select("id")
       .single();
 
     if (error) {
       throw new Error(error.message);
     }
 
-    const mapped = data ? mapAppointment(data) : null;
-    if (!mapped) {
+    if (!data?.id) {
       throw new Error(t("ui.nao_foi_possivel_criar_o_apontamento"));
     }
 
-    const newId = mapped.id;
+    const newId = data.id;
     await rebindPendingActions(appointmentId, newId);
     await rebindOfflinePhotos(appointmentId, newId);
     await removePendingAppointment(appointmentId);
@@ -136,6 +134,7 @@ export const syncAppointment = async (
         kind,
         blob,
         mimeType: item.mime || blob.type || "image/jpeg",
+        originalName: item.originalName,
       });
 
       const { error: insertError } = await supabase

@@ -9,8 +9,8 @@ import type { Appointment } from "../lib/types";
 import { isSameDay } from "../lib/date";
 import { createSupabaseBrowserClient } from "../lib/supabaseClient";
 import {
-  APPOINTMENT_SELECT,
-  COMPANY_SELECT,
+  APPOINTMENT_LIST_SELECT,
+  COMPANY_LIST_SELECT,
   mapAppointment,
   mapCompany,
 } from "../lib/supabase";
@@ -401,13 +401,13 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
       try {
         const companiesPromise = supabase
           .from("companies")
-          .select(COMPANY_SELECT)
+          .select(COMPANY_LIST_SELECT)
           .eq("email_csa", userEmail)
           .order("name", { ascending: true });
 
         let appointmentsQuery = supabase
           .from("apontamentos")
-          .select(`${APPOINTMENT_SELECT}, companies(name)`)
+          .select(`${APPOINTMENT_LIST_SELECT}, companies(name)`)
           .gte("starts_at", range.startAt)
           .lte("starts_at", range.endAt)
           .order("starts_at", { ascending: true });

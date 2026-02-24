@@ -6,7 +6,7 @@ import { SectionHeader } from "../components/SectionHeader";
 import { useAuth } from "../contexts/useAuth";
 import { useSchedule } from "../state/useSchedule";
 import { createSupabaseBrowserClient } from "../lib/supabaseClient";
-import { COMPANY_SELECT, mapCompany } from "../lib/supabase";
+import { COMPANY_LIST_SELECT, mapCompany } from "../lib/supabase";
 import type { Company } from "../lib/types";
 import {
   getCompaniesSnapshot,
@@ -102,7 +102,7 @@ export default function NewAppointment() {
 
       const { data, error: companyError } = await supabase
         .from("companies")
-        .select(COMPANY_SELECT)
+        .select(COMPANY_LIST_SELECT)
         .eq("email_csa", userEmail)
         .order("name", { ascending: true });
 
