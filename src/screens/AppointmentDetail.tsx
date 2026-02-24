@@ -49,6 +49,7 @@ import {
   listPendingActions,
   removePendingAction,
   savePendingAction,
+  type PendingScheduleAction,
 } from "../storage/offlineSchedule";
 import { syncAppointment } from "../sync/appointmentSync";
 import { compressImage } from "../utils/photoCompress";
@@ -241,6 +242,89 @@ const formatMapDateTimeLabel = (value?: string | null) => {
   return `${formatDateShort(parsed)} - ${formatTime(parsed)}`;
 };
 
+const toStringValue = (value: unknown) =>
+  typeof value === "string" ? value : null;
+
+const toNumberValue = (value: unknown) =>
+  typeof value === "number" && Number.isFinite(value) ? value : null;
+
+const applyPendingActionsToAppointment = (
+  appointment: Appointment,
+  pendingActions: PendingScheduleAction[],
+) => {
+  if (!pendingActions.length) return appointment;
+  const sorted = [...pendingActions].sort((a, b) => a.createdAt - b.createdAt);
+  const next = sorted.reduce<Appointment>((current, action) => {
+    const changes = action.changes ?? {};
+    if (action.actionType === "reschedule") {
+      const startAt =
+        toStringValue(changes.starts_at) ??
+        toStringValue(changes.startAt) ??
+        current.startAt;
+      const endAt =
+        toStringValue(changes.ends_at) ??
+        toStringValue(changes.endAt) ??
+        current.endAt;
+      return {
+        ...current,
+        startAt,
+        endAt,
+      };
+    }
+    if (action.actionType === "checkIn") {
+      return {
+        ...current,
+        status:
+          (toStringValue(changes.status) as Appointment["status"]) ??
+          "in_progress",
+        checkInAt: toStringValue(changes.check_in_at) ?? current.checkInAt,
+        checkInLat:
+          toNumberValue(changes.check_in_lat) ?? current.checkInLat ?? null,
+        checkInLng:
+          toNumberValue(changes.check_in_lng) ?? current.checkInLng ?? null,
+        checkInAccuracyM:
+          toNumberValue(changes.check_in_accuracy_m) ??
+          current.checkInAccuracyM ??
+          null,
+      };
+    }
+    if (action.actionType === "checkOut") {
+      const hasNotes = Object.prototype.hasOwnProperty.call(changes, "notes");
+      return {
+        ...current,
+        status:
+          (toStringValue(changes.status) as Appointment["status"]) ?? "done",
+        checkOutAt: toStringValue(changes.check_out_at) ?? current.checkOutAt,
+        checkOutLat:
+          toNumberValue(changes.check_out_lat) ?? current.checkOutLat ?? null,
+        checkOutLng:
+          toNumberValue(changes.check_out_lng) ?? current.checkOutLng ?? null,
+        checkOutAccuracyM:
+          toNumberValue(changes.check_out_accuracy_m) ??
+          current.checkOutAccuracyM ??
+          null,
+        notes: hasNotes ? toStringValue(changes.notes) : current.notes ?? null,
+        oportunidades: Array.isArray(changes.oportunidades)
+          ? (changes.oportunidades as string[])
+          : current.oportunidades,
+      };
+    }
+    return {
+      ...current,
+      status:
+        (toStringValue(changes.status) as Appointment["status"]) ?? "absent",
+      absenceReason:
+        toStringValue(changes.absence_reason) ?? current.absenceReason,
+      absenceNote: toStringValue(changes.absence_note) ?? current.absenceNote,
+    };
+  }, appointment);
+
+  return {
+    ...next,
+    pendingSync: true,
+  };
+};
+
 export default function AppointmentDetail() {
   const { id } = useParams();
   const { state, selectors, actions } = useSchedule();
@@ -374,10 +458,22 @@ export default function AppointmentDetail() {
       : data.companies;
     const mappedCompany = rawCompany ? mapCompany(rawCompany) : null;
 
-    setAppointment(mappedAppointment);
+    let resolvedAppointment = mappedAppointment;
+    const pendingActions = await listPendingActions(userEmail);
+    const scopedActions = pendingActions.filter(
+      (item) => item.appointmentId === mappedAppointment.id,
+    );
+    if (scopedActions.length) {
+      resolvedAppointment = applyPendingActionsToAppointment(
+        mappedAppointment,
+        scopedActions,
+      );
+    }
+
+    setAppointment(resolvedAppointment);
     setCompany(mappedCompany);
-    setAbsenceReason(mappedAppointment.absenceReason ?? "");
-    setAbsenceNote(mappedAppointment.absenceNote ?? "");
+    setAbsenceReason(resolvedAppointment.absenceReason ?? "");
+    setAbsenceNote(resolvedAppointment.absenceNote ?? "");
     setLoading(false);
   }, [
     appointmentFromState,
