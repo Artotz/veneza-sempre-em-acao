@@ -6,7 +6,7 @@ import { EmptyState } from "../components/EmptyState";
 import { StatusFilters } from "../components/StatusFilters";
 import { t } from "../i18n";
 import { useAuth } from "../contexts/useAuth";
-import { isSameDay, formatDateShort } from "../lib/date";
+import { addDays, formatDateShort, isSameDay, startOfWeekMonday } from "../lib/date";
 import {
   formatAppointmentWindow,
   getAppointmentStatus,
@@ -29,10 +29,11 @@ const formatDuration = (valueMs: number) => {
 };
 
 export default function Home() {
-  const { state, selectors } = useSchedule();
+  const { state, selectors, actions } = useSchedule();
   const { user } = useAuth();
   const [now, setNow] = useState(() => new Date());
   const navigate = useNavigate();
+  const today = useMemo(() => new Date(), []);
   const [statusFilters, setStatusFilters] = useState<
     ReturnType<typeof getAppointmentStatus>[]
   >(() => ["agendado"]);
@@ -42,6 +43,12 @@ export default function Home() {
     const interval = window.setInterval(() => setNow(new Date()), 1000);
     return () => window.clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    const startAt = startOfWeekMonday(today);
+    const endAt = addDays(startAt, 6);
+    actions.setRange({ startAt, endAt });
+  }, [actions, today]);
 
   const todayAppointments = useMemo(() => {
     return state.appointments

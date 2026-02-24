@@ -17,7 +17,13 @@ import { CameraCaptureModal } from "../components/CameraCaptureModal";
 import { EmptyState } from "../components/EmptyState";
 import { SectionHeader } from "../components/SectionHeader";
 import { StatusBadge } from "../components/StatusBadge";
-import { formatDateShort, formatTime, isSameDay } from "../lib/date";
+import {
+  addDays,
+  formatDateShort,
+  formatTime,
+  isSameDay,
+  startOfWeekMonday,
+} from "../lib/date";
 import {
   formatAppointmentWindow,
   getAppointmentStatus,
@@ -398,6 +404,14 @@ export default function AppointmentDetail() {
       setCompany(companyFromState);
     }
   }, [appointmentFromState, companyFromState]);
+
+  useEffect(() => {
+    if (!appointment?.startAt) return;
+    const baseDate = new Date(appointment.startAt);
+    const startAt = startOfWeekMonday(baseDate);
+    const endAt = addDays(startAt, 6);
+    actions.setRange({ startAt, endAt });
+  }, [actions, appointment?.startAt]);
 
   const loadDetail = useCallback(async () => {
     if (!id) return;
@@ -876,6 +890,47 @@ export default function AppointmentDetail() {
     [actions, appointment, storeOfflinePhoto],
   );
 
+  const createPendingAction = useCallback(
+    async (params: {
+      actionType: "checkIn" | "checkOut" | "absence";
+      changes: Record<string, unknown>;
+    }) => {
+      if (!appointment) {
+        throw new Error(t("ui.agendamento_nao_encontrado_2"));
+      }
+      const userEmail = user?.email?.trim();
+      if (!userEmail) {
+        throw new Error(t("ui.usuario_nao_autenticado"));
+      }
+      const pendingAction = await savePendingAction({
+        userEmail,
+        appointmentId: appointment.id,
+        actionType: params.actionType,
+        changes: params.changes,
+      });
+      actions.setPendingSync(appointment.id, true);
+      await loadPendingActions();
+      return pendingAction;
+    },
+    [actions, appointment, loadPendingActions, user?.email],
+  );
+
+  const clearPendingAction = useCallback(
+    async (id: string) => {
+      if (!appointment) return;
+      const userEmail = user?.email?.trim();
+      if (!userEmail) return;
+      await removePendingAction(id);
+      const pending = await listPendingActions(userEmail);
+      const stillPending = pending.some(
+        (item) => item.appointmentId === appointment.id,
+      );
+      actions.setPendingSync(appointment.id, stillPending);
+      await loadPendingActions();
+    },
+    [actions, appointment, loadPendingActions, user?.email],
+  );
+
   const syncCheckIn = useCallback(
     async (params: {
       shot: CapturePhotoResult;
@@ -900,17 +955,19 @@ export default function AppointmentDetail() {
           return;
         }
 
+        const pendingAction = await createPendingAction({
+          actionType: "checkIn",
+          changes,
+        });
+
         try {
           await updateAppointmentRemote(changes);
         } catch (error) {
-          await queuePendingActionWithPhoto({
-            actionType: "checkIn",
-            changes,
-            kind: "checkin",
-            shot: params.shot,
-          });
+          await queuePendingPhotoOnly({ kind: "checkin", shot: params.shot });
           return;
         }
+
+        await clearPendingAction(pendingAction.id);
 
         try {
           await uploadPhotoRemote("checkin", params.shot);
@@ -928,6 +985,8 @@ export default function AppointmentDetail() {
     },
     [
       buildCheckInRemoteChanges,
+      clearPendingAction,
+      createPendingAction,
       loadMedia,
       queuePendingActionWithPhoto,
       queuePendingPhotoOnly,
@@ -961,14 +1020,18 @@ export default function AppointmentDetail() {
           return;
         }
 
+        const pendingAction = await createPendingAction({
+          actionType: "checkOut",
+          changes,
+        });
+
         try {
           await updateAppointmentRemote(changes);
         } catch (error) {
-          await queuePendingActionOnly({
-            actionType: "checkOut",
-            changes,
-          });
+          return;
         }
+
+        await clearPendingAction(pendingAction.id);
       } catch (error) {
         setSyncStatus(
           error instanceof Error
@@ -977,7 +1040,13 @@ export default function AppointmentDetail() {
         );
       }
     },
-    [buildCheckOutRemoteChanges, queuePendingActionOnly, updateAppointmentRemote],
+    [
+      buildCheckOutRemoteChanges,
+      clearPendingAction,
+      createPendingAction,
+      queuePendingActionOnly,
+      updateAppointmentRemote,
+    ],
   );
 
   const syncAbsence = useCallback(
@@ -1129,7 +1198,8 @@ export default function AppointmentDetail() {
     !blocked &&
     isTodayAppointment &&
     (appointment.status ?? "scheduled") === "in_progress";
-  const canAbsence = status === "agendado" || status === "expirado";
+  const canAbsence =
+    status === "agendado" || status === "expirado" || status === "em_execucao";
   const canEditVisit = status === "agendado";
   const showAddPhoto = status === "em_execucao" || status === "concluido";
   const showEditVisit = status !== "em_execucao";
