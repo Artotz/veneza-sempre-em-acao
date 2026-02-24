@@ -39,7 +39,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading: true,
       }));
 
-      if (session?.access_token && !didValidateUserRef.current) {
+      const isOnline =
+        typeof navigator === "undefined" ? true : navigator.onLine;
+
+      if (session?.access_token && !didValidateUserRef.current && isOnline) {
         didValidateUserRef.current = true;
         const {
           data: { user },
@@ -50,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         setState((prev) => ({
           ...prev,
-          user: user ?? null,
+          user: user ?? prev.user ?? session?.user ?? null,
           error: userError?.message ?? prev.error ?? null,
           loading: false,
         }));
