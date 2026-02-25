@@ -68,20 +68,15 @@ export const resources = {
         cronograma: "Cronograma",
         home: "Home",
         home_next_appointment_in:
-          "Seu pr\u00f3ximo agendamento de hoje \u00e9 em {{time}}.",
+          "Seu próximo agendamento de hoje é em {{time}}.",
         home_next_appointment_late_by:
-          "Seu pr\u00f3ximo agendamento era há {{time}}.",
-        home_in_appointment_for:
-          "Voc\u00ea est\u00e1 em um agendamento h\u00e1 {{time}}.",
-        home_in_appointment_since: "Voc\u00ea est\u00e1 em um agendamento há:",
-        home_next_appointment_in_label:
-          "Seu pr\u00f3ximo agendamento de hoje \u00e9 em:",
-        home_next_appointment_late_by_label:
-          "Seu pr\u00f3ximo agendamento era há:",
-        home_in_appointment_now:
-          "Voc\u00ea est\u00e1 em um agendamento \u2014 {{time}}.",
-        home_no_more_appointments_today:
-          "Voc\u00ea n\u00e3o tem mais agendamentos hoje.",
+          "Seu próximo agendamento era há {{time}}.",
+        home_in_appointment_for: "Você está em um agendamento há {{time}}.",
+        home_in_appointment_since: "Você está em um agendamento há:",
+        home_next_appointment_in_label: "Seu próximo agendamento de hoje é em:",
+        home_next_appointment_late_by_label: "Seu próximo agendamento era há:",
+        home_in_appointment_now: "Você está em um agendamento — {{time}}.",
+        home_no_more_appointments_today: "Você não tem mais agendamentos hoje.",
         seus_outros_agendamentos_de_hoje: "Seus agendamentos de hoje",
         calendario: "Calendário",
         agenda: "Agenda",
@@ -199,11 +194,9 @@ export const resources = {
         nao_foi_possivel_gerar_a_foto: "Não foi possível gerar a foto.",
         nao_foi_possivel_iniciar_a_camera: "Não foi possível iniciar a câmera.",
         nao_foi_possivel_salvar_a_foto: "Não foi possível salvar a foto.",
-        formato_de_arquivo_nao_suportado:
-          "Formato de arquivo não suportado.",
+        formato_de_arquivo_nao_suportado: "Formato de arquivo não suportado.",
         arquivo_muito_grande: "Arquivo maior que {{max}}MB.",
-        limite_de_registros_atingido:
-          "Limite de {{max}} registros atingido.",
+        limite_de_registros_atingido: "Limite de {{max}} registros atingido.",
         nao_ha_apontamentos_hoje: "Não há apontamentos hoje",
 
         nao_informado: "Não informado",
@@ -261,18 +254,18 @@ export const resources = {
         quantidade_cot_1m: "Quantidade Cot (1m)",
         quantidade_value: "Quantidade: {{value}}",
 
-        codigo_value: "CÃ³digo: {{value}}",
+        codigo_value: "Código: {{value}}",
         data_value: "Data: {{value}}",
-        descricao_nao_informada: "DescriÃ§Ã£o nÃ£o informada",
+        descricao_nao_informada: "Descrição não informada",
         filial_value: "Filial: {{value}}",
         itens: "Itens",
         mostrar_itens: "Mostrar itens",
         ocultar_itens: "Ocultar itens",
         nenhum_item_encontrado: "Nenhum item encontrado",
         nenhum_orcamento_disponivel_no_momento:
-          "Nenhum orÃ§amento disponÃ­vel no momento.",
-        nenhum_orcamento_encontrado: "Nenhum orÃ§amento encontrado",
-        orcamento_numero: "OrÃ§amento {{numero}}",
+          "Nenhum orçamento disponível no momento.",
+        nenhum_orcamento_encontrado: "Nenhum orçamento encontrado",
+        orcamento_numero: "Orçamento {{numero}}",
 
         reconexao: "Reconexão",
         reconexoes: "Reconexões",
@@ -377,7 +370,7 @@ export const resources = {
         captura_de_foto_indisponivel_neste_ambiente:
           "Captura de foto indisponível neste ambiente.",
         capturando_localizacao_aguarde_alguns_segundos:
-          "Capturando localização. Aguarde alguns segundos...",
+          "Aguarde alguns segundos...",
         check_in_e_check_out_so_podem_ser_feitos_no_dia_do_apontamento:
           "Check-in e check-out só podem ser feitos no dia do apontamento.",
         check_ins_e_check_outs_registrados_na_semana:
