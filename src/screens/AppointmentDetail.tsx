@@ -1885,6 +1885,7 @@ export default function AppointmentDetail() {
   const checkoutNotes = appointment.notes?.trim() ?? "";
   const showCheckoutNotes = checkoutNotes.length > 0;
   const hasThermometer = appointment.clientThermometer != null;
+  const thermometerValue = appointment.clientThermometer ?? 0;
   const isCheckoutReceiverValid =
     receiverName.trim().length > 0 && receiverContact.trim().length > 0;
   const thermometerLabel = t("ui.termometro_nota_value", {
@@ -2029,7 +2030,7 @@ export default function AppointmentDetail() {
                 <span>{t("ui.termometro_do_cliente")}</span>
                 <span className="font-semibold text-foreground">
                   {t("ui.termometro_nota_value", {
-                    value: appointment.clientThermometer,
+                    value: thermometerValue,
                   })}
                 </span>
               </div>

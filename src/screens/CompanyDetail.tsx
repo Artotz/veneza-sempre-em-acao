@@ -726,65 +726,8 @@ export default function CompanyDetail() {
                   <div className="rounded-2xl border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-foreground-soft">
                     {state.error}
                   </div>
-        ) : null}
+                ) : null}
 
-        {companyTab === "contatos" ? (
-          <section className="space-y-3">
-            <SectionHeader
-              title={t("ui.contatos")}
-              rightSlot={t("ui.contatos_count", { count: contacts.length })}
-            />
-
-            {contactsLoading ? (
-              <div className="space-y-3">
-                <div className="h-20 animate-pulse rounded-3xl bg-surface-muted" />
-                <div className="h-20 animate-pulse rounded-3xl bg-surface-muted" />
-              </div>
-            ) : contactsError ? (
-              <EmptyState
-                title={t("ui.nao_foi_possivel_carregar")}
-                description={contactsError}
-              />
-            ) : contacts.length ? (
-              <div className="space-y-3">
-                {contacts.map((contact) => {
-                  const createdAt = contact.createdAt
-                    ? new Date(contact.createdAt)
-                    : null;
-                  const createdAtLabel =
-                    createdAt && !Number.isNaN(createdAt.getTime())
-                      ? formatDateShort(createdAt)
-                      : null;
-                  return (
-                    <div
-                      key={contact.id}
-                      className="rounded-3xl border border-border bg-white p-4 shadow-sm"
-                    >
-                      <p className="text-sm font-semibold text-foreground">
-                        {contact.name}
-                      </p>
-                      <p className="mt-1 text-xs text-foreground-muted">
-                        {contact.contact}
-                      </p>
-                      {createdAtLabel ? (
-                        <p className="mt-2 text-[11px] text-foreground-soft">
-                          {t("ui.contato_registrado_em", {
-                            date: createdAtLabel,
-                          })}
-                        </p>
-                      ) : null}
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <EmptyState
-                title={t("ui.nenhum_contato_registrado")}
-                description={t("ui.registre_contatos_no_check_out")}
-              />
-            )}
-          </section>
-        ) : null}
                 {filteredAppointments.length ? (
                   filteredAppointments.map((appointment) => {
                     const appointmentDetail = getAppointmentTitle(appointment);
@@ -833,7 +776,9 @@ export default function CompanyDetail() {
               </div>
             )}
           </section>
-        ) : (
+        ) : null}
+
+        {companyTab === "oportunidades" ? (
           <section className="space-y-3">
             <SectionHeader
               title={t("ui.oportunidades")}
@@ -1053,7 +998,65 @@ export default function CompanyDetail() {
               />
             )}
           </section>
-        )}
+        ) : null}
+
+        {companyTab === "contatos" ? (
+          <section className="space-y-3">
+            <SectionHeader
+              title={t("ui.contatos")}
+              rightSlot={t("ui.contatos_count", { count: contacts.length })}
+            />
+
+            {contactsLoading ? (
+              <div className="space-y-3">
+                <div className="h-20 animate-pulse rounded-3xl bg-surface-muted" />
+                <div className="h-20 animate-pulse rounded-3xl bg-surface-muted" />
+              </div>
+            ) : contactsError ? (
+              <EmptyState
+                title={t("ui.nao_foi_possivel_carregar")}
+                description={contactsError}
+              />
+            ) : contacts.length ? (
+              <div className="space-y-3">
+                {contacts.map((contact) => {
+                  const createdAt = contact.createdAt
+                    ? new Date(contact.createdAt)
+                    : null;
+                  const createdAtLabel =
+                    createdAt && !Number.isNaN(createdAt.getTime())
+                      ? formatDateShort(createdAt)
+                      : null;
+                  return (
+                    <div
+                      key={contact.id}
+                      className="rounded-3xl border border-border bg-white p-4 shadow-sm"
+                    >
+                      <p className="text-sm font-semibold text-foreground">
+                        {contact.name}
+                      </p>
+                      <p className="mt-1 text-xs text-foreground-muted">
+                        {contact.contact}
+                      </p>
+                      {createdAtLabel ? (
+                        <p className="mt-2 text-[11px] text-foreground-soft">
+                          {t("ui.contato_registrado_em", {
+                            date: createdAtLabel,
+                          })}
+                        </p>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <EmptyState
+                title={t("ui.nenhum_contato_registrado")}
+                description={t("ui.registre_contatos_no_check_out")}
+              />
+            )}
+          </section>
+        ) : null}
       </div>
     </AppShell>
   );
