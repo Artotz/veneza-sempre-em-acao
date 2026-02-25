@@ -59,6 +59,18 @@ type OrcamentoGroup = {
   consultor?: string | null;
   itens: OrcamentoItem[];
 };
+type OrcamentoRow = {
+  vs1_numorc?: number | null;
+  vs1_filial?: number | null;
+  vs1_datorc?: number | null;
+  vs1_vtotnf?: number | null;
+  status?: string | null;
+  consultor_bd?: string | null;
+  vs3_codite?: string | null;
+  descricao?: string | null;
+  vs3_qtdite?: number | null;
+  vs3_valtot?: number | null;
+};
 
 const buildDayGroups = (appointments: Appointment[]) => {
   const groups = new Map<string, Appointment[]>();
@@ -331,22 +343,21 @@ export default function CompanyDetail() {
       }
 
       const groups = new Map<string, OrcamentoGroup>();
-      (data ?? []).forEach((row, index) => {
+      const rows = (data ?? []) as OrcamentoRow[];
+      rows.forEach((row, index) => {
         const numero = parseOrcamentoNumber(row.vs1_numorc);
         const filial = parseOrcamentoNumber(row.vs1_filial);
         const key = `${numero ?? "sem"}-${filial ?? "sem"}`;
-        const current =
-          groups.get(key) ??
-          ({
-            id: key,
-            numero,
-            filial,
-            data: parseOrcamentoNumber(row.vs1_datorc),
-            total: parseOrcamentoNumber(row.vs1_vtotnf),
-            status: row.status ?? null,
-            consultor: row.consultor_bd ?? null,
-            itens: [],
-          } satisfies OrcamentoGroup);
+        const current: OrcamentoGroup = groups.get(key) ?? {
+          id: key,
+          numero,
+          filial,
+          data: parseOrcamentoNumber(row.vs1_datorc),
+          total: parseOrcamentoNumber(row.vs1_vtotnf),
+          status: row.status ?? null,
+          consultor: row.consultor_bd ?? null,
+          itens: [],
+        };
 
         current.itens.push({
           id: `${key}-${row.vs3_codite ?? "item"}-${index}`,
