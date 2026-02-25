@@ -121,6 +121,9 @@ export default function CompanyDetail() {
   const [orcamentos, setOrcamentos] = useState<OrcamentoGroup[]>([]);
   const [orcamentosLoading, setOrcamentosLoading] = useState(false);
   const [orcamentosError, setOrcamentosError] = useState<string | null>(null);
+  const [expandedOrcamentos, setExpandedOrcamentos] = useState<
+    Record<string, boolean>
+  >({});
   const [protheusSeries, setProtheusSeries] = useState<{
     preventivas: string[];
     reconexoes: string[];
@@ -434,6 +437,13 @@ export default function CompanyDetail() {
 
   const handleOpenAppointment = (appointmentId: string) => {
     navigate(`/apontamentos/${appointmentId}`);
+  };
+
+  const toggleOrcamentoItens = (orcamentoId: string) => {
+    setExpandedOrcamentos((current) => ({
+      ...current,
+      [orcamentoId]: !current[orcamentoId],
+    }));
   };
 
   const activeOpportunities =
@@ -765,6 +775,8 @@ export default function CompanyDetail() {
                 <div className="space-y-3">
                   {orcamentos.map((orcamento) => {
                     const dataOrcamento = parseOrcamentoDate(orcamento.data);
+                    const itensOpen = Boolean(expandedOrcamentos[orcamento.id]);
+                    const itensId = `orcamento-itens-${orcamento.id}`;
                     return (
                       <div
                         key={orcamento.id}
@@ -813,40 +825,58 @@ export default function CompanyDetail() {
 
                         {orcamento.itens.length ? (
                           <div className="space-y-2">
-                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-foreground-soft">
-                              {t("ui.itens")}
-                            </p>
-                            <div className="space-y-2">
-                              {orcamento.itens.map((item) => (
-                                <div
-                                  key={item.id}
-                                  className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs"
-                                >
-                                  <p className="text-sm font-semibold text-foreground">
-                                    {item.descricao ??
-                                      t("ui.descricao_nao_informada")}
-                                  </p>
-                                  <div className="flex flex-wrap gap-2 text-[11px] text-foreground-soft">
-                                    <span>
-                                      {t("ui.codigo_value", {
-                                        value:
-                                          item.codigo ?? t("ui.nao_informado"),
-                                      })}
-                                    </span>
-                                    <span>
-                                      {t("ui.quantidade_value", {
-                                        value: formatQuantity(item.quantidade),
-                                      })}
-                                    </span>
-                                    <span>
-                                      {t("ui.valor_value", {
-                                        value: formatCurrencyBRL(item.valor),
-                                      })}
-                                    </span>
-                                  </div>
-                                </div>
-                              ))}
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-foreground-soft">
+                                {t("ui.itens")}
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => toggleOrcamentoItens(orcamento.id)}
+                                aria-expanded={itensOpen}
+                                aria-controls={itensId}
+                                className="text-[11px] font-semibold text-foreground-soft transition hover:text-foreground"
+                              >
+                                {itensOpen
+                                  ? t("ui.ocultar_itens")
+                                  : t("ui.mostrar_itens")}
+                              </button>
                             </div>
+                            {itensOpen ? (
+                              <div id={itensId} className="space-y-2">
+                                {orcamento.itens.map((item) => (
+                                  <div
+                                    key={item.id}
+                                    className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs"
+                                  >
+                                    <p className="text-sm font-semibold text-foreground">
+                                      {item.descricao ??
+                                        t("ui.descricao_nao_informada")}
+                                    </p>
+                                    <div className="flex flex-wrap gap-2 text-[11px] text-foreground-soft">
+                                      <span>
+                                        {t("ui.codigo_value", {
+                                          value:
+                                            item.codigo ??
+                                            t("ui.nao_informado"),
+                                        })}
+                                      </span>
+                                      <span>
+                                        {t("ui.quantidade_value", {
+                                          value: formatQuantity(
+                                            item.quantidade,
+                                          ),
+                                        })}
+                                      </span>
+                                      <span>
+                                        {t("ui.valor_value", {
+                                          value: formatCurrencyBRL(item.valor),
+                                        })}
+                                      </span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : null}
                           </div>
                         ) : (
                           <p className="text-xs text-foreground-soft">

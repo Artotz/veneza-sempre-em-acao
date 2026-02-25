@@ -58,6 +58,7 @@ export const resources = {
         concluidos: "Concluídos",
         confirmar_check_out: "Confirmar check-out",
         continuar_check_out: "Continuar check-out",
+        continuar_sem_localizacao: "Continuar sem localização",
         consultor: "Consultor",
         consultor_value: "Consultor: {{value}}",
 
@@ -265,6 +266,8 @@ export const resources = {
         descricao_nao_informada: "DescriÃ§Ã£o nÃ£o informada",
         filial_value: "Filial: {{value}}",
         itens: "Itens",
+        mostrar_itens: "Mostrar itens",
+        ocultar_itens: "Ocultar itens",
         nenhum_item_encontrado: "Nenhum item encontrado",
         nenhum_orcamento_disponivel_no_momento:
           "Nenhum orÃ§amento disponÃ­vel no momento.",
@@ -492,6 +495,8 @@ export const resources = {
           "Visão simultânea dos 7 dias com cards compactos.",
         voce_pode_tentar_novamente_ou_cancelar:
           "Você pode tentar novamente ou cancelar.",
+        voce_pode_tentar_novamente_ou_continuar_sem_localizacao:
+          "Você pode tentar novamente ou continuar sem localização.",
         volte_para_o_dia_e_selecione_outro_horario:
           "Volte para o dia e selecione outro horário.",
         com_agendamentos_label_count: "{{label}} com {{count}} agendamentos",
