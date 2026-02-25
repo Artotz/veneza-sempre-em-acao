@@ -1501,6 +1501,28 @@ export default function AppointmentDetail() {
     });
   };
 
+  const handleSkipCheckoutContact = () => {
+    if (!canCheckOut || busy || geo.isCapturing || isPhotoBusy) return;
+    setError(null);
+    const oportunidades =
+      pendingCheckoutOpportunities ?? [...checkoutOpportunities];
+    const notes =
+      pendingCheckoutObservation ??
+      (checkoutObservation.trim().length ? checkoutObservation.trim() : null);
+    setPendingClientThermometer(clientThermometer);
+    setReceiverName("");
+    setReceiverContact("");
+    setIsCheckoutOpen(false);
+    setCheckoutStep("summary");
+    void performCheckOut({
+      oportunidades,
+      notes,
+      receiverName: "",
+      receiverContact: "",
+      clientThermometer,
+    });
+  };
+
   const handleSyncAppointment = async () => {
     if (isSyncing || !appointment) return;
     if (!isOnline) {
@@ -2744,6 +2766,18 @@ export default function AppointmentDetail() {
                     }`}
                   >
                     {t("ui.voltar")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSkipCheckoutContact}
+                    disabled={isCheckoutBusy}
+                    className={`rounded-full border border-border px-4 py-2 text-xs font-semibold ${
+                      isCheckoutBusy
+                        ? "cursor-not-allowed text-foreground-muted"
+                        : "text-foreground-soft"
+                    }`}
+                  >
+                    {t("ui.pular_contato")}
                   </button>
                   <button
                     type="button"

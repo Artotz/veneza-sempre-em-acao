@@ -130,6 +130,7 @@ export const resources = {
         nenhum_contato_registrado: "Nenhum contato registrado",
         registre_contatos_no_check_out: "Registre contatos no check-out.",
         contato_registrado_em: "Registrado em {{date}}",
+        pular_contato: "Pular contato",
 
         endereco_snapshot: "Endereço (snapshot)",
         endereco_fechado: "Endereço fechado",
@@ -222,7 +223,7 @@ export const resources = {
         nova_foto: "Nova foto",
         novo_apontamento: "Novo apontamento",
         ex_nome_de_quem_recebeu: "Ex: João Silva",
-        ex_telefone_ou_email: "Ex: (11) 99999-9999 ou email@empresa.com",
+        ex_telefone_ou_email: "Ex: (99) 99999-9999",
         termometro_do_cliente: "Termômetro do cliente",
         avaliacao_de_0_a_10: "Avaliação de 0 a 10.",
         termometro_nota_value: "Nota {{value}}/10",
