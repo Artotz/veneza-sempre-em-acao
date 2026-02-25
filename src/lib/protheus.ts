@@ -10,8 +10,10 @@ export type ProtheusCountSummary = {
 
 export type ProtheusCountMap = Record<string, ProtheusCountSummary>;
 
-export const normalizeDocument = (document?: string | null) =>
-  document?.replace(/\D/g, "") ?? "";
+export const normalizeDocument = (document?: string | number | null) => {
+  if (document == null) return "";
+  return String(document).replace(/\D/g, "");
+};
 
 export const getProtheusKey = (document?: string | null) =>
   normalizeDocument(document);

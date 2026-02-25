@@ -338,6 +338,7 @@ export const resources = {
         validacao_value: "Validação: {{value}}",
         valor_cot_3m: "Valor Cot (3m)",
         valor_cot_1m: "Valor Cot (1m)",
+        valor_cotacoes_abertas: "Valor cotações abertas",
         valor_value: "Valor: {{value}}",
         total_value: "Total: {{value}}",
         qtd_preventivas: "Qtd Preventivas",

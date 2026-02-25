@@ -4,13 +4,14 @@ import { AppShell } from "../components/AppShell";
 import { EmptyState } from "../components/EmptyState";
 import { SectionHeader } from "../components/SectionHeader";
 import { useAuth } from "../contexts/useAuth";
-import { formatQuantity } from "../lib/format";
+import { formatCurrencyBRL, formatQuantity } from "../lib/format";
 import {
   buildProtheusCounts,
   buildDocumentVariants,
   chunkArray,
   getProtheusKey,
   mergeProtheusCounts,
+  normalizeDocument,
   type ProtheusCountMap,
 } from "../lib/protheus";
 import { createSupabaseBrowserClient } from "../lib/supabaseClient";
@@ -28,12 +29,15 @@ export default function Companies() {
   const { user, loading: authLoading } = useAuth();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [query, setQuery] = useState("");
-  const [sortBy, setSortBy] = useState<"preventivas" | "reconexoes">(
-    "preventivas",
-  );
+  const [sortBy, setSortBy] = useState<
+    "preventivas" | "reconexoes" | "cotacoes_abertas"
+  >("preventivas");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [protheusCounts, setProtheusCounts] = useState<ProtheusCountMap>({});
+  const [openQuoteTotals, setOpenQuoteTotals] = useState<
+    Record<string, number>
+  >({});
 
   const filterCompanies = (items: Company[], term: string) => {
     const trimmed = term.trim().toLowerCase();
@@ -172,6 +176,67 @@ export default function Companies() {
     };
   }, [companies, supabase]);
 
+  useEffect(() => {
+    let active = true;
+
+    const loadOpenQuotes = async () => {
+      const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
+      if (isOffline) {
+        setOpenQuoteTotals({});
+        return;
+      }
+
+      const documents = Array.from(
+        new Set(
+          companies.flatMap((company) =>
+            buildDocumentVariants(company.document),
+          ),
+        ),
+      );
+      if (!documents.length) {
+        setOpenQuoteTotals({});
+        return;
+      }
+
+      const totals: Record<string, number> = {};
+      for (const chunk of chunkArray(documents, 200)) {
+        const { data, error: requestError } = await supabase
+          .from("base_csa_orc")
+          .select("cnpj, vs1_vtotnf")
+          .eq("status", "ABERTO")
+          .in("cnpj", chunk);
+
+        if (!active) return;
+
+        if (requestError) {
+          setOpenQuoteTotals({});
+          return;
+        }
+
+        (data ?? []).forEach((row) => {
+          const key = normalizeDocument(
+            (row as { cnpj?: string | null }).cnpj,
+          );
+          if (!key) return;
+          const total = Number(
+            (row as { vs1_vtotnf?: number | string | null }).vs1_vtotnf ?? 0,
+          );
+          if (Number.isNaN(total)) return;
+          totals[key] = (totals[key] ?? 0) + total;
+        });
+      }
+
+      if (!active) return;
+      setOpenQuoteTotals(totals);
+    };
+
+    void loadOpenQuotes();
+
+    return () => {
+      active = false;
+    };
+  }, [companies, supabase]);
+
   const filteredCompanies = useMemo(
     () => filterCompanies(companies, query),
     [companies, query],
@@ -179,17 +244,23 @@ export default function Companies() {
 
   const sortedCompanies = useMemo(() => {
     const items = [...filteredCompanies];
-    const getMetric = (company: Company) =>
-      sortBy === "preventivas"
-        ? (protheusCounts[getProtheusKey(company.document)]?.preventivas ?? 0)
-        : (protheusCounts[getProtheusKey(company.document)]?.reconexoes ?? 0);
+    const getMetric = (company: Company) => {
+      const key = getProtheusKey(company.document);
+      if (sortBy === "preventivas") {
+        return protheusCounts[key]?.preventivas ?? 0;
+      }
+      if (sortBy === "reconexoes") {
+        return protheusCounts[key]?.reconexoes ?? 0;
+      }
+      return openQuoteTotals[key] ?? 0;
+    };
     items.sort((a, b) => {
       const diff = getMetric(b) - getMetric(a);
       if (diff !== 0) return diff;
       return (a.name ?? "").localeCompare(b.name ?? "", "pt-BR");
     });
     return items;
-  }, [filteredCompanies, protheusCounts, sortBy]);
+  }, [filteredCompanies, openQuoteTotals, protheusCounts, sortBy]);
 
   return (
     <AppShell
@@ -215,13 +286,19 @@ export default function Companies() {
             value={sortBy}
             onChange={(event) =>
               setSortBy(
-                event.target.value as "preventivas" | "reconexoes",
+                event.target.value as
+                  | "preventivas"
+                  | "reconexoes"
+                  | "cotacoes_abertas",
               )
             }
             className="w-full flex-1 rounded-2xl border border-border bg-white px-3 py-2 text-xs font-semibold text-foreground shadow-sm outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
           >
             <option value="preventivas">{t("ui.qtd_preventivas")}</option>
             <option value="reconexoes">{t("ui.qtd_reconexoes")}</option>
+            <option value="cotacoes_abertas">
+              {t("ui.valor_cotacoes_abertas")}
+            </option>
           </select>
         </div>
       </section>
@@ -269,16 +346,22 @@ export default function Companies() {
                 <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
                   {sortBy === "preventivas"
                     ? t("ui.qtd_preventivas")
-                    : t("ui.qtd_reconexoes")}
+                    : sortBy === "reconexoes"
+                      ? t("ui.qtd_reconexoes")
+                      : t("ui.valor_cotacoes_abertas")}
                 </p>
                 <p className="text-sm font-semibold text-foreground">
-                  {formatQuantity(
-                    sortBy === "preventivas"
-                      ? protheusCounts[getProtheusKey(company.document)]
-                          ?.preventivas ?? 0
-                      : protheusCounts[getProtheusKey(company.document)]
-                          ?.reconexoes ?? 0,
-                  )}
+                  {sortBy === "cotacoes_abertas"
+                    ? formatCurrencyBRL(
+                        openQuoteTotals[getProtheusKey(company.document)] ?? 0,
+                      )
+                    : formatQuantity(
+                        sortBy === "preventivas"
+                          ? protheusCounts[getProtheusKey(company.document)]
+                              ?.preventivas ?? 0
+                          : protheusCounts[getProtheusKey(company.document)]
+                              ?.reconexoes ?? 0,
+                      )}
                 </p>
               </div>
 
