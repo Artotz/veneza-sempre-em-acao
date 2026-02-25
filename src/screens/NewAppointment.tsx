@@ -181,13 +181,15 @@ export default function NewAppointment() {
 
   useEffect(() => {
     if (!selectedCompanyId) return;
+    if (companiesLoading) return;
+    if (!companyQuery.trim()) return;
     const stillVisible = filteredCompanies.some(
       (item) => item.id === selectedCompanyId,
     );
     if (!stillVisible) {
       setSelectedCompanyId("");
     }
-  }, [filteredCompanies, selectedCompanyId]);
+  }, [companiesLoading, companyQuery, filteredCompanies, selectedCompanyId]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
