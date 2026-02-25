@@ -92,6 +92,17 @@ const oportunidadeLabels = Object.fromEntries(
 
 type MediaKind = "checkin" | "checkout" | "absence" | "registro";
 
+type PendingGeoAction =
+  | {
+      intent: "check_in";
+      shot: CapturePhotoResult;
+    }
+  | {
+      intent: "check_out";
+      oportunidades: string[];
+      notes: string | null;
+    };
+
 type ApontamentoMediaRow = {
   id?: string;
   bucket: string;
@@ -355,6 +366,8 @@ export default function AppointmentDetail() {
   const [geoIntent, setGeoIntent] = useState<"check_in" | "check_out" | null>(
     null,
   );
+  const [pendingGeoAction, setPendingGeoAction] =
+    useState<PendingGeoAction | null>(null);
   const [photoStatus, setPhotoStatus] = useState<string | null>(null);
   const [cameraIntent, setCameraIntent] = useState<
     "checkin" | "registro" | null
@@ -391,8 +404,12 @@ export default function AppointmentDetail() {
   const [showCheckOutMarker, setShowCheckOutMarker] = useState(true);
 
   const geo = useGeolocation();
-  useLockBodyScroll(isCheckoutOpen || isAbsenceOpen || cameraIntent !== null);
   const isCameraOpen = cameraIntent !== null;
+  const isGeoModalOpen =
+    geo.isCapturing || Boolean(geo.error && pendingGeoAction);
+  useLockBodyScroll(
+    isCheckoutOpen || isAbsenceOpen || isCameraOpen || isGeoModalOpen,
+  );
 
   useEffect(() => {
     if (appointmentFromState) {
@@ -1410,12 +1427,98 @@ export default function AppointmentDetail() {
     }
   };
 
+  const finalizeCheckIn = async ({
+    shot,
+    position,
+  }: {
+    shot: CapturePhotoResult;
+    position: { lat: number; lng: number; accuracy: number } | null;
+  }) => {
+    const now = new Date().toISOString();
+    setAppointment((current) =>
+      current
+        ? {
+            ...current,
+            checkInAt: now,
+            status: "in_progress",
+            checkInLat: position?.lat ?? null,
+            checkInLng: position?.lng ?? null,
+            checkInAccuracyM: position?.accuracy ?? null,
+          }
+        : current,
+    );
+    const updated = await actions.checkIn(appointment.id, {
+      at: now,
+      lat: position?.lat ?? null,
+      lng: position?.lng ?? null,
+      accuracy: position?.accuracy ?? null,
+    });
+    if (updated) {
+      setAppointment(updated);
+    }
+    setGeoIntent(null);
+    setPendingGeoAction(null);
+    setPhotoStatus(null);
+    void syncCheckIn({ shot, at: now, position });
+  };
+
+  const finalizeCheckOut = async ({
+    position,
+    oportunidades,
+    notes,
+  }: {
+    position: { lat: number; lng: number; accuracy: number } | null;
+    oportunidades: string[];
+    notes: string | null;
+  }) => {
+    const now = new Date().toISOString();
+    setAppointment((current) =>
+      current
+        ? {
+            ...current,
+            checkOutAt: now,
+            status: "done",
+            checkOutLat: position?.lat ?? null,
+            checkOutLng: position?.lng ?? null,
+            checkOutAccuracyM: position?.accuracy ?? null,
+            oportunidades: oportunidades ?? [],
+            notes,
+          }
+        : current,
+    );
+    const updated = await actions.checkOut(appointment.id, {
+      at: now,
+      lat: position?.lat ?? null,
+      lng: position?.lng ?? null,
+      accuracy: position?.accuracy ?? null,
+      oportunidades: oportunidades ?? [],
+      notes,
+    });
+    if (updated) {
+      setAppointment(updated);
+    }
+    setGeoIntent(null);
+    setPendingGeoAction(null);
+    setCheckoutOpportunities([]);
+    setPendingCheckoutOpportunities(null);
+    setCheckoutObservation("");
+    setPendingCheckoutObservation(null);
+    setPhotoStatus(null);
+    void syncCheckOut({
+      at: now,
+      position,
+      oportunidades: oportunidades ?? [],
+      notes,
+    });
+  };
+
   const performCheckIn = async (shot: CapturePhotoResult) => {
     if (!canCheckIn || busy || geo.isCapturing) return;
     setError(null);
     setSyncStatus(null);
     geo.resetError();
     setGeoIntent("check_in");
+    setPendingGeoAction(null);
     try {
       let position: { lat: number; lng: number; accuracy: number } | null =
         null;
@@ -1423,39 +1526,16 @@ export default function AppointmentDetail() {
         position = await geo.capture();
       } catch (geoError) {
         if (isGeoError(geoError)) {
-          geo.resetError();
-          setPhotoStatus(
-            t("ui.localizacao_indisponivel_salvando_sem_localizacao"),
-          );
+          setPendingGeoAction({
+            intent: "check_in",
+            shot,
+          });
+          return;
         } else {
           throw geoError;
         }
       }
-      const now = new Date().toISOString();
-      setAppointment((current) =>
-        current
-          ? {
-              ...current,
-              checkInAt: now,
-              status: "in_progress",
-              checkInLat: position?.lat ?? null,
-              checkInLng: position?.lng ?? null,
-              checkInAccuracyM: position?.accuracy ?? null,
-            }
-          : current,
-      );
-      const updated = await actions.checkIn(appointment.id, {
-        at: now,
-        lat: position?.lat ?? null,
-        lng: position?.lng ?? null,
-        accuracy: position?.accuracy ?? null,
-      });
-      if (updated) {
-        setAppointment(updated);
-      }
-      setGeoIntent(null);
-      setPhotoStatus(null);
-      void syncCheckIn({ shot, at: now, position });
+      await finalizeCheckIn({ shot, position });
     } catch (actionError) {
       setError(
         actionError instanceof Error
@@ -1477,6 +1557,7 @@ export default function AppointmentDetail() {
     setSyncStatus(null);
     geo.resetError();
     setGeoIntent("check_out");
+    setPendingGeoAction(null);
     const oportunidades =
       overrides?.oportunidades ??
       pendingCheckoutOpportunities ??
@@ -1492,48 +1573,17 @@ export default function AppointmentDetail() {
         position = await geo.capture();
       } catch (geoError) {
         if (isGeoError(geoError)) {
-          geo.resetError();
-          setPhotoStatus(
-            t("ui.localizacao_indisponivel_salvando_sem_localizacao"),
-          );
+          setPendingGeoAction({
+            intent: "check_out",
+            oportunidades: oportunidades ?? [],
+            notes,
+          });
+          return;
         } else {
           throw geoError;
         }
       }
-      const now = new Date().toISOString();
-      setAppointment((current) =>
-        current
-          ? {
-              ...current,
-              checkOutAt: now,
-              status: "done",
-              checkOutLat: position?.lat ?? null,
-              checkOutLng: position?.lng ?? null,
-              checkOutAccuracyM: position?.accuracy ?? null,
-              oportunidades: oportunidades ?? [],
-              notes,
-            }
-          : current,
-      );
-      const updated = await actions.checkOut(appointment.id, {
-        at: now,
-        lat: position?.lat ?? null,
-        lng: position?.lng ?? null,
-        accuracy: position?.accuracy ?? null,
-        oportunidades: oportunidades ?? [],
-        notes,
-      });
-      if (updated) {
-        setAppointment(updated);
-      }
-      setGeoIntent(null);
-      setCheckoutOpportunities([]);
-      setPendingCheckoutOpportunities(null);
-      setCheckoutObservation("");
-      setPendingCheckoutObservation(null);
-      setPhotoStatus(null);
-      void syncCheckOut({
-        at: now,
+      await finalizeCheckOut({
         position,
         oportunidades: oportunidades ?? [],
         notes,
@@ -1610,25 +1660,38 @@ export default function AppointmentDetail() {
     }
   };
 
-  const handleRetryGeo = async () => {
-    if (geoIntent === "check_in") {
-      await handleCheckIn();
+  const handleRetryGeoCapture = () => {
+    const pending = pendingGeoAction;
+    if (!pending) return;
+    geo.resetError();
+    setPendingGeoAction(null);
+    if (pending.intent === "check_in") {
+      void performCheckIn(pending.shot);
       return;
     }
-    if (geoIntent === "check_out") {
-      await handleCheckOut();
+    void performCheckOut({
+      oportunidades: pending.oportunidades,
+      notes: pending.notes,
+    });
+  };
+
+  const handleSkipGeoCapture = () => {
+    const pending = pendingGeoAction;
+    geo.resetError();
+    if (!pending) {
+      setGeoIntent(null);
+      return;
     }
-  };
-
-  const handleCancelGeo = () => {
-    geo.resetError();
-    setGeoIntent(null);
-  };
-
-  const handleRetryCheckoutGeo = () => {
-    if (!canCheckOut || busy || isCheckoutBusy) return;
-    geo.resetError();
-    void performCheckOut();
+    setPendingGeoAction(null);
+    if (pending.intent === "check_in") {
+      void finalizeCheckIn({ shot: pending.shot, position: null });
+      return;
+    }
+    void finalizeCheckOut({
+      position: null,
+      oportunidades: pending.oportunidades,
+      notes: pending.notes,
+    });
   };
 
   const handleOpenAbsence = () => {
@@ -1674,6 +1737,15 @@ export default function AppointmentDetail() {
         : canCheckOut
           ? t("ui.fazer_check_out")
           : t("ui.check_in_check_out");
+  const hasGeoFailure = Boolean(geo.error && pendingGeoAction);
+  const geoModalTitle = geo.isCapturing
+    ? t("ui.capturando_localizacao")
+    : t("ui.nao_foi_possivel_capturar_a_localizacao");
+  const geoModalSubtitle = geo.isCapturing
+    ? t("ui.capturando_localizacao_aguarde_alguns_segundos")
+    : geo.error?.code === "PERMISSION_DENIED"
+      ? t("ui.permita_localizacao_no_navegador_para_concluir_o_registro")
+      : t("ui.voce_pode_tentar_novamente_ou_continuar_sem_localizacao");
   const pendingItemBase = pendingPhotos.length + pendingActionCount;
   const pendingItemCount =
     pendingItemBase +
@@ -1944,36 +2016,6 @@ export default function AppointmentDetail() {
             {photoStatus ? (
               <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
                 {photoStatus}
-              </div>
-            ) : null}
-            {geo.error ? (
-              <div className="rounded-2xl border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-foreground-soft">
-                <p className="font-semibold text-foreground">
-                  {geo.error.message}
-                </p>
-                <p className="mt-1 text-foreground-soft">
-                  {geo.error.code === "PERMISSION_DENIED"
-                    ? t(
-                        "ui.permita_localizacao_no_navegador_para_concluir_o_registro",
-                      )
-                    : t("ui.voce_pode_tentar_novamente_ou_cancelar")}
-                </p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={handleRetryGeo}
-                    className="rounded-full border border-border bg-white px-3 py-1 text-[10px] font-semibold text-foreground"
-                  >
-                    {t("ui.tentar_novamente")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleCancelGeo}
-                    className="rounded-full border border-border bg-white px-3 py-1 text-[10px] font-semibold text-foreground-soft"
-                  >
-                    {t("ui.cancelar")}
-                  </button>
-                </div>
               </div>
             ) : null}
           </div>
@@ -2414,44 +2456,9 @@ export default function AppointmentDetail() {
                 />
               </div>
 
-              {/* {geo.isCapturing && geoIntent === "check_out" ? (
-                <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
-                  {t("ui.capturando_localizacao_aguarde_alguns_segundos")}
-                </div>
-              ) : null} */}
               {photoStatus ? (
                 <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
                   {photoStatus}
-                </div>
-              ) : null}
-              {geo.error && geoIntent === "check_out" ? (
-                <div className="rounded-2xl border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-foreground-soft">
-                  <p className="font-semibold text-foreground">
-                    {geo.error.message}
-                  </p>
-                  <p className="mt-1 text-foreground-soft">
-                    {geo.error.code === "PERMISSION_DENIED"
-                      ? t(
-                          "ui.permita_localizacao_no_navegador_para_concluir_o_registro",
-                        )
-                      : t("ui.voce_pode_tentar_novamente_ou_cancelar")}
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={handleRetryCheckoutGeo}
-                      className="rounded-full border border-border bg-white px-3 py-1 text-[10px] font-semibold text-foreground"
-                    >
-                      {t("ui.tentar_novamente")}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleCancelGeo}
-                      className="rounded-full border border-border bg-white px-3 py-1 text-[10px] font-semibold text-foreground-soft"
-                    >
-                      {t("ui.cancelar")}
-                    </button>
-                  </div>
                 </div>
               ) : null}
             </div>
@@ -2565,6 +2572,50 @@ export default function AppointmentDetail() {
                 {t("ui.registrar_ausencia")}
               </button>
             </div>
+          </div>
+        </div>
+      ) : null}
+      {isGeoModalOpen ? (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 px-4 py-6 sm:items-center">
+          <div
+            className="w-full max-w-md overflow-hidden rounded-3xl border border-border bg-white shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="border-b border-border px-5 py-4">
+              <h3 className="text-base font-semibold text-foreground">
+                {geoModalTitle}
+              </h3>
+              <p className="mt-1 text-xs text-foreground-muted">
+                {geoModalSubtitle}
+              </p>
+            </div>
+            {hasGeoFailure ? (
+              <div className="space-y-3 px-5 py-4">
+                <div className="rounded-2xl border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-foreground-soft">
+                  <p className="font-semibold text-foreground">
+                    {geo.error?.message}
+                  </p>
+                </div>
+              </div>
+            ) : null}
+            {hasGeoFailure ? (
+              <div className="flex items-center justify-end gap-2 border-t border-border px-5 py-4">
+                <button
+                  type="button"
+                  onClick={handleSkipGeoCapture}
+                  className="rounded-full border border-border px-4 py-2 text-xs font-semibold text-foreground-soft"
+                >
+                  {t("ui.continuar_sem_localizacao")}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRetryGeoCapture}
+                  className="rounded-full bg-foreground px-4 py-2 text-xs font-semibold text-white"
+                >
+                  {t("ui.tentar_novamente")}
+                </button>
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}
