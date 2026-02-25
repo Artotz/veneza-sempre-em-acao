@@ -38,6 +38,7 @@ export type ScheduleContextValue = {
         accuracy?: number | null;
         oportunidades: string[];
         notes?: string | null;
+        clientThermometer?: number | null;
       }
     ) => Promise<Appointment | null>;
     justifyAbsence: (

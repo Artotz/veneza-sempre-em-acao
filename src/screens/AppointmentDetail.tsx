@@ -101,6 +101,9 @@ type PendingGeoAction =
       intent: "check_out";
       oportunidades: string[];
       notes: string | null;
+      receiverName: string;
+      receiverContact: string;
+      clientThermometer: number | null;
     };
 
 type ApontamentoMediaRow = {
@@ -324,7 +327,14 @@ const applyPendingActionsToAppointment = (
         oportunidades: Array.isArray(changes.oportunidades)
           ? (changes.oportunidades as string[])
           : current.oportunidades,
+        clientThermometer:
+          toNumberValue(changes.client_thermometer) ??
+          current.clientThermometer ??
+          null,
       };
+    }
+    if (action.actionType === "companyContact") {
+      return current;
     }
     return {
       ...current,
@@ -390,6 +400,9 @@ export default function AppointmentDetail() {
     "fotos",
   );
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [checkoutStep, setCheckoutStep] = useState<"summary" | "receiver">(
+    "summary",
+  );
   const [isAbsenceOpen, setIsAbsenceOpen] = useState(false);
   const [checkoutOpportunities, setCheckoutOpportunities] = useState<string[]>(
     [],
@@ -399,6 +412,12 @@ export default function AppointmentDetail() {
   const [checkoutObservation, setCheckoutObservation] = useState("");
   const [pendingCheckoutObservation, setPendingCheckoutObservation] = useState<
     string | null
+  >(null);
+  const [receiverName, setReceiverName] = useState("");
+  const [receiverContact, setReceiverContact] = useState("");
+  const [clientThermometer, setClientThermometer] = useState<number>(5);
+  const [pendingClientThermometer, setPendingClientThermometer] = useState<
+    number | null
   >(null);
   const [showCheckInMarker, setShowCheckInMarker] = useState(true);
   const [showCheckOutMarker, setShowCheckOutMarker] = useState(true);
@@ -736,6 +755,7 @@ export default function AppointmentDetail() {
       accuracy?: number | null;
       oportunidades: string[];
       notes?: string | null;
+      clientThermometer?: number | null;
     }) => {
       const changes: Record<string, unknown> = {
         check_out_at: payload.at,
@@ -743,6 +763,9 @@ export default function AppointmentDetail() {
         oportunidades: payload.oportunidades,
         notes: payload.notes ?? null,
       };
+      if (payload.clientThermometer != null) {
+        changes.client_thermometer = payload.clientThermometer;
+      }
       if (payload.lat != null && payload.lng != null) {
         changes.check_out_lat = payload.lat;
         changes.check_out_lng = payload.lng;
@@ -932,6 +955,27 @@ export default function AppointmentDetail() {
     [actions, appointment, loadPendingActions, user?.email],
   );
 
+  const queuePendingCompanyContact = useCallback(
+    async (changes: Record<string, unknown>) => {
+      if (!appointment) {
+        throw new Error(t("ui.agendamento_nao_encontrado_2"));
+      }
+      const userEmail = user?.email?.trim();
+      if (!userEmail) {
+        throw new Error(t("ui.usuario_nao_autenticado"));
+      }
+      await savePendingAction({
+        userEmail,
+        appointmentId: appointment.id,
+        actionType: "companyContact",
+        changes,
+      });
+      actions.setPendingSync(appointment.id, true);
+      await loadPendingActions();
+    },
+    [actions, appointment, loadPendingActions, user?.email],
+  );
+
   const clearPendingAction = useCallback(
     async (id: string) => {
       if (!appointment) return;
@@ -1018,6 +1062,7 @@ export default function AppointmentDetail() {
       position: { lat: number; lng: number; accuracy: number } | null;
       oportunidades: string[];
       notes?: string | null;
+      clientThermometer?: number | null;
     }) => {
       try {
         const changes = buildCheckOutRemoteChanges({
@@ -1027,6 +1072,7 @@ export default function AppointmentDetail() {
           accuracy: params.position?.accuracy ?? null,
           oportunidades: params.oportunidades,
           notes: params.notes ?? null,
+          clientThermometer: params.clientThermometer ?? null,
         });
 
         if (typeof navigator !== "undefined" && !navigator.onLine) {
@@ -1064,6 +1110,40 @@ export default function AppointmentDetail() {
       queuePendingActionOnly,
       updateAppointmentRemote,
     ],
+  );
+
+  const syncCompanyContact = useCallback(
+    async (payload: { name: string; contact: string }) => {
+      if (!appointment) return;
+      const normalizedName = payload.name.trim();
+      const normalizedContact = payload.contact.trim();
+      if (!normalizedName || !normalizedContact) return;
+      const userEmail = user?.email?.trim();
+      if (!userEmail) return;
+      const changes = {
+        company_id: appointment.companyId,
+        name: normalizedName,
+        contact: normalizedContact,
+      };
+
+      try {
+        if (typeof navigator !== "undefined" && !navigator.onLine) {
+          await queuePendingCompanyContact(changes);
+          return;
+        }
+
+        const { error } = await supabase
+          .from("company_contacts")
+          .insert(changes);
+
+        if (error) {
+          await queuePendingCompanyContact(changes);
+        }
+      } catch (error) {
+        await queuePendingCompanyContact(changes);
+      }
+    },
+    [appointment, queuePendingCompanyContact, supabase, user?.email],
   );
 
   const syncAbsence = useCallback(
@@ -1266,6 +1346,11 @@ export default function AppointmentDetail() {
     setPendingCheckoutOpportunities(null);
     setCheckoutObservation(appointment?.notes ?? "");
     setPendingCheckoutObservation(null);
+    setReceiverName("");
+    setReceiverContact("");
+    setClientThermometer(appointment?.clientThermometer ?? 5);
+    setPendingClientThermometer(null);
+    setCheckoutStep("summary");
     setIsCheckoutOpen(true);
   };
 
@@ -1361,10 +1446,15 @@ export default function AppointmentDetail() {
   const handleCloseCheckout = () => {
     if (isCheckoutBusy) return;
     setIsCheckoutOpen(false);
+    setCheckoutStep("summary");
     setCheckoutOpportunities([]);
     setPendingCheckoutOpportunities(null);
     setCheckoutObservation("");
     setPendingCheckoutObservation(null);
+    setReceiverName("");
+    setReceiverContact("");
+    setClientThermometer(5);
+    setPendingClientThermometer(null);
     geo.resetError();
     setGeoIntent(null);
   };
@@ -1377,7 +1467,7 @@ export default function AppointmentDetail() {
     );
   };
 
-  const handleConfirmCheckout = () => {
+  const handleContinueCheckout = () => {
     if (!canCheckOut || busy || geo.isCapturing || isPhotoBusy) return;
     setError(null);
     const oportunidades = [...checkoutOpportunities];
@@ -1385,8 +1475,30 @@ export default function AppointmentDetail() {
     const normalizedObservation = checkoutObservation.trim();
     const notes = normalizedObservation.length ? normalizedObservation : null;
     setPendingCheckoutObservation(notes);
+    setCheckoutStep("receiver");
+  };
+
+  const handleFinalizeCheckout = () => {
+    if (!canCheckOut || busy || geo.isCapturing || isPhotoBusy) return;
+    const normalizedName = receiverName.trim();
+    const normalizedContact = receiverContact.trim();
+    if (!normalizedName || !normalizedContact) return;
+    setError(null);
+    const oportunidades =
+      pendingCheckoutOpportunities ?? [...checkoutOpportunities];
+    const notes =
+      pendingCheckoutObservation ??
+      (checkoutObservation.trim().length ? checkoutObservation.trim() : null);
+    setPendingClientThermometer(clientThermometer);
     setIsCheckoutOpen(false);
-    void performCheckOut({ oportunidades, notes });
+    setCheckoutStep("summary");
+    void performCheckOut({
+      oportunidades,
+      notes,
+      receiverName: normalizedName,
+      receiverContact: normalizedContact,
+      clientThermometer,
+    });
   };
 
   const handleSyncAppointment = async () => {
@@ -1466,10 +1578,16 @@ export default function AppointmentDetail() {
     position,
     oportunidades,
     notes,
+    clientThermometer,
+    receiverName,
+    receiverContact,
   }: {
     position: { lat: number; lng: number; accuracy: number } | null;
     oportunidades: string[];
     notes: string | null;
+    clientThermometer: number | null;
+    receiverName: string;
+    receiverContact: string;
   }) => {
     const now = new Date().toISOString();
     setAppointment((current) =>
@@ -1483,6 +1601,7 @@ export default function AppointmentDetail() {
             checkOutAccuracyM: position?.accuracy ?? null,
             oportunidades: oportunidades ?? [],
             notes,
+            clientThermometer,
           }
         : current,
     );
@@ -1493,6 +1612,7 @@ export default function AppointmentDetail() {
       accuracy: position?.accuracy ?? null,
       oportunidades: oportunidades ?? [],
       notes,
+      clientThermometer,
     });
     if (updated) {
       setAppointment(updated);
@@ -1503,12 +1623,21 @@ export default function AppointmentDetail() {
     setPendingCheckoutOpportunities(null);
     setCheckoutObservation("");
     setPendingCheckoutObservation(null);
+    setReceiverName("");
+    setReceiverContact("");
+    setClientThermometer(5);
+    setPendingClientThermometer(null);
     setPhotoStatus(null);
     void syncCheckOut({
       at: now,
       position,
       oportunidades: oportunidades ?? [],
       notes,
+      clientThermometer,
+    });
+    void syncCompanyContact({
+      name: receiverName,
+      contact: receiverContact,
     });
   };
 
@@ -1551,6 +1680,9 @@ export default function AppointmentDetail() {
   const performCheckOut = async (overrides?: {
     oportunidades: string[];
     notes: string | null;
+    receiverName: string;
+    receiverContact: string;
+    clientThermometer: number | null;
   }) => {
     if (!canCheckOut || busy || geo.isCapturing) return;
     setError(null);
@@ -1566,6 +1698,12 @@ export default function AppointmentDetail() {
       overrides?.notes ?? pendingCheckoutObservation ?? checkoutObservation;
     const normalizedObservation = observationSource.trim();
     const notes = normalizedObservation.length ? normalizedObservation : null;
+    const receiverNameValue =
+      overrides?.receiverName?.trim() ?? receiverName.trim();
+    const receiverContactValue =
+      overrides?.receiverContact?.trim() ?? receiverContact.trim();
+    const thermometerValue =
+      overrides?.clientThermometer ?? pendingClientThermometer ?? clientThermometer;
     try {
       let position: { lat: number; lng: number; accuracy: number } | null =
         null;
@@ -1577,6 +1715,9 @@ export default function AppointmentDetail() {
             intent: "check_out",
             oportunidades: oportunidades ?? [],
             notes,
+            receiverName: receiverNameValue,
+            receiverContact: receiverContactValue,
+            clientThermometer: thermometerValue,
           });
           return;
         } else {
@@ -1587,6 +1728,9 @@ export default function AppointmentDetail() {
         position,
         oportunidades: oportunidades ?? [],
         notes,
+        receiverName: receiverNameValue,
+        receiverContact: receiverContactValue,
+        clientThermometer: thermometerValue,
       });
     } catch (actionError) {
       setError(
@@ -1672,6 +1816,9 @@ export default function AppointmentDetail() {
     void performCheckOut({
       oportunidades: pending.oportunidades,
       notes: pending.notes,
+      receiverName: pending.receiverName,
+      receiverContact: pending.receiverContact,
+      clientThermometer: pending.clientThermometer,
     });
   };
 
@@ -1691,6 +1838,9 @@ export default function AppointmentDetail() {
       position: null,
       oportunidades: pending.oportunidades,
       notes: pending.notes,
+      receiverName: pending.receiverName,
+      receiverContact: pending.receiverContact,
+      clientThermometer: pending.clientThermometer,
     });
   };
 
@@ -1712,6 +1862,12 @@ export default function AppointmentDetail() {
   );
   const checkoutNotes = appointment.notes?.trim() ?? "";
   const showCheckoutNotes = checkoutNotes.length > 0;
+  const hasThermometer = appointment.clientThermometer != null;
+  const isCheckoutReceiverValid =
+    receiverName.trim().length > 0 && receiverContact.trim().length > 0;
+  const thermometerLabel = t("ui.termometro_nota_value", {
+    value: clientThermometer,
+  });
   const hasMapPoints = mapPoints.length > 0;
   const hasFilteredMapPoints = filteredMapPoints.length > 0;
   const companyDisplayName =
@@ -1843,6 +1999,16 @@ export default function AppointmentDetail() {
                 <span>{t("ui.endereco_snapshot")}</span>
                 <span className="font-semibold text-foreground">
                   {snapshotLabel}
+                </span>
+              </div>
+            ) : null}
+            {hasThermometer ? (
+              <div className="flex items-center justify-between">
+                <span>{t("ui.termometro_do_cliente")}</span>
+                <span className="font-semibold text-foreground">
+                  {t("ui.termometro_nota_value", {
+                    value: appointment.clientThermometer,
+                  })}
                 </span>
               </div>
             ) : null}
@@ -2369,10 +2535,14 @@ export default function AppointmentDetail() {
           >
             <div className="border-b border-border px-5 py-4">
               <h3 className="text-base font-semibold text-foreground">
-                {t("ui.check_out_do_agendamento")}
+                {checkoutStep === "summary"
+                  ? t("ui.check_out_do_agendamento")
+                  : t("ui.dados_de_recebimento")}
               </h3>
               <p className="mt-1 text-xs text-foreground-muted">
-                {t("ui.confirme_os_dados_antes_de_finalizar")}
+                {checkoutStep === "summary"
+                  ? t("ui.confirme_os_dados_antes_de_finalizar")
+                  : t("ui.informe_quem_recebeu_a_visita")}
               </p>
             </div>
 
@@ -2397,64 +2567,134 @@ export default function AppointmentDetail() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-border bg-white p-3">
-                <p className="text-xs font-semibold text-foreground">
-                  {t("ui.oportunidades_percebidas_durante_a_visita")}
-                </p>
-                <p className="mt-1 text-[11px] text-foreground-muted">
-                  {t(
-                    "ui.selecione_oportunidades_percebidas_durante_a_visita_opcional",
-                  )}
-                </p>
-                <div className="mt-3 max-h-40 overflow-y-auto pr-1">
-                  <div className="grid gap-2">
-                    {oportunidadeOptions.map((option) => {
-                      const fieldId = `oportunidade-${option.value}`;
-                      const checked = checkoutOpportunities.includes(
-                        option.value,
-                      );
-                      return (
-                        <label
-                          key={option.value}
-                          htmlFor={fieldId}
-                          className="flex items-center gap-2 rounded-2xl border border-border bg-white px-3 py-2 text-xs text-foreground"
-                        >
-                          <input
-                            id={fieldId}
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() =>
-                              toggleCheckoutOpportunity(option.value)
-                            }
-                            disabled={isCheckoutBusy}
-                            className="h-4 w-4 accent-accent"
-                          />
-                          <span className="font-semibold">{option.label}</span>
-                        </label>
-                      );
-                    })}
+              {checkoutStep === "summary" ? (
+                <>
+                  <div className="rounded-2xl border border-border bg-white p-3">
+                    <p className="text-xs font-semibold text-foreground">
+                      {t("ui.oportunidades_percebidas_durante_a_visita")}
+                    </p>
+                    <p className="mt-1 text-[11px] text-foreground-muted">
+                      {t(
+                        "ui.selecione_oportunidades_percebidas_durante_a_visita_opcional",
+                      )}
+                    </p>
+                    <div className="mt-3 max-h-40 overflow-y-auto pr-1">
+                      <div className="grid gap-2">
+                        {oportunidadeOptions.map((option) => {
+                          const fieldId = `oportunidade-${option.value}`;
+                          const checked = checkoutOpportunities.includes(
+                            option.value,
+                          );
+                          return (
+                            <label
+                              key={option.value}
+                              htmlFor={fieldId}
+                              className="flex items-center gap-2 rounded-2xl border border-border bg-white px-3 py-2 text-xs text-foreground"
+                            >
+                              <input
+                                id={fieldId}
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() =>
+                                  toggleCheckoutOpportunity(option.value)
+                                }
+                                disabled={isCheckoutBusy}
+                                className="h-4 w-4 accent-accent"
+                              />
+                              <span className="font-semibold">
+                                {option.label}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
 
-              <div className="rounded-2xl border border-border bg-white p-3">
-                <p className="text-xs font-semibold text-foreground">
-                  {t("ui.observacoes_do_check_out")}
-                </p>
-                <p className="mt-1 text-[11px] text-foreground-muted">
-                  {t("ui.registre_detalhes_relevantes_da_visita_opcional")}
-                </p>
-                <textarea
-                  value={checkoutObservation}
-                  onChange={(event) =>
-                    setCheckoutObservation(event.target.value)
-                  }
-                  placeholder={t("ui.ex_cliente_solicitou_retorno_em_15_dias")}
-                  className="mt-3 w-full resize-none rounded-2xl border border-border bg-white px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-accent/40"
-                  rows={3}
-                  disabled={isCheckoutBusy}
-                />
-              </div>
+                  <div className="rounded-2xl border border-border bg-white p-3">
+                    <p className="text-xs font-semibold text-foreground">
+                      {t("ui.observacoes_do_check_out")}
+                    </p>
+                    <p className="mt-1 text-[11px] text-foreground-muted">
+                      {t("ui.registre_detalhes_relevantes_da_visita_opcional")}
+                    </p>
+                    <textarea
+                      value={checkoutObservation}
+                      onChange={(event) =>
+                        setCheckoutObservation(event.target.value)
+                      }
+                      placeholder={t(
+                        "ui.ex_cliente_solicitou_retorno_em_15_dias",
+                      )}
+                      className="mt-3 w-full resize-none rounded-2xl border border-border bg-white px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-accent/40"
+                      rows={3}
+                      disabled={isCheckoutBusy}
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="rounded-2xl border border-border bg-white p-3">
+                    <p className="text-xs font-semibold text-foreground">
+                      {t("ui.quem_recebeu_a_visita")}
+                    </p>
+                    <div className="mt-3 grid gap-3">
+                      <label className="grid gap-2 text-xs font-semibold text-foreground">
+                        <span>{t("ui.nome")}</span>
+                        <input
+                          type="text"
+                          value={receiverName}
+                          onChange={(event) =>
+                            setReceiverName(event.target.value)
+                          }
+                          placeholder={t("ui.ex_nome_de_quem_recebeu")}
+                          className="w-full rounded-2xl border border-border bg-white px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-accent/40"
+                          disabled={isCheckoutBusy}
+                        />
+                      </label>
+                      <label className="grid gap-2 text-xs font-semibold text-foreground">
+                        <span>{t("ui.contato")}</span>
+                        <input
+                          type="text"
+                          value={receiverContact}
+                          onChange={(event) =>
+                            setReceiverContact(event.target.value)
+                          }
+                          placeholder={t("ui.ex_telefone_ou_email")}
+                          className="w-full rounded-2xl border border-border bg-white px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-accent/40"
+                          disabled={isCheckoutBusy}
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-border bg-white p-3">
+                    <p className="text-xs font-semibold text-foreground">
+                      {t("ui.termometro_do_cliente")}
+                    </p>
+                    <p className="mt-1 text-[11px] text-foreground-muted">
+                      {t("ui.avaliacao_de_0_a_10")}
+                    </p>
+                    <div className="mt-3 space-y-2">
+                      <input
+                        type="range"
+                        min={0}
+                        max={10}
+                        step={1}
+                        value={clientThermometer}
+                        onChange={(event) =>
+                          setClientThermometer(Number(event.target.value))
+                        }
+                        disabled={isCheckoutBusy}
+                        className="w-full accent-accent"
+                      />
+                      <div className="text-xs font-semibold text-foreground">
+                        {thermometerLabel}
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
 
               {photoStatus ? (
                 <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
@@ -2464,30 +2704,66 @@ export default function AppointmentDetail() {
             </div>
 
             <div className="flex items-center justify-end gap-2 border-t border-border px-5 py-4">
-              <button
-                type="button"
-                onClick={handleCloseCheckout}
-                disabled={isCheckoutBusy}
-                className={`rounded-full border border-border px-4 py-2 text-xs font-semibold ${
-                  isCheckoutBusy
-                    ? "cursor-not-allowed text-foreground-muted"
-                    : "text-foreground-soft"
-                }`}
-              >
-                {t("ui.cancelar")}
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmCheckout}
-                disabled={!canCheckOut || busy || isCheckoutBusy}
-                className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
-                  canCheckOut && !busy && !isCheckoutBusy
-                    ? "bg-info text-white"
-                    : "cursor-not-allowed bg-surface-muted text-foreground-muted"
-                }`}
-              >
-                {t("ui.continuar_check_out")}
-              </button>
+              {checkoutStep === "summary" ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleCloseCheckout}
+                    disabled={isCheckoutBusy}
+                    className={`rounded-full border border-border px-4 py-2 text-xs font-semibold ${
+                      isCheckoutBusy
+                        ? "cursor-not-allowed text-foreground-muted"
+                        : "text-foreground-soft"
+                    }`}
+                  >
+                    {t("ui.cancelar")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleContinueCheckout}
+                    disabled={!canCheckOut || busy || isCheckoutBusy}
+                    className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
+                      canCheckOut && !busy && !isCheckoutBusy
+                        ? "bg-info text-white"
+                        : "cursor-not-allowed bg-surface-muted text-foreground-muted"
+                    }`}
+                  >
+                    {t("ui.continuar_check_out")}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setCheckoutStep("summary")}
+                    disabled={isCheckoutBusy}
+                    className={`rounded-full border border-border px-4 py-2 text-xs font-semibold ${
+                      isCheckoutBusy
+                        ? "cursor-not-allowed text-foreground-muted"
+                        : "text-foreground-soft"
+                    }`}
+                  >
+                    {t("ui.voltar")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleFinalizeCheckout}
+                    disabled={
+                      !canCheckOut || busy || isCheckoutBusy || !isCheckoutReceiverValid
+                    }
+                    className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
+                      canCheckOut &&
+                      !busy &&
+                      !isCheckoutBusy &&
+                      isCheckoutReceiverValid
+                        ? "bg-info text-white"
+                        : "cursor-not-allowed bg-surface-muted text-foreground-muted"
+                    }`}
+                  >
+                    {t("ui.finalizar_check_out")}
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>

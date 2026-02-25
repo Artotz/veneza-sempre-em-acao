@@ -149,6 +149,7 @@ const buildCheckOutChanges = (payload: {
   accuracy?: number | null;
   oportunidades: string[];
   notes?: string | null;
+  clientThermometer?: number | null;
 }) => {
   const remoteChanges: Record<string, unknown> = {
     check_out_at: payload.at,
@@ -162,6 +163,10 @@ const buildCheckOutChanges = (payload: {
     oportunidades: payload.oportunidades,
     notes: payload.notes ?? null,
   };
+  if (payload.clientThermometer != null) {
+    remoteChanges.client_thermometer = payload.clientThermometer;
+    localChanges.clientThermometer = payload.clientThermometer;
+  }
 
   if (hasCoords(payload.lat, payload.lng)) {
     remoteChanges.check_out_lat = payload.lat as number;
@@ -570,6 +575,7 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
           accuracy?: number | null;
           oportunidades: string[];
           notes?: string | null;
+          clientThermometer?: number | null;
         }
       ) =>
         runUpdate(id, async () => {

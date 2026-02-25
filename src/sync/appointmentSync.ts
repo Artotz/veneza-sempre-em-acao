@@ -83,15 +83,25 @@ export const syncAppointment = async (
   let actionsApplied = 0;
   for (const item of pendingActions) {
     try {
-      const { error } = await supabase
-        .from("apontamentos")
-        .update(item.changes)
-        .eq("id", item.appointmentId)
-        .select("id")
-        .single();
+      if (item.actionType === "companyContact") {
+        const { error } = await supabase
+          .from("company_contacts")
+          .insert(item.changes);
 
-      if (error) {
-        throw new Error(error.message);
+        if (error) {
+          throw new Error(error.message);
+        }
+      } else {
+        const { error } = await supabase
+          .from("apontamentos")
+          .update(item.changes)
+          .eq("id", item.appointmentId)
+          .select("id")
+          .single();
+
+        if (error) {
+          throw new Error(error.message);
+        }
       }
 
       await removePendingAction(item.id);

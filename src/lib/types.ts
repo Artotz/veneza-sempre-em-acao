@@ -35,11 +35,21 @@ export type Appointment = {
   absenceNote?: string | null;
   notes?: string | null;
   oportunidades?: string[] | null;
+  clientThermometer?: number | null;
   createdAt?: string | null;
   updatedAt?: string | null;
   appointmentTitle?: string | null;
   pendingSync?: boolean;
   localCreatedAt?: number | null;
+};
+
+export type CompanyContact = {
+  id: string;
+  companyId: string;
+  name: string;
+  contact: string;
+  appointmentId?: string | null;
+  createdAt?: string | null;
 };
 
 export type Company = {

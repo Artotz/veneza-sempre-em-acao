@@ -23,7 +23,12 @@ import {
 } from "../lib/schedule";
 import { COMPANY_DETAIL_SELECT, mapCompany } from "../lib/supabase";
 import { createSupabaseBrowserClient } from "../lib/supabaseClient";
-import type { Appointment, AppointmentStatus, Company } from "../lib/types";
+import type {
+  Appointment,
+  AppointmentStatus,
+  Company,
+  CompanyContact,
+} from "../lib/types";
 import { useSchedule } from "../state/useSchedule";
 import {
   getCompaniesSnapshot,
@@ -34,7 +39,7 @@ import { t } from "../i18n";
 const buildDayKey = (date: Date) =>
   `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
 
-type CompanyTab = "agendamentos" | "oportunidades";
+type CompanyTab = "agendamentos" | "oportunidades" | "contatos";
 type OpportunityTab = "cotacoes" | "preventivas" | "reconexoes";
 type OpportunityItem = {
   id: string;
@@ -128,6 +133,9 @@ export default function CompanyDetail() {
     preventivas: string[];
     reconexoes: string[];
   }>({ preventivas: [], reconexoes: [] });
+  const [contacts, setContacts] = useState<CompanyContact[]>([]);
+  const [contactsLoading, setContactsLoading] = useState(false);
+  const [contactsError, setContactsError] = useState<string | null>(null);
 
   const opportunities = useMemo(() => {
     const preventivas: OpportunityItem[] = protheusSeries.preventivas.map(
@@ -252,6 +260,57 @@ export default function CompanyDetail() {
       active = false;
     };
   }, [authLoading, id, selectors, state.companies, supabase, user?.email]);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadContacts = async () => {
+      if (!id) return;
+      const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
+      if (isOffline) {
+        if (!active) return;
+        setContacts([]);
+        setContactsError(t("ui.sem_conexao_e_sem_cache_local"));
+        setContactsLoading(false);
+        return;
+      }
+
+      setContactsLoading(true);
+      setContactsError(null);
+
+      const { data, error } = await supabase
+        .from("company_contacts")
+        .select("id, company_id, name, contact, created_at")
+        .eq("company_id", id)
+        .order("created_at", { ascending: false });
+
+      if (!active) return;
+
+      if (error) {
+        setContactsError(error.message);
+        setContacts([]);
+        setContactsLoading(false);
+        return;
+      }
+
+      const mapped = (data ?? []).map((row) => ({
+        id: row.id,
+        companyId: row.company_id,
+        name: row.name,
+        contact: row.contact,
+        createdAt: row.created_at ?? null,
+      })) as CompanyContact[];
+
+      setContacts(mapped);
+      setContactsLoading(false);
+    };
+
+    void loadContacts();
+
+    return () => {
+      active = false;
+    };
+  }, [id, supabase, t]);
 
   useEffect(() => {
     let active = true;
@@ -580,7 +639,7 @@ export default function CompanyDetail() {
           role="tablist"
           aria-label={t("ui.alternar_secoes_empresa")}
         >
-          <div className="grid grid-cols-2 gap-1">
+          <div className="grid grid-cols-3 gap-1">
             <button
               type="button"
               role="tab"
@@ -606,6 +665,19 @@ export default function CompanyDetail() {
               }`}
             >
               {t("ui.oportunidades")}
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={companyTab === "contatos"}
+              onClick={() => setCompanyTab("contatos")}
+              className={`rounded-xl px-3 py-2 text-xs font-semibold transition ${
+                companyTab === "contatos"
+                  ? "bg-white text-foreground shadow-sm"
+                  : "text-foreground-soft hover:bg-white/60"
+              }`}
+            >
+              {t("ui.contatos")}
             </button>
           </div>
         </div>
@@ -654,7 +726,65 @@ export default function CompanyDetail() {
                   <div className="rounded-2xl border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-foreground-soft">
                     {state.error}
                   </div>
-                ) : null}
+        ) : null}
+
+        {companyTab === "contatos" ? (
+          <section className="space-y-3">
+            <SectionHeader
+              title={t("ui.contatos")}
+              rightSlot={t("ui.contatos_count", { count: contacts.length })}
+            />
+
+            {contactsLoading ? (
+              <div className="space-y-3">
+                <div className="h-20 animate-pulse rounded-3xl bg-surface-muted" />
+                <div className="h-20 animate-pulse rounded-3xl bg-surface-muted" />
+              </div>
+            ) : contactsError ? (
+              <EmptyState
+                title={t("ui.nao_foi_possivel_carregar")}
+                description={contactsError}
+              />
+            ) : contacts.length ? (
+              <div className="space-y-3">
+                {contacts.map((contact) => {
+                  const createdAt = contact.createdAt
+                    ? new Date(contact.createdAt)
+                    : null;
+                  const createdAtLabel =
+                    createdAt && !Number.isNaN(createdAt.getTime())
+                      ? formatDateShort(createdAt)
+                      : null;
+                  return (
+                    <div
+                      key={contact.id}
+                      className="rounded-3xl border border-border bg-white p-4 shadow-sm"
+                    >
+                      <p className="text-sm font-semibold text-foreground">
+                        {contact.name}
+                      </p>
+                      <p className="mt-1 text-xs text-foreground-muted">
+                        {contact.contact}
+                      </p>
+                      {createdAtLabel ? (
+                        <p className="mt-2 text-[11px] text-foreground-soft">
+                          {t("ui.contato_registrado_em", {
+                            date: createdAtLabel,
+                          })}
+                        </p>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <EmptyState
+                title={t("ui.nenhum_contato_registrado")}
+                description={t("ui.registre_contatos_no_check_out")}
+              />
+            )}
+          </section>
+        ) : null}
                 {filteredAppointments.length ? (
                   filteredAppointments.map((appointment) => {
                     const appointmentDetail = getAppointmentTitle(appointment);
