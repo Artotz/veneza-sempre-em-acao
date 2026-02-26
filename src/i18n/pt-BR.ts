@@ -60,6 +60,7 @@ export const resources = {
         cliente_solicitou_remarcacao: "Cliente solicitou remarcação",
         concluido: "Concluído",
         concluidos: "Concluídos",
+        confirmar: "Confirmar",
         confirmar_check_out: "Confirmar check-out",
         continuar_check_out: "Continuar check-out",
         continuar_sem_localizacao: "Continuar sem localização",
@@ -107,7 +108,7 @@ export const resources = {
         datas_invalidas: "Datas inválidas.",
 
         dentes: "Dentes",
-        descreva_o_motivo: "Descreva o motivo...",
+        descreva_o_motivo: "Descreva a nota do cancelamento...",
 
         detalhe_do_agendamento: "Detalhe do agendamento",
         detalhe_do_atendimento: "Detalhe do atendimento.",
@@ -185,7 +186,8 @@ export const resources = {
         ir_para_empresas: "Ir para empresas",
         ir_para_home: "Ir para home",
         ir_para_apontamento: "Ir para apontamento",
-        justificar_ausencia: "Justificar ausência",
+        ir_para_lista_do_dia: "Ir para lista do dia",
+        justificar_ausencia: "Cancelar visita",
 
         lamina: "Lâmina",
         linha_do_tempo: "Linha do tempo",
@@ -198,6 +200,7 @@ export const resources = {
 
         mes: "Mês",
         motivo: "Motivo",
+        motivo_do_cancelamento: "Nota de cancelamento",
 
         nao_foi_possivel_acessar_a_camera: "Não foi possível acessar a câmera.",
         nao_foi_possivel_capturar_a_foto: "Não foi possível capturar a foto.",
@@ -355,6 +358,7 @@ export const resources = {
         qtd_reconexoes: "Qtd Reconexões",
 
         ver_empresa: "Ver empresa",
+        visitas_realizadas_count: "Visitas realizadas {{done}} / {{total}}",
 
         seu_email_com: "seu@email.com",
 
@@ -476,7 +480,7 @@ export const resources = {
         registre_detalhes_relevantes_da_visita_opcional:
           "Registre detalhes relevantes da visita (opcional).",
         selecione_o_motivo_e_confirme_o_registro:
-          "Selecione o motivo e confirme o registro.",
+          "Informe a nota do cancelamento.",
         selecione_oportunidades_percebidas_durante_a_visita_opcional:
           "Selecione oportunidades percebidas durante a visita (opcional).",
         selecione_outro_dia_para_ver_a_agenda:

@@ -87,11 +87,14 @@ export function StatusFilters({
             type="button"
             onClick={() => handleToggleStatus(pill.status)}
             aria-pressed={isActive}
-            className={`w-full truncate rounded-full px-3 py-1 transition ${pill.baseClass} ${
+            className={`flex w-full items-center justify-between gap-2 rounded-full px-3 py-1 transition ${pill.baseClass} ${
               isActive ? `ring-2 ${pill.ringClass}` : ""
             }`}
           >
-            {pill.label}: {pill.count}
+            <span className="min-w-0 truncate">{pill.label}</span>
+            <span className="shrink-0 font-semibold tabular-nums">
+              {pill.count}
+            </span>
           </button>
         );
       })}
@@ -99,11 +102,14 @@ export function StatusFilters({
         type="button"
         onClick={onToggleSuggestions}
         aria-pressed={showSuggestions}
-        className={`w-full truncate rounded-full px-3 py-1 transition bg-accent/10 text-foreground ${
+        className={`flex w-full items-center justify-between gap-2 rounded-full px-3 py-1 transition bg-accent/10 text-foreground ${
           showSuggestions ? "ring-2 ring-accent/30" : ""
         }`}
       >
-        {t("ui.sugestoes")}: {suggestionCount}
+        <span className="min-w-0 truncate">{t("ui.sugestoes")}</span>
+        <span className="shrink-0 font-semibold tabular-nums">
+          {suggestionCount}
+        </span>
       </button>
       {lastGroup.map((pill) => {
         const isActive = statusFilters.includes(pill.status);
@@ -113,11 +119,14 @@ export function StatusFilters({
             type="button"
             onClick={() => handleToggleStatus(pill.status)}
             aria-pressed={isActive}
-            className={`w-full truncate rounded-full px-3 py-1 transition ${pill.baseClass} ${
+            className={`flex w-full items-center justify-between gap-2 rounded-full px-3 py-1 transition ${pill.baseClass} ${
               isActive ? `ring-2 ${pill.ringClass}` : ""
             }`}
           >
-            {pill.label}: {pill.count}
+            <span className="min-w-0 truncate">{pill.label}</span>
+            <span className="shrink-0 font-semibold tabular-nums">
+              {pill.count}
+            </span>
           </button>
         );
       })}
