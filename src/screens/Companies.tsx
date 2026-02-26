@@ -30,12 +30,11 @@ export default function Companies() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [query, setQuery] = useState("");
   const [sortBy, setSortBy] = useState<
-    | "nome"
     | "dias_desde_ultima_visita"
     | "preventivas"
     | "reconexoes"
     | "cotacoes_abertas"
-  >("nome");
+  >("dias_desde_ultima_visita");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [protheusCounts, setProtheusCounts] = useState<ProtheusCountMap>({});
@@ -333,9 +332,6 @@ export default function Companies() {
       return Math.floor(diffMs / (1000 * 60 * 60 * 24));
     };
     items.sort((a, b) => {
-      if (sortBy === "nome") {
-        return (a.name ?? "").localeCompare(b.name ?? "", "pt-BR");
-      }
       if (sortBy === "dias_desde_ultima_visita") {
         const aDays = getDaysSinceLastVisit(a);
         const bDays = getDaysSinceLastVisit(b);
@@ -386,7 +382,6 @@ export default function Companies() {
             onChange={(event) =>
               setSortBy(
                 event.target.value as
-                  | "nome"
                   | "dias_desde_ultima_visita"
                   | "preventivas"
                   | "reconexoes"
@@ -395,7 +390,6 @@ export default function Companies() {
             }
             className="w-full flex-1 rounded-2xl border border-border bg-white px-3 py-2 text-xs font-semibold text-foreground shadow-sm outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
           >
-            <option value="nome">{t("ui.nome")}</option>
             <option value="dias_desde_ultima_visita">
               {t("ui.dias_desde_ultima_visita")}
             </option>
@@ -457,12 +451,10 @@ export default function Companies() {
                         ? t("ui.valor_cotacoes_abertas")
                         : sortBy === "dias_desde_ultima_visita"
                           ? t("ui.dias_desde_ultima_visita")
-                          : t("ui.nome")}
+                          : t("ui.valor_cotacoes_abertas")}
                 </p>
                 <p className="text-sm font-semibold text-foreground">
-                  {sortBy === "nome"
-                    ? company.name
-                    : sortBy === "dias_desde_ultima_visita"
+                  {sortBy === "dias_desde_ultima_visita"
                       ? (() => {
                           const lastVisit = lastVisitByCompany[company.id];
                           if (!lastVisit) return t("ui.sem_apontamentos");
