@@ -30,13 +30,20 @@ export default function Companies() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [query, setQuery] = useState("");
   const [sortBy, setSortBy] = useState<
-    "preventivas" | "reconexoes" | "cotacoes_abertas"
-  >("preventivas");
+    | "nome"
+    | "dias_desde_ultima_visita"
+    | "preventivas"
+    | "reconexoes"
+    | "cotacoes_abertas"
+  >("nome");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [protheusCounts, setProtheusCounts] = useState<ProtheusCountMap>({});
   const [openQuoteTotals, setOpenQuoteTotals] = useState<
     Record<string, number>
+  >({});
+  const [lastVisitByCompany, setLastVisitByCompany] = useState<
+    Record<string, string | null>
   >({});
 
   const filterCompanies = (items: Company[], term: string) => {
@@ -237,6 +244,68 @@ export default function Companies() {
     };
   }, [companies, supabase]);
 
+  useEffect(() => {
+    let active = true;
+
+    const loadLastVisits = async () => {
+      const userEmail = user?.email?.trim();
+      if (!userEmail) {
+        setLastVisitByCompany({});
+        return;
+      }
+
+      if (!companies.length) {
+        setLastVisitByCompany({});
+        return;
+      }
+
+      const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
+      if (isOffline) {
+        setLastVisitByCompany({});
+        return;
+      }
+
+      const nowIso = new Date().toISOString();
+      const next: Record<string, string | null> = {};
+      const companyIds = companies
+        .map((company) => company.id)
+        .filter(Boolean);
+
+      for (const chunk of chunkArray(companyIds, 200)) {
+        const { data, error: requestError } = await supabase
+          .from("apontamentos")
+          .select("company_id, starts_at")
+          .in("company_id", chunk)
+          .eq("consultant_name", userEmail)
+          .lte("starts_at", nowIso)
+          .order("starts_at", { ascending: false });
+
+        if (!active) return;
+
+        if (requestError) {
+          setLastVisitByCompany({});
+          return;
+        }
+
+        (data ?? []).forEach((row) => {
+          const companyId = (row as { company_id?: string | null }).company_id;
+          if (!companyId || next[companyId]) return;
+          next[companyId] =
+            (row as { starts_at?: string | null }).starts_at ?? null;
+        });
+      }
+
+      if (!active) return;
+      setLastVisitByCompany(next);
+    };
+
+    void loadLastVisits();
+
+    return () => {
+      active = false;
+    };
+  }, [companies, supabase, user?.email]);
+
   const filteredCompanies = useMemo(
     () => filterCompanies(companies, query),
     [companies, query],
@@ -254,13 +323,43 @@ export default function Companies() {
       }
       return openQuoteTotals[key] ?? 0;
     };
+    const getDaysSinceLastVisit = (company: Company) => {
+      const lastVisit = lastVisitByCompany[company.id];
+      if (!lastVisit) return null;
+      const parsed = new Date(lastVisit);
+      if (Number.isNaN(parsed.getTime())) return null;
+      const diffMs = Date.now() - parsed.getTime();
+      if (diffMs <= 0) return 0;
+      return Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    };
     items.sort((a, b) => {
+      if (sortBy === "nome") {
+        return (a.name ?? "").localeCompare(b.name ?? "", "pt-BR");
+      }
+      if (sortBy === "dias_desde_ultima_visita") {
+        const aDays = getDaysSinceLastVisit(a);
+        const bDays = getDaysSinceLastVisit(b);
+        if (aDays == null && bDays == null) {
+          return (a.name ?? "").localeCompare(b.name ?? "", "pt-BR");
+        }
+        if (aDays == null) return 1;
+        if (bDays == null) return -1;
+        const diff = bDays - aDays;
+        if (diff !== 0) return diff;
+        return (a.name ?? "").localeCompare(b.name ?? "", "pt-BR");
+      }
       const diff = getMetric(b) - getMetric(a);
       if (diff !== 0) return diff;
       return (a.name ?? "").localeCompare(b.name ?? "", "pt-BR");
     });
     return items;
-  }, [filteredCompanies, openQuoteTotals, protheusCounts, sortBy]);
+  }, [
+    filteredCompanies,
+    lastVisitByCompany,
+    openQuoteTotals,
+    protheusCounts,
+    sortBy,
+  ]);
 
   return (
     <AppShell
@@ -287,6 +386,8 @@ export default function Companies() {
             onChange={(event) =>
               setSortBy(
                 event.target.value as
+                  | "nome"
+                  | "dias_desde_ultima_visita"
                   | "preventivas"
                   | "reconexoes"
                   | "cotacoes_abertas",
@@ -294,6 +395,10 @@ export default function Companies() {
             }
             className="w-full flex-1 rounded-2xl border border-border bg-white px-3 py-2 text-xs font-semibold text-foreground shadow-sm outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
           >
+            <option value="nome">{t("ui.nome")}</option>
+            <option value="dias_desde_ultima_visita">
+              {t("ui.dias_desde_ultima_visita")}
+            </option>
             <option value="preventivas">{t("ui.qtd_preventivas")}</option>
             <option value="reconexoes">{t("ui.qtd_reconexoes")}</option>
             <option value="cotacoes_abertas">
@@ -348,10 +453,31 @@ export default function Companies() {
                     ? t("ui.qtd_preventivas")
                     : sortBy === "reconexoes"
                       ? t("ui.qtd_reconexoes")
-                      : t("ui.valor_cotacoes_abertas")}
+                      : sortBy === "cotacoes_abertas"
+                        ? t("ui.valor_cotacoes_abertas")
+                        : sortBy === "dias_desde_ultima_visita"
+                          ? t("ui.dias_desde_ultima_visita")
+                          : t("ui.nome")}
                 </p>
                 <p className="text-sm font-semibold text-foreground">
-                  {sortBy === "cotacoes_abertas"
+                  {sortBy === "nome"
+                    ? company.name
+                    : sortBy === "dias_desde_ultima_visita"
+                      ? (() => {
+                          const lastVisit = lastVisitByCompany[company.id];
+                          if (!lastVisit) return t("ui.sem_apontamentos");
+                          const parsed = new Date(lastVisit);
+                          if (Number.isNaN(parsed.getTime())) {
+                            return t("ui.sem_apontamentos");
+                          }
+                          const diffMs = Date.now() - parsed.getTime();
+                          const days =
+                            diffMs <= 0
+                              ? 0
+                              : Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                          return `${formatQuantity(days)} ${t("ui.dias")}`;
+                        })()
+                      : sortBy === "cotacoes_abertas"
                     ? formatCurrencyBRL(
                         openQuoteTotals[getProtheusKey(company.document)] ?? 0,
                       )
