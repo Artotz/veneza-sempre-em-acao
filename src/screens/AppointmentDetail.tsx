@@ -61,15 +61,12 @@ import { syncAppointment } from "../sync/appointmentSync";
 import { compressImage } from "../utils/photoCompress";
 import { t } from "../i18n";
 
-const absenceOptions = [
-  {
-    label: t("ui.cliente_solicitou_remarcacao"),
-    value: "client_requested_reschedule",
-  },
-  { label: t("ui.endereco_fechado"), value: "address_closed" },
-  { label: t("ui.equipamento_indisponivel"), value: "equipment_unavailable" },
-  { label: t("ui.outro"), value: "other" },
-];
+const absenceReasonLabels: Record<string, string> = {
+  client_requested_reschedule: t("ui.cliente_solicitou_remarcacao"),
+  address_closed: t("ui.endereco_fechado"),
+  equipment_unavailable: t("ui.equipamento_indisponivel"),
+  other: t("ui.outro"),
+};
 
 const oportunidadeOptions = [
   { label: t("ui.preventiva"), value: "preventiva" },
@@ -1305,6 +1302,7 @@ export default function AppointmentDetail() {
   const isCheckOutCapturing = geo.isCapturing && geoIntent === "check_out";
   const isPhotoBusy = Boolean(photoStatus) || isCameraOpen;
   const isCheckoutBusy = isPhotoBusy || geo.isCapturing;
+  const isAbsenceNoteValid = absenceNote.trim().length > 0;
 
   const formatCoordinates = (lat?: number | null, lng?: number | null) => {
     if (lat == null || lng == null) return t("ui.nao_registrado");
@@ -1807,7 +1805,7 @@ export default function AppointmentDetail() {
   };
 
   const handleAbsence = async () => {
-    if (!canAbsence || busy || isPhotoBusy) return;
+    if (!canAbsence || busy || isPhotoBusy || !isAbsenceNoteValid) return;
     setError(null);
     setSyncStatus(null);
     const reason = absenceReason.trim() || "other";
@@ -1882,6 +1880,9 @@ export default function AppointmentDetail() {
   const showOportunidades = Boolean(
     appointment.checkOutAt || appointment.status === "done",
   );
+  const cancellationReason = appointment.absenceNote?.trim() ?? "";
+  const showCancellationReason =
+    appointment.status === "absent" && cancellationReason.length > 0;
   const checkoutNotes = appointment.notes?.trim() ?? "";
   const showCheckoutNotes = checkoutNotes.length > 0;
   const hasThermometer = appointment.clientThermometer != null;
@@ -2103,6 +2104,15 @@ export default function AppointmentDetail() {
             ) : (
               <p className="text-xs text-foreground-muted">{t("ui.nenhuma")}</p>
             )}
+          </section>
+        ) : null}
+
+        {showCancellationReason ? (
+          <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
+            <SectionHeader title={t("ui.motivo_do_cancelamento")} />
+            <p className="text-sm text-foreground-muted whitespace-pre-wrap">
+              {cancellationReason}
+            </p>
           </section>
         ) : null}
 
@@ -2824,30 +2834,15 @@ export default function AppointmentDetail() {
             <div className="space-y-4 px-5 py-4">
               <div className="rounded-2xl border border-border bg-surface-muted p-3">
                 <p className="text-xs font-semibold text-foreground">
-                  {t("ui.motivo")}
+                  {t("ui.motivo_do_cancelamento")}
                 </p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {absenceOptions.map((reason) => (
-                    <button
-                      key={reason.value}
-                      type="button"
-                      onClick={() => setAbsenceReason(reason.value)}
-                      className={`rounded-full border px-3 py-1 text-[10px] font-semibold ${
-                        absenceReason === reason.value
-                          ? "border-accent bg-white text-foreground"
-                          : "border-border bg-white text-foreground-soft"
-                      }`}
-                    >
-                      {reason.label}
-                    </button>
-                  ))}
-                </div>
                 <textarea
                   value={absenceNote}
                   onChange={(event) => setAbsenceNote(event.target.value)}
                   placeholder={t("ui.descreva_o_motivo")}
                   className="mt-3 w-full resize-none rounded-2xl border border-border bg-white px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-accent/40"
                   rows={3}
+                  required
                 />
               </div>
               {photoStatus ? (
@@ -2872,15 +2867,15 @@ export default function AppointmentDetail() {
               </button>
               <button
                 type="button"
-                disabled={!canAbsence || busy || isPhotoBusy}
+                disabled={!canAbsence || busy || isPhotoBusy || !isAbsenceNoteValid}
                 onClick={handleAbsence}
                 className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
-                  canAbsence && !busy && !isPhotoBusy
+                  canAbsence && !busy && !isPhotoBusy && isAbsenceNoteValid
                     ? "bg-danger text-white"
                     : "cursor-not-allowed bg-surface-muted text-foreground-muted"
                 }`}
               >
-                {t("ui.registrar_ausencia")}
+                {t("ui.confirmar")}
               </button>
             </div>
           </div>

@@ -108,7 +108,7 @@ export const resources = {
         datas_invalidas: "Datas inválidas.",
 
         dentes: "Dentes",
-        descreva_o_motivo: "Descreva a nota do cancelamento...",
+        descreva_o_motivo: "Descreva o motivo...",
 
         detalhe_do_agendamento: "Detalhe do agendamento",
         detalhe_do_atendimento: "Detalhe do atendimento.",
@@ -200,7 +200,6 @@ export const resources = {
 
         mes: "Mês",
         motivo: "Motivo",
-        motivo_do_cancelamento: "Nota de cancelamento",
 
         nao_foi_possivel_acessar_a_camera: "Não foi possível acessar a câmera.",
         nao_foi_possivel_capturar_a_foto: "Não foi possível capturar a foto.",
@@ -231,6 +230,7 @@ export const resources = {
         avaliacao_de_0_a_10: "Avaliação de 0 a 10.",
         termometro_nota_value: "Nota {{value}}/10",
 
+        motivo_do_cancelamento: "Motivo do cancelamento",
         observacao_do_check_out: "Observação do check-out",
         observacoes_do_check_out: "Observações do check-out",
 
@@ -358,7 +358,7 @@ export const resources = {
         qtd_reconexoes: "Qtd Reconexões",
 
         ver_empresa: "Ver empresa",
-        visitas_realizadas_count: "Visitas realizadas {{done}} / {{total}}",
+        visitas_realizadas_count: "{{done}} / {{total}}",
 
         seu_email_com: "seu@email.com",
 
@@ -366,6 +366,11 @@ export const resources = {
         emp_count: "{{count}} emp.",
 
         agendamentos_label_count: "{{label}} - {{count}} agendamentos",
+        sua_proxima_visita: "Sua visita atual",
+        visitas_realizadas: "Visitas realizadas",
+        visitas_atrasadas: "Visitas atrasadas",
+        visitas_canceladas: "Visitas canceladas",
+        visitas_sugeridas: "Visitas sugeridas",
 
         a_rota_solicitada_nao_existe_ou_foi_movida:
           "A rota solicitada não existe ou foi movida.",
@@ -480,7 +485,7 @@ export const resources = {
         registre_detalhes_relevantes_da_visita_opcional:
           "Registre detalhes relevantes da visita (opcional).",
         selecione_o_motivo_e_confirme_o_registro:
-          "Informe a nota do cancelamento.",
+          "Selecione o motivo e confirme o registro.",
         selecione_oportunidades_percebidas_durante_a_visita_opcional:
           "Selecione oportunidades percebidas durante a visita (opcional).",
         selecione_outro_dia_para_ver_a_agenda:

@@ -2,11 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppShell } from "../components/AppShell";
 import { AppointmentCard } from "../components/AppointmentCard";
-import { EmptyState } from "../components/EmptyState";
-import { StatusFilters } from "../components/StatusFilters";
 import { t } from "../i18n";
 import { useAuth } from "../contexts/useAuth";
-import { addDays, formatDateShort, isSameDay, startOfWeekMonday } from "../lib/date";
+import {
+  addDays,
+  formatDateShort,
+  isSameDay,
+  startOfWeekMonday,
+} from "../lib/date";
 import {
   formatAppointmentWindow,
   getAppointmentStatus,
@@ -34,10 +37,6 @@ export default function Home() {
   const [now, setNow] = useState(() => new Date());
   const navigate = useNavigate();
   const today = useMemo(() => new Date(), []);
-  const [statusFilters, setStatusFilters] = useState<
-    ReturnType<typeof getAppointmentStatus>[]
-  >(() => ["agendado"]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
 
   useEffect(() => {
     const interval = window.setInterval(() => setNow(new Date()), 1000);
@@ -52,9 +51,7 @@ export default function Home() {
 
   const todayAppointments = useMemo(() => {
     return state.appointments
-      .filter((appointment) =>
-        isSameDay(new Date(appointment.startAt), now),
-      )
+      .filter((appointment) => isSameDay(new Date(appointment.startAt), now))
       .sort(sortByStart);
   }, [now, state.appointments]);
 
@@ -118,7 +115,6 @@ export default function Home() {
   }, [activeAppointment, nextPendingAppointment, now]);
 
   const showCreateButton = todayAppointments.length === 0;
-  const todayLabel = formatDateShort(now);
   const daySummary = useMemo(() => {
     return todayAppointments.reduce(
       (acc, appointment) => {
@@ -135,25 +131,27 @@ export default function Home() {
       },
     );
   }, [todayAppointments]);
-  const suggestionCount = useMemo(
+  const completedCount = daySummary.concluido;
+  const scheduledCount = daySummary.agendado;
+  const inProgressCount = daySummary.em_execucao;
+  const totalCount = completedCount + scheduledCount + inProgressCount;
+  const canceledCount = daySummary.cancelado;
+  const lateCount = useMemo(() => {
+    const nowMs = now.getTime();
+    return todayAppointments.filter((appointment) => {
+      if (getAppointmentStatus(appointment) !== "agendado") return false;
+      const endMs = new Date(appointment.endAt).getTime();
+      if (Number.isNaN(endMs)) return false;
+      return endMs < nowMs;
+    }).length;
+  }, [now, todayAppointments]);
+  const suggestedCount = useMemo(
     () =>
       todayAppointments.filter((appointment) =>
         isSuggested(appointment, user?.email),
       ).length,
     [todayAppointments, user?.email],
   );
-  const filteredAppointments = useMemo(() => {
-    if (statusFilters.length === 0 && !showSuggestions) return [];
-    return todayAppointments.filter((appointment) => {
-      const matchesStatus = statusFilters.includes(
-        getAppointmentStatus(appointment),
-      );
-      const matchesSuggestion =
-        showSuggestions && isSuggested(appointment, user?.email);
-      return matchesStatus || matchesSuggestion;
-    });
-  }, [showSuggestions, statusFilters, todayAppointments, user?.email]);
-  const hasDayAppointments = todayAppointments.length > 0;
 
   return (
     <AppShell title={t("ui.home")}>
@@ -172,115 +170,59 @@ export default function Home() {
 
       <div className="mt-5 space-y-3">
         {focusAppointment ? (
-          <AppointmentCard
-            appointment={focusAppointment}
-            companyName={
-              focusAppointment.companyName ??
-              selectors.getCompany(focusAppointment.companyId)?.name ??
-              t("ui.empresa")
-            }
-            blocked={isBlocked(focusAppointment, todayAppointments)}
-            headerLabel={`${formatDateShort(
-              new Date(focusAppointment.startAt),
-            )} - ${formatAppointmentWindow(focusAppointment)}`}
-            detailLabel={getAppointmentTitle(focusAppointment)}
-            onClick={() =>
-              navigate(`/apontamentos/${focusAppointment.id}`)
-            }
-          />
-        ) : null}
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-semibold text-white">
-                {t("ui.seus_outros_agendamentos_de_hoje")}
-              </p>
-              <p className="text-xs text-white/70">
-                {t("ui.agendamentos_label_count", {
-                  label: todayLabel,
-                  count: todayAppointments.length,
-                })}
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold text-foreground">
-                  {t("ui.filtros_do_dia")}
-                </p>
-                <p className="text-xs text-foreground-muted">
-                  {t("ui.status_e_sugestoes")}
-                </p>
-              </div>
-              <span className="text-xs font-semibold text-foreground-muted">
-                {t("ui.ag_count", {
-                  count: filteredAppointments.length,
-                })}
-              </span>
-            </div>
-            <StatusFilters
-              summary={daySummary}
-              statusFilters={statusFilters}
-              onChange={setStatusFilters}
-              showSuggestions={showSuggestions}
-              onToggleSuggestions={() =>
-                setShowSuggestions((current) => !current)
+          <div className="space-y-2">
+            <p className="text-sm font-semibold text-white">
+              {t("ui.sua_proxima_visita")}
+            </p>
+            <AppointmentCard
+              appointment={focusAppointment}
+              companyName={
+                focusAppointment.companyName ??
+                selectors.getCompany(focusAppointment.companyId)?.name ??
+                t("ui.empresa")
               }
-              suggestionCount={suggestionCount}
-              className="grid grid-cols-3 gap-2 text-[11px] font-semibold"
+              blocked={isBlocked(focusAppointment, todayAppointments)}
+              headerLabel={`${formatDateShort(
+                new Date(focusAppointment.startAt),
+              )} - ${formatAppointmentWindow(focusAppointment)}`}
+              detailLabel={getAppointmentTitle(focusAppointment)}
+              onClick={() => navigate(`/apontamentos/${focusAppointment.id}`)}
             />
           </div>
-
-          <div className="space-y-3">
-            {filteredAppointments.length ? (
-              filteredAppointments.map((appointment, index) => {
-                const company =
-                  appointment.companyName ??
-                  selectors.getCompany(appointment.companyId)?.name ??
-                  t("ui.empresa");
-                const appointmentDetail = getAppointmentTitle(appointment);
-                const snapshot = appointment.addressSnapshot;
-                const detailLabel = snapshot
-                  ? `${appointmentDetail} - ${snapshot}`
-                  : appointmentDetail;
-                const blocked = isBlocked(appointment, todayAppointments);
-                return (
-                  <AppointmentCard
-                    key={appointment.id}
-                    appointment={appointment}
-                    companyName={company}
-                    blocked={blocked}
-                    headerLabel={`#${index + 1} - ${formatAppointmentWindow(
-                      appointment,
-                    )}`}
-                    detailLabel={detailLabel}
-                    onClick={() => navigate(`/apontamentos/${appointment.id}`)}
-                  />
-                );
-              })
-            ) : (
-              <EmptyState
-                title={
-                  !hasDayAppointments
-                    ? t("ui.nao_ha_apontamentos_hoje")
-                    : t("ui.sem_agendamentos")
-                }
-                description={
-                  !hasDayAppointments
-                    ? t("ui.sem_apontamentos")
-                    : statusFilters.length === 0
-                      ? t(
-                          "ui.nenhum_filtro_ativo_ligue_ao_menos_um_status_acima",
-                        )
-                      : t(
-                          "ui.nenhum_agendamento_encontrado_para_os_filtros_ativos",
-                        )
-                }
-              />
-            )}
+        ) : null}
+        <section className="space-y-3">
+          <div className="space-y-4 rounded-3xl border border-border bg-white p-4 shadow-sm">
+            <div>
+              <div className="flex items-center justify-between text-sm font-semibold text-foreground">
+                <span>{t("ui.visitas_realizadas")}</span>
+                <span>
+                  {t("ui.visitas_realizadas_count", {
+                    done: completedCount,
+                    total: totalCount,
+                  })}
+                </span>
+              </div>
+              <div className="mt-2 flex items-center justify-between text-xs text-foreground-muted">
+                <span>{t("ui.visitas_atrasadas")}</span>
+                <span>{lateCount}</span>
+              </div>
+              <div className="mt-2 flex items-center justify-between text-xs text-foreground-muted">
+                <span>{t("ui.visitas_canceladas")}</span>
+                <span>{canceledCount}</span>
+              </div>
+              <div className="mt-2 flex items-center justify-between text-xs text-foreground-muted">
+                <span>{t("ui.visitas_sugeridas")}</span>
+                <span>{suggestedCount}</span>
+              </div>
+            </div>
           </div>
+          <button
+            type="button"
+            onClick={() => navigate("/calendario/dia")}
+            className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm font-semibold text-foreground shadow-sm transition hover:bg-surface-muted"
+          >
+            {t("ui.ir_para_lista_do_dia")}
+          </button>
         </section>
 
         {showCreateButton ? (
