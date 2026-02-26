@@ -61,13 +61,6 @@ import { syncAppointment } from "../sync/appointmentSync";
 import { compressImage } from "../utils/photoCompress";
 import { t } from "../i18n";
 
-const absenceReasonLabels: Record<string, string> = {
-  client_requested_reschedule: t("ui.cliente_solicitou_remarcacao"),
-  address_closed: t("ui.endereco_fechado"),
-  equipment_unavailable: t("ui.equipamento_indisponivel"),
-  other: t("ui.outro"),
-};
-
 const oportunidadeOptions = [
   { label: t("ui.preventiva"), value: "preventiva" },
   { label: t("ui.garantia_basica"), value: "garantia_basica" },
