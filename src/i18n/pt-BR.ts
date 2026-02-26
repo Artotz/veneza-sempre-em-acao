@@ -244,6 +244,8 @@ export const resources = {
         nenhuma_oportunidade_encontrada: "Nenhuma oportunidade encontrada",
         nenhuma_oportunidade_disponivel_no_momento:
           "Nenhuma oportunidade disponível no momento.",
+        dias: "dias",
+        dias_desde_ultima_visita: "Dias desde a última visita",
         ordenar_por: "Ordenar por:",
 
         outro: "Outro",
@@ -256,6 +258,10 @@ export const resources = {
 
         pagina_nao_encontrada: "Página não encontrada",
         pendente: "Pendente",
+        pagina_anterior: "Página anterior",
+        proxima_pagina: "Próxima pagina",
+        paginacao_label: "Página {{current}} de {{total}}",
+        pagina_value: "Página {{value}}",
 
         pinos_do_atendimento: "Pinos do atendimento.",
 
