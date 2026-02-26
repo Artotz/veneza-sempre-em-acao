@@ -1225,11 +1225,18 @@ export default function AppointmentDetail() {
           return;
         }
 
+        const pendingAction = await createPendingAction({
+          actionType: "absence",
+          changes,
+        });
+
         try {
           await updateAppointmentRemote(changes);
         } catch (error) {
-          await queuePendingActionOnly({ actionType: "absence", changes });
+          return;
         }
+
+        await clearPendingAction(pendingAction.id);
       } catch (error) {
         setSyncStatus(
           error instanceof Error
@@ -1240,6 +1247,8 @@ export default function AppointmentDetail() {
     },
     [
       buildAbsenceRemoteChanges,
+      clearPendingAction,
+      createPendingAction,
       queuePendingActionOnly,
       updateAppointmentRemote,
     ],
