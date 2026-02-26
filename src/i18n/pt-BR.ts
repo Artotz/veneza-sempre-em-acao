@@ -73,6 +73,8 @@ export const resources = {
         criar_apontamento: "Criar apontamento",
         cronograma: "Cronograma",
         home: "Home",
+        vfs: "VFS",
+        logo_vfs: "Logo VFS",
         home_next_appointment_in:
           "Seu próximo agendamento de hoje é em {{time}}.",
         home_next_appointment_late_by:

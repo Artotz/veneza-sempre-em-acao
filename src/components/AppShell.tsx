@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { BottomNav } from "./BottomNav";
 import { useAuth } from "../contexts/useAuth";
 import { t } from "../i18n";
+import logo from "../assets/logo.png";
 
 type AppShellProps = {
   title: string;
@@ -26,9 +27,16 @@ export const AppShell = ({
       <header className="relative overflow-hidden bg-transparent text-white">
         <div className="relative px-5 pb-6 pt-3">
           <div className="flex items-start justify-between gap-3 mb-5">
-            <p className="text-[11px] pt-[6px] uppercase tracking-[0.2em] text-white/70">
-              {t("ui.cronograma")}
-            </p>
+            <div className="flex items-center gap-2">
+              <img
+                src={logo}
+                alt={t("ui.logo_vfs")}
+                className="h-5 w-5 object-contain"
+              />
+              <span className="text-[11px] pt-[2px] uppercase tracking-[0.2em] text-white/70">
+                {t("ui.vfs")}
+              </span>
+            </div>
             {headerRightSlot ? (
               userEmail ? (
                 <Link
