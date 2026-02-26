@@ -2001,6 +2001,21 @@ export default function AppointmentDetail() {
   const showOportunidades = Boolean(
     appointment.checkOutAt || appointment.status === "done",
   );
+  const registrosRealizados = useMemo(() => {
+    const tipos = new Set<string>();
+    pendingPhotos.forEach((item) => {
+      if (item.kind === "registro" && item.registroTipo) {
+        tipos.add(item.registroTipo);
+      }
+    });
+    mediaItems.forEach((item) => {
+      if (item.kind === "registro" && item.registroTipo) {
+        tipos.add(item.registroTipo);
+      }
+    });
+    return registroOptions.filter((option) => tipos.has(option.value));
+  }, [mediaItems, pendingPhotos]);
+  const showRegistrosRealizados = registrosRealizados.length > 0;
   const cancellationReason = appointment.absenceNote?.trim() ?? "";
   const showCancellationReason =
     appointment.status === "absent" && cancellationReason.length > 0;
@@ -2230,6 +2245,22 @@ export default function AppointmentDetail() {
             ) : (
               <p className="text-xs text-foreground-muted">{t("ui.nenhuma")}</p>
             )}
+          </section>
+        ) : null}
+
+        {showRegistrosRealizados ? (
+          <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
+            <SectionHeader title={t("ui.atividades_realizadas")} />
+            <div className="flex flex-wrap gap-2">
+              {registrosRealizados.map((item) => (
+                <span
+                  key={item.value}
+                  className="rounded-full border border-border bg-surface-muted px-3 py-1 text-[11px] font-semibold text-foreground"
+                >
+                  {item.label}
+                </span>
+              ))}
+            </div>
           </section>
         ) : null}
 

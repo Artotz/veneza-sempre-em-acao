@@ -246,6 +246,7 @@ export const resources = {
 
         oportunidades: "Oportunidades",
         oportunidades_percebidas: "Oportunidades percebidas",
+        atividades_realizadas: "Atividades realizadas",
         nenhuma_oportunidade_encontrada: "Nenhuma oportunidade encontrada",
         nenhuma_oportunidade_disponivel_no_momento:
           "Nenhuma oportunidade disponível no momento.",
@@ -559,6 +560,7 @@ export const resources = {
 } as const;
 
 export default resources;
+
 
 
 
