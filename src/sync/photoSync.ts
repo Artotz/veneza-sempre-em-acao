@@ -15,6 +15,7 @@ type PendingUpload = {
   size: number;
   originalName?: string;
   kind?: string;
+  registroTipo?: string;
   consultantId?: string;
   apontamentoId?: string;
   entityRef?: string;
@@ -69,6 +70,7 @@ export const flushUploads = async (): Promise<void> => {
           bucket: upload.bucket,
           path: upload.path,
           kind,
+          registro_tipo: item.registroTipo ?? null,
           mime_type: item.mime ?? blob.type ?? null,
           bytes: upload.bytes,
         });

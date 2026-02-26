@@ -154,6 +154,7 @@ export const syncAppointment = async (
           bucket: upload.bucket,
           path: upload.path,
           kind,
+          registro_tipo: item.registroTipo ?? null,
           mime_type: item.mime ?? blob.type ?? null,
           bytes: upload.bytes,
         });

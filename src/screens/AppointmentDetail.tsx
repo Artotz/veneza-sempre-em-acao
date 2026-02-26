@@ -88,6 +88,24 @@ const oportunidadeLabels = Object.fromEntries(
 ) as Record<string, string>;
 
 type MediaKind = "checkin" | "checkout" | "absence" | "registro";
+type RegistroTipo =
+  | "reconexao"
+  | "medicao_mr"
+  | "proposta_preventiva"
+  | "proposta_powergard"
+  | "outro";
+
+const registroOptions: { label: string; value: RegistroTipo }[] = [
+  { label: t("ui.reconexao"), value: "reconexao" },
+  { label: t("ui.medicao_mr"), value: "medicao_mr" },
+  { label: t("ui.proposta_preventiva"), value: "proposta_preventiva" },
+  { label: t("ui.proposta_powergard"), value: "proposta_powergard" },
+  { label: t("ui.outro"), value: "outro" },
+];
+
+const registroLabels = Object.fromEntries(
+  registroOptions.map((option) => [option.value, option.label]),
+) as Record<RegistroTipo, string>;
 
 type PendingGeoAction =
   | {
@@ -108,6 +126,7 @@ type ApontamentoMediaRow = {
   bucket: string;
   path: string;
   kind: MediaKind;
+  registro_tipo?: string | null;
   mime_type?: string | null;
   bytes?: number | null;
   created_at?: string | null;
@@ -118,6 +137,7 @@ type AppointmentMediaItem = {
   bucket: string;
   path: string;
   kind: MediaKind;
+  registroTipo?: string | null;
   mimeType: string | null;
   bytes: number;
   createdAt?: string | null;
@@ -134,6 +154,25 @@ const mediaKindLabels: Record<MediaKind, string> = {
   checkout: t("ui.check_out"),
   absence: t("ui.ausencia"),
   registro: t("ui.registro"),
+};
+
+const getRegistroLabel = (registroTipo?: string | null) => {
+  if (!registroTipo) return null;
+  return (
+    registroLabels[registroTipo as RegistroTipo] ??
+    registroTipo
+  );
+};
+
+const buildRegistroItemLabel = (
+  index: number,
+  registroTipo?: string | null,
+) => {
+  const tipoLabel = getRegistroLabel(registroTipo);
+  if (tipoLabel) {
+    return t("ui.registro_numero_tipo", { numero: index, tipo: tipoLabel });
+  }
+  return t("ui.registro_numero", { numero: index });
 };
 
 const MAX_REGISTROS = 10;
@@ -379,6 +418,13 @@ export default function AppointmentDetail() {
   const [cameraIntent, setCameraIntent] = useState<
     "checkin" | "registro" | null
   >(null);
+  const [isRegistroModalOpen, setIsRegistroModalOpen] = useState(false);
+  const [registroModalAction, setRegistroModalAction] = useState<
+    "camera" | "file" | null
+  >(null);
+  const [registroTipo, setRegistroTipo] = useState<RegistroTipo | "">("");
+  const [pendingRegistroTipo, setPendingRegistroTipo] =
+    useState<RegistroTipo | null>(null);
   const [mediaItems, setMediaItems] = useState<AppointmentMediaItem[]>([]);
   const [mediaLoading, setMediaLoading] = useState(false);
   const [mediaError, setMediaError] = useState<string | null>(null);
@@ -424,7 +470,11 @@ export default function AppointmentDetail() {
   const isGeoModalOpen =
     geo.isCapturing || Boolean(geo.error && pendingGeoAction);
   useLockBodyScroll(
-    isCheckoutOpen || isAbsenceOpen || isCameraOpen || isGeoModalOpen,
+    isCheckoutOpen ||
+      isAbsenceOpen ||
+      isCameraOpen ||
+      isGeoModalOpen ||
+      isRegistroModalOpen,
   );
 
   useEffect(() => {
@@ -545,7 +595,7 @@ export default function AppointmentDetail() {
 
     const { data, error: requestError } = await supabase
       .from("apontamento_media")
-      .select("id, bucket, path, kind, mime_type, bytes, created_at")
+      .select("id, bucket, path, kind, registro_tipo, mime_type, bytes, created_at")
       .eq("apontamento_id", id)
       .order("created_at", { ascending: true });
 
@@ -571,6 +621,7 @@ export default function AppointmentDetail() {
           bucket: item.bucket,
           path: item.path,
           kind: item.kind,
+          registroTipo: item.registro_tipo ?? null,
           mimeType: item.mime_type ?? null,
           bytes: item.bytes ?? 0,
           createdAt: item.created_at ?? null,
@@ -697,7 +748,11 @@ export default function AppointmentDetail() {
   }, [loadPendingActions]);
 
   const storeOfflinePhoto = useCallback(
-    async (kind: MediaKind, shot: CapturePhotoResult) => {
+    async (
+      kind: MediaKind,
+      shot: CapturePhotoResult,
+      registroTipoValue?: RegistroTipo | null,
+    ) => {
       if (!appointment) {
         throw new Error(t("ui.agendamento_nao_encontrado_2"));
       }
@@ -711,6 +766,7 @@ export default function AppointmentDetail() {
         entityRef: appointment.id,
         apontamentoId: appointment.id,
         kind,
+        registroTipo: registroTipoValue ?? undefined,
         consultantId,
         originalName: shot.originalName,
       });
@@ -804,7 +860,11 @@ export default function AppointmentDetail() {
   );
 
   const uploadPhotoRemote = useCallback(
-    async (kind: MediaKind, shot: CapturePhotoResult) => {
+    async (
+      kind: MediaKind,
+      shot: CapturePhotoResult,
+      registroTipoValue?: RegistroTipo | null,
+    ) => {
       if (!appointment) {
         throw new Error(t("ui.agendamento_nao_encontrado_2"));
       }
@@ -829,6 +889,7 @@ export default function AppointmentDetail() {
           bucket: upload.bucket,
           path: upload.path,
           kind,
+          registro_tipo: registroTipoValue ?? null,
           mime_type: shot.mimeType,
           bytes: upload.bytes,
         });
@@ -918,8 +979,16 @@ export default function AppointmentDetail() {
   );
 
   const queuePendingPhotoOnly = useCallback(
-    async (params: { kind: MediaKind; shot: CapturePhotoResult }) => {
-      await storeOfflinePhoto(params.kind, params.shot);
+    async (params: {
+      kind: MediaKind;
+      shot: CapturePhotoResult;
+      registroTipo?: RegistroTipo | null;
+    }) => {
+      await storeOfflinePhoto(
+        params.kind,
+        params.shot,
+        params.registroTipo ?? null,
+      );
       if (appointment) {
         actions.setPendingSync(appointment.id, true);
       }
@@ -1362,13 +1431,41 @@ export default function AppointmentDetail() {
     }
   };
 
-  const handleAddRegistroPhoto = () => {
+  const openRegistroModal = (action: "camera" | "file") => {
     if (!canAddPhoto || isPhotoBusy || registroCount >= MAX_REGISTROS) return;
-    setCameraIntent("registro");
+    setRegistroTipo("");
+    setPendingRegistroTipo(null);
+    setRegistroModalAction(action);
+    setIsRegistroModalOpen(true);
+  };
+
+  const handleAddRegistroPhoto = () => {
+    openRegistroModal("camera");
   };
 
   const handleAddRegistroFile = () => {
-    if (!canAddPhoto || isPhotoBusy || registroCount >= MAX_REGISTROS) return;
+    openRegistroModal("file");
+  };
+
+  const handleCloseRegistroModal = () => {
+    if (isPhotoBusy) return;
+    setIsRegistroModalOpen(false);
+    setRegistroModalAction(null);
+    setRegistroTipo("");
+    setPendingRegistroTipo(null);
+  };
+
+  const handleConfirmRegistroModal = () => {
+    const action = registroModalAction;
+    if (!registroTipo || !action) return;
+    setPendingRegistroTipo(registroTipo);
+    setIsRegistroModalOpen(false);
+    setRegistroModalAction(null);
+    setRegistroTipo("");
+    if (action === "camera") {
+      setCameraIntent("registro");
+      return;
+    }
     registroFileInputRef.current?.click();
   };
 
@@ -1379,7 +1476,15 @@ export default function AppointmentDetail() {
     const files = Array.from(event.target.files ?? []);
     event.target.value = "";
 
+    const registroTipoValue = pendingRegistroTipo;
+    setPendingRegistroTipo(null);
+
     if (!files.length) return;
+
+    if (!registroTipoValue) {
+      setError(t("ui.selecione_o_tipo_de_registro"));
+      return;
+    }
 
     if (registroCount >= MAX_REGISTROS) {
       setError(
@@ -1425,7 +1530,7 @@ export default function AppointmentDetail() {
           extension: mimeToExtension(blob.type || normalizedMime),
           originalName: file.name,
         };
-        await performRegistroUpload(shot);
+        await performRegistroUpload(shot, registroTipoValue);
       } catch (error) {
         setError(
           error instanceof Error
@@ -1764,21 +1869,35 @@ export default function AppointmentDetail() {
     }
   };
 
-  const performRegistroUpload = async (shot: CapturePhotoResult) => {
+  const performRegistroUpload = async (
+    shot: CapturePhotoResult,
+    registroTipoValue?: RegistroTipo | null,
+  ) => {
     if (!appointment) return;
     setError(null);
     setSyncStatus(null);
     try {
+      if (!registroTipoValue) {
+        throw new Error(t("ui.selecione_o_tipo_de_registro"));
+      }
       if (typeof navigator !== "undefined" && !navigator.onLine) {
-        await queuePendingPhotoOnly({ kind: "registro", shot });
+        await queuePendingPhotoOnly({
+          kind: "registro",
+          shot,
+          registroTipo: registroTipoValue,
+        });
         return;
       }
 
       try {
-        await uploadPhotoRemote("registro", shot);
+        await uploadPhotoRemote("registro", shot, registroTipoValue);
         await loadMedia();
       } catch (error) {
-        await queuePendingPhotoOnly({ kind: "registro", shot });
+        await queuePendingPhotoOnly({
+          kind: "registro",
+          shot,
+          registroTipo: registroTipoValue,
+        });
       }
     } catch (actionError) {
       setError(
@@ -1800,7 +1919,9 @@ export default function AppointmentDetail() {
     }
 
     if (intent === "registro") {
-      await performRegistroUpload(shot);
+      const registroTipoValue = pendingRegistroTipo;
+      setPendingRegistroTipo(null);
+      await performRegistroUpload(shot, registroTipoValue);
     }
   };
 
@@ -1935,9 +2056,14 @@ export default function AppointmentDetail() {
     cameraIntent === "checkin"
       ? t("ui.foto_do_check_in")
       : cameraIntent === "registro"
-        ? t("ui.nova_foto")
+        ? t("ui.adicionar_registro")
         : t("ui.capturar_foto");
-  const canAddPhoto = status === "em_execucao" || status === "concluido";
+  const registroModalActionLabel =
+    registroModalAction === "file"
+      ? t("ui.adicionar_arquivo")
+      : t("ui.tirar_foto");
+  const canConfirmRegistroModal = Boolean(registroTipo) && !isPhotoBusy;
+  const canAddPhoto = status === "em_execucao";
   const inlineActionCols = "grid-cols-3";
   let pendingRegistroIndex = 0;
   let uploadedRegistroIndex = pendingRegistroCount;
@@ -2161,7 +2287,7 @@ export default function AppointmentDetail() {
                       : "cursor-not-allowed bg-surface-muted text-foreground-muted"
                   }`}
                 >
-                  {t("ui.adicionar_foto")}
+                  {t("ui.adicionar_registro")}
                 </button>
               ) : null}
               <button
@@ -2326,9 +2452,10 @@ export default function AppointmentDetail() {
                   const kindLabel = isRegistro
                     ? (() => {
                         pendingRegistroIndex += 1;
-                        return t("ui.registro_numero", {
-                          numero: pendingRegistroIndex,
-                        });
+                        return buildRegistroItemLabel(
+                          pendingRegistroIndex,
+                          item.registroTipo,
+                        );
                       })()
                     : (item.kind &&
                         (mediaKindLabels as Record<string, string>)[
@@ -2367,9 +2494,10 @@ export default function AppointmentDetail() {
                   const kindLabel = isRegistro
                     ? (() => {
                         uploadedRegistroIndex += 1;
-                        return t("ui.registro_numero", {
-                          numero: uploadedRegistroIndex,
-                        });
+                        return buildRegistroItemLabel(
+                          uploadedRegistroIndex,
+                          item.registroTipo,
+                        );
                       })()
                     : mediaKindLabels[item.kind];
                   return (
@@ -2876,6 +3004,86 @@ export default function AppointmentDetail() {
                 }`}
               >
                 {t("ui.confirmar")}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {isRegistroModalOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 px-4 py-6 sm:items-center"
+          onClick={handleCloseRegistroModal}
+        >
+          <div
+            className="w-full max-w-md overflow-hidden rounded-3xl border border-border bg-white shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="border-b border-border px-5 py-4">
+              <h3 className="text-base font-semibold text-foreground">
+                {t("ui.adicionar_registro")}
+              </h3>
+              <p className="mt-1 text-xs text-foreground-muted">
+                {t("ui.selecione_o_tipo_de_registro")}
+              </p>
+            </div>
+
+            <div className="space-y-4 px-5 py-4">
+              <div className="rounded-2xl border border-border bg-white p-3">
+                <p className="text-xs font-semibold text-foreground">
+                  {t("ui.tipo_de_registro")}
+                </p>
+                <div className="mt-3 max-h-48 overflow-y-auto pr-1">
+                  <div className="grid gap-2">
+                    {registroOptions.map((option) => {
+                      const fieldId = `registro-${option.value}`;
+                      return (
+                        <label
+                          key={option.value}
+                          htmlFor={fieldId}
+                          className="flex items-center gap-2 rounded-2xl border border-border bg-white px-3 py-2 text-xs text-foreground"
+                        >
+                          <input
+                            id={fieldId}
+                            type="radio"
+                            name="registro-tipo"
+                            checked={registroTipo === option.value}
+                            onChange={() => setRegistroTipo(option.value)}
+                            disabled={isPhotoBusy}
+                            className="h-4 w-4 accent-accent"
+                          />
+                          <span className="font-semibold">{option.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 border-t border-border px-5 py-4">
+              <button
+                type="button"
+                onClick={handleCloseRegistroModal}
+                disabled={isPhotoBusy}
+                className={`rounded-full border border-border px-4 py-2 text-xs font-semibold ${
+                  isPhotoBusy
+                    ? "cursor-not-allowed text-foreground-muted"
+                    : "text-foreground-soft"
+                }`}
+              >
+                {t("ui.cancelar")}
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmRegistroModal}
+                disabled={!canConfirmRegistroModal}
+                className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
+                  canConfirmRegistroModal
+                    ? "bg-info text-white"
+                    : "cursor-not-allowed bg-surface-muted text-foreground-muted"
+                }`}
+              >
+                {registroModalActionLabel}
               </button>
             </div>
           </div>

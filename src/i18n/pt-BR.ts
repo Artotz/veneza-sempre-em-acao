@@ -38,6 +38,7 @@ export const resources = {
         capturando_localizacao: "Capturando localização...",
         capturar_foto: "Capturar foto",
         adicionar_foto: "Adicionar foto",
+        adicionar_registro: "Adicionar registro",
         adicionar_arquivo: "Adicionar arquivo",
         carregando_detalhes: "Carregando detalhes.",
         carregando_empresa: "Carregando empresa...",
@@ -111,6 +112,8 @@ export const resources = {
 
         dentes: "Dentes",
         descreva_o_motivo: "Descreva o motivo...",
+        tipo_de_registro: "Tipo de registro",
+        selecione_o_tipo_de_registro: "Selecione o tipo de registro.",
 
         detalhe_do_agendamento: "Detalhe do agendamento",
         detalhe_do_atendimento: "Detalhe do atendimento.",
@@ -274,6 +277,9 @@ export const resources = {
         preventiva: "Preventiva",
         preventivas: "Preventivas",
         preview_da_foto: "Preview da foto",
+        medicao_mr: "Medição de M.R.",
+        proposta_preventiva: "Proposta de Preventiva",
+        proposta_powergard: "Proposta PowerGard",
 
         cotacoes: "Cotações",
         qtd_cot_3m: "Qtd Cot (3m)",
@@ -304,6 +310,7 @@ export const resources = {
         registro_visual_do_apontamento: "Registro visual do apontamento.",
         registro: "Registro",
         registro_numero: "Registro {{numero}}",
+        registro_numero_tipo: "Registro {{numero}} - {{tipo}}",
         registros_count: "{{count}} de {{max}} registros",
 
         resumo_do_apontamento: "Resumo do apontamento",
@@ -552,3 +559,7 @@ export const resources = {
 } as const;
 
 export default resources;
+
+
+
+
