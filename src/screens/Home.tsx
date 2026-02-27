@@ -114,7 +114,6 @@ export default function Home() {
     };
   }, [activeAppointment, nextPendingAppointment, now]);
 
-  const showCreateButton = todayAppointments.length === 0;
   const daySummary = useMemo(() => {
     return todayAppointments.reduce(
       (acc, appointment) => {
@@ -225,15 +224,6 @@ export default function Home() {
           </button>
         </section>
 
-        {showCreateButton ? (
-          <button
-            type="button"
-            onClick={() => navigate("/apontamentos/novo")}
-            className="w-full rounded-2xl bg-foreground px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-foreground/90"
-          >
-            {t("ui.novo_apontamento")}
-          </button>
-        ) : null}
       </div>
     </AppShell>
   );

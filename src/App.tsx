@@ -107,7 +107,7 @@ export default function App() {
               path="/calendario"
               element={
                 <RequireAuth>
-                  <Navigate to="/calendario/semana" replace />
+                  <WeekView />
                 </RequireAuth>
               }
             />

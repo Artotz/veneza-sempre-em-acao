@@ -253,6 +253,7 @@ export const resources = {
         dias: "dias",
         dias_desde_ultima_visita: "Dias desde a última visita",
         ordenar_por: "Ordenar por:",
+        selecione_ordenacao: "Selecione uma opção...",
 
         outro: "Outro",
         outros: "Outros",
@@ -560,8 +561,3 @@ export const resources = {
 } as const;
 
 export default resources;
-
-
-
-
-

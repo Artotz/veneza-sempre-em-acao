@@ -30,11 +30,12 @@ export default function Companies() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [query, setQuery] = useState("");
   const [sortBy, setSortBy] = useState<
+    | ""
     | "dias_desde_ultima_visita"
     | "preventivas"
     | "reconexoes"
     | "cotacoes_abertas"
-  >("dias_desde_ultima_visita");
+  >("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [protheusCounts, setProtheusCounts] = useState<ProtheusCountMap>({});
@@ -312,6 +313,9 @@ export default function Companies() {
 
   const sortedCompanies = useMemo(() => {
     const items = [...filteredCompanies];
+    if (!sortBy) {
+      return items;
+    }
     const getMetric = (company: Company) => {
       const key = getProtheusKey(company.document);
       if (sortBy === "preventivas") {
@@ -382,6 +386,7 @@ export default function Companies() {
             onChange={(event) =>
               setSortBy(
                 event.target.value as
+                  | ""
                   | "dias_desde_ultima_visita"
                   | "preventivas"
                   | "reconexoes"
@@ -390,6 +395,7 @@ export default function Companies() {
             }
             className="w-full flex-1 rounded-2xl border border-border bg-white px-3 py-2 text-xs font-semibold text-foreground shadow-sm outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
           >
+            <option value="">{t("ui.selecione_ordenacao")}</option>
             <option value="dias_desde_ultima_visita">
               {t("ui.dias_desde_ultima_visita")}
             </option>
@@ -441,47 +447,50 @@ export default function Companies() {
                 ) : null}
               </div>
 
-              <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
-                  {sortBy === "preventivas"
-                    ? t("ui.qtd_preventivas")
-                    : sortBy === "reconexoes"
-                      ? t("ui.qtd_reconexoes")
-                      : sortBy === "cotacoes_abertas"
-                        ? t("ui.valor_cotacoes_abertas")
-                        : sortBy === "dias_desde_ultima_visita"
-                          ? t("ui.dias_desde_ultima_visita")
-                          : t("ui.valor_cotacoes_abertas")}
-                </p>
-                <p className="text-sm font-semibold text-foreground">
-                  {sortBy === "dias_desde_ultima_visita"
-                      ? (() => {
-                          const lastVisit = lastVisitByCompany[company.id];
-                          if (!lastVisit) return t("ui.sem_apontamentos");
-                          const parsed = new Date(lastVisit);
-                          if (Number.isNaN(parsed.getTime())) {
-                            return t("ui.sem_apontamentos");
-                          }
-                          const diffMs = Date.now() - parsed.getTime();
-                          const days =
-                            diffMs <= 0
-                              ? 0
-                              : Math.floor(diffMs / (1000 * 60 * 60 * 24));
-                          return `${formatQuantity(days)} ${t("ui.dias")}`;
-                        })()
-                      : sortBy === "cotacoes_abertas"
-                    ? formatCurrencyBRL(
-                        openQuoteTotals[getProtheusKey(company.document)] ?? 0,
-                      )
-                    : formatQuantity(
-                        sortBy === "preventivas"
-                          ? protheusCounts[getProtheusKey(company.document)]
-                              ?.preventivas ?? 0
-                          : protheusCounts[getProtheusKey(company.document)]
-                              ?.reconexoes ?? 0,
-                      )}
-                </p>
-              </div>
+              {sortBy ? (
+                <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
+                    {sortBy === "preventivas"
+                      ? t("ui.qtd_preventivas")
+                      : sortBy === "reconexoes"
+                        ? t("ui.qtd_reconexoes")
+                        : sortBy === "cotacoes_abertas"
+                          ? t("ui.valor_cotacoes_abertas")
+                          : sortBy === "dias_desde_ultima_visita"
+                            ? t("ui.dias_desde_ultima_visita")
+                            : t("ui.valor_cotacoes_abertas")}
+                  </p>
+                  <p className="text-sm font-semibold text-foreground">
+                    {sortBy === "dias_desde_ultima_visita"
+                        ? (() => {
+                            const lastVisit = lastVisitByCompany[company.id];
+                            if (!lastVisit) return t("ui.sem_apontamentos");
+                            const parsed = new Date(lastVisit);
+                            if (Number.isNaN(parsed.getTime())) {
+                              return t("ui.sem_apontamentos");
+                            }
+                            const diffMs = Date.now() - parsed.getTime();
+                            const days =
+                              diffMs <= 0
+                                ? 0
+                                : Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                            return `${formatQuantity(days)} ${t("ui.dias")}`;
+                          })()
+                        : sortBy === "cotacoes_abertas"
+                      ? formatCurrencyBRL(
+                          openQuoteTotals[getProtheusKey(company.document)] ??
+                            0,
+                        )
+                      : formatQuantity(
+                          sortBy === "preventivas"
+                            ? protheusCounts[getProtheusKey(company.document)]
+                                ?.preventivas ?? 0
+                            : protheusCounts[getProtheusKey(company.document)]
+                                ?.reconexoes ?? 0,
+                        )}
+                  </p>
+                </div>
+              ) : null}
 
               <div className="grid gap-2 sm:grid-cols-2">
                 <button

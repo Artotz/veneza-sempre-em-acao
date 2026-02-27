@@ -149,7 +149,7 @@ export default function Login() {
   };
 
   return (
-    <div className="app-background relative flex min-h-screen items-center justify-center bg-background px-4 py-10">
+    <div className="app-background relative flex min-h-screen items-center justify-center px-4 py-10">
       <img
         src={cscLogo}
         alt=""

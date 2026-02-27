@@ -14,8 +14,10 @@ export function RequireAuth({ children }: { children: ReactNode }) {
 
   if (loading || !user) {
     return (
-      <div className="flex min-h-[calc(100vh-120px)] items-center justify-center px-4 py-10 text-sm text-foreground-muted">
-        {t("ui.carregando")}
+      <div className="app-background min-h-screen text-foreground">
+        <div className="mx-auto flex min-h-screen w-full max-w-xl items-center justify-center px-4 py-10 text-sm text-foreground-muted">
+          {t("ui.carregando")}
+        </div>
       </div>
     );
   }

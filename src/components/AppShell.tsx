@@ -23,7 +23,7 @@ export const AppShell = ({
   const headerRightSlot = userEmail || rightSlot;
 
   return (
-    <div className="app-background min-h-screen bg-background text-foreground">
+    <div className="app-background min-h-screen text-foreground">
       <header className="relative overflow-hidden bg-transparent text-white">
         <div className="relative px-5 pb-6 pt-3">
           <div className="flex items-start justify-between gap-3 mb-5">

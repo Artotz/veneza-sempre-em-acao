@@ -200,7 +200,6 @@ export default function AllAppointments() {
   const canGoPrev = page > 1;
   const canGoNext = page < totalPages;
   const showPagination = filteredMeta.length > PAGE_SIZE;
-  const isLoading = loadingMeta || loadingPage;
 
   return (
     <AppShell
@@ -211,13 +210,7 @@ export default function AllAppointments() {
       rightSlot={showPagination ? t("ui.pagina_value", { value: page }) : undefined}
     >
       <div className="space-y-4">
-        {isLoading ? (
-          <div className="space-y-4">
-            <div className="h-24 animate-pulse rounded-3xl bg-surface-muted" />
-            <div className="h-24 animate-pulse rounded-3xl bg-surface-muted" />
-            <div className="h-24 animate-pulse rounded-3xl bg-surface-muted" />
-          </div>
-        ) : error ? (
+        {error ? (
           <EmptyState
             title={t("ui.nao_foi_possivel_carregar")}
             description={error}
@@ -225,26 +218,49 @@ export default function AllAppointments() {
         ) : (
           <div className="space-y-4">
             <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
-              <SectionHeader
-                title={t("ui.resumo_geral")}
-                subtitle={t("ui.distribuicao_por_status")}
-                rightSlot={t("ui.ag_count", { count: summary.total })}
-              />
-              <StatusFilters
-                summary={summary}
-                statusFilters={statusFilters}
-                onChange={setStatusFilters}
-                showSuggestions={showSuggestions}
-                onToggleSuggestions={() =>
-                  setShowSuggestions((current) => !current)
-                }
-                suggestionCount={suggestionCount}
-                className="grid grid-cols-3 gap-2 text-[11px] font-semibold"
-              />
+              {loadingMeta ? (
+                <div className="space-y-3">
+                  <div className="h-5 w-40 animate-pulse rounded-full bg-surface-muted" />
+                  <div className="h-4 w-56 animate-pulse rounded-full bg-surface-muted" />
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="h-9 animate-pulse rounded-2xl bg-surface-muted" />
+                    <div className="h-9 animate-pulse rounded-2xl bg-surface-muted" />
+                    <div className="h-9 animate-pulse rounded-2xl bg-surface-muted" />
+                    <div className="h-9 animate-pulse rounded-2xl bg-surface-muted" />
+                    <div className="h-9 animate-pulse rounded-2xl bg-surface-muted" />
+                    <div className="h-9 animate-pulse rounded-2xl bg-surface-muted" />
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <SectionHeader
+                    title={t("ui.resumo_geral")}
+                    subtitle={t("ui.distribuicao_por_status")}
+                    rightSlot={t("ui.ag_count", { count: summary.total })}
+                  />
+                  <StatusFilters
+                    summary={summary}
+                    statusFilters={statusFilters}
+                    onChange={setStatusFilters}
+                    showSuggestions={showSuggestions}
+                    onToggleSuggestions={() =>
+                      setShowSuggestions((current) => !current)
+                    }
+                    suggestionCount={suggestionCount}
+                    className="grid grid-cols-3 gap-2 text-[11px] font-semibold"
+                  />
+                </>
+              )}
             </section>
 
             <section className="space-y-3">
-              {filteredMeta.length ? (
+              {loadingPage ? (
+                <div className="space-y-4">
+                  <div className="h-24 animate-pulse rounded-3xl bg-surface-muted" />
+                  <div className="h-24 animate-pulse rounded-3xl bg-surface-muted" />
+                  <div className="h-24 animate-pulse rounded-3xl bg-surface-muted" />
+                </div>
+              ) : filteredMeta.length ? (
                 appointments.map((appointment) => {
                   const companyName =
                     appointment.companyName ?? t("ui.empresa");
@@ -290,7 +306,7 @@ export default function AllAppointments() {
               )}
             </section>
 
-            {showPagination ? (
+            {!loadingMeta && showPagination ? (
               <section className="flex items-center justify-between rounded-3xl border border-border bg-white p-4 shadow-sm">
                 <button
                   type="button"
