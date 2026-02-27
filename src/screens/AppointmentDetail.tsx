@@ -1311,6 +1311,21 @@ export default function AppointmentDetail() {
     [mapPoints, showCheckInMarker, showCheckOutMarker],
   );
 
+  const registrosRealizados = useMemo(() => {
+    const tipos = new Set<string>();
+    pendingPhotos.forEach((item) => {
+      if (item.kind === "registro" && item.registroTipo) {
+        tipos.add(item.registroTipo);
+      }
+    });
+    mediaItems.forEach((item) => {
+      if (item.kind === "registro" && item.registroTipo) {
+        tipos.add(item.registroTipo);
+      }
+    });
+    return registroOptions.filter((option) => tipos.has(option.value));
+  }, [mediaItems, pendingPhotos]);
+
   if (!appointment && loading) {
     return (
       <AppShell
@@ -2003,20 +2018,6 @@ export default function AppointmentDetail() {
   const showOportunidades = Boolean(
     appointment.checkOutAt || appointment.status === "done",
   );
-  const registrosRealizados = useMemo(() => {
-    const tipos = new Set<string>();
-    pendingPhotos.forEach((item) => {
-      if (item.kind === "registro" && item.registroTipo) {
-        tipos.add(item.registroTipo);
-      }
-    });
-    mediaItems.forEach((item) => {
-      if (item.kind === "registro" && item.registroTipo) {
-        tipos.add(item.registroTipo);
-      }
-    });
-    return registroOptions.filter((option) => tipos.has(option.value));
-  }, [mediaItems, pendingPhotos]);
   const showRegistrosRealizados = registrosRealizados.length > 0;
   const cancellationReason = appointment.absenceNote?.trim() ?? "";
   const showCancellationReason =

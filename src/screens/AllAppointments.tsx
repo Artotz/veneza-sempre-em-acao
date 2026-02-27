@@ -46,7 +46,7 @@ export default function AllAppointments() {
   const [metaAppointments, setMetaAppointments] = useState<Appointment[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loadingMeta, setLoadingMeta] = useState(false);
-  const [loadingPage, setLoadingPage] = useState(false);
+  const [loadingPage, setLoadingPage] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [statusFilters, setStatusFilters] = useState<AppointmentStatus[]>(
@@ -130,7 +130,10 @@ export default function AllAppointments() {
 
   useEffect(() => {
     if (!pagedIds.length) {
-      setAppointments([]);
+      if (!loadingMeta) {
+        setAppointments([]);
+        setLoadingPage(false);
+      }
       return;
     }
     let active = true;
@@ -193,6 +196,19 @@ export default function AllAppointments() {
     [metaAppointments, user?.email],
   );
 
+  const displaySummary = loadingMeta
+    ? {
+        total: 0,
+        agendado: 0,
+        expirado: 0,
+        em_execucao: 0,
+        concluido: 0,
+        cancelado: 0,
+      }
+    : summary;
+  const displaySuggestionCount = loadingMeta ? 0 : suggestionCount;
+
+
   const handleOpenAppointment = (id: string) => {
     navigate(`/apontamentos/${id}`);
   };
@@ -218,43 +234,26 @@ export default function AllAppointments() {
         ) : (
           <div className="space-y-4">
             <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
-              {loadingMeta ? (
-                <div className="space-y-3">
-                  <div className="h-5 w-40 animate-pulse rounded-full bg-surface-muted" />
-                  <div className="h-4 w-56 animate-pulse rounded-full bg-surface-muted" />
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="h-9 animate-pulse rounded-2xl bg-surface-muted" />
-                    <div className="h-9 animate-pulse rounded-2xl bg-surface-muted" />
-                    <div className="h-9 animate-pulse rounded-2xl bg-surface-muted" />
-                    <div className="h-9 animate-pulse rounded-2xl bg-surface-muted" />
-                    <div className="h-9 animate-pulse rounded-2xl bg-surface-muted" />
-                    <div className="h-9 animate-pulse rounded-2xl bg-surface-muted" />
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <SectionHeader
-                    title={t("ui.resumo_geral")}
-                    subtitle={t("ui.distribuicao_por_status")}
-                    rightSlot={t("ui.ag_count", { count: summary.total })}
-                  />
-                  <StatusFilters
-                    summary={summary}
-                    statusFilters={statusFilters}
-                    onChange={setStatusFilters}
-                    showSuggestions={showSuggestions}
-                    onToggleSuggestions={() =>
-                      setShowSuggestions((current) => !current)
-                    }
-                    suggestionCount={suggestionCount}
-                    className="grid grid-cols-3 gap-2 text-[11px] font-semibold"
-                  />
-                </>
-              )}
+              <SectionHeader
+                title={t("ui.resumo_geral")}
+                subtitle={t("ui.distribuicao_por_status")}
+                rightSlot={t("ui.ag_count", { count: displaySummary.total })}
+              />
+              <StatusFilters
+                summary={displaySummary}
+                statusFilters={statusFilters}
+                onChange={setStatusFilters}
+                showSuggestions={showSuggestions}
+                onToggleSuggestions={() =>
+                  setShowSuggestions((current) => !current)
+                }
+                suggestionCount={displaySuggestionCount}
+                className="grid grid-cols-3 gap-2 text-[11px] font-semibold"
+              />
             </section>
 
             <section className="space-y-3">
-              {loadingPage ? (
+              {loadingMeta || loadingPage ? (
                 <div className="space-y-4">
                   <div className="h-24 animate-pulse rounded-3xl bg-surface-muted" />
                   <div className="h-24 animate-pulse rounded-3xl bg-surface-muted" />
@@ -306,7 +305,7 @@ export default function AllAppointments() {
               )}
             </section>
 
-            {!loadingMeta && showPagination ? (
+            {!loadingMeta && !loadingPage && showPagination ? (
               <section className="flex items-center justify-between rounded-3xl border border-border bg-white p-4 shadow-sm">
                 <button
                   type="button"
