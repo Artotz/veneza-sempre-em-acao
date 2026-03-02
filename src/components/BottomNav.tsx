@@ -6,7 +6,7 @@ export const BottomNav = () => {
   const isOnline = useOnlineStatus();
   const navItems = [
     { to: "/home", label: t("ui.home") },
-    { to: "/calendario", label: t("ui.calendario") },
+    { to: "/calendario/semana", label: t("ui.calendario") },
     { to: "/agenda", label: t("ui.agenda") },
     { to: "/empresas", label: t("ui.empresas") },
   ];

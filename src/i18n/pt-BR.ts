@@ -273,8 +273,14 @@ export const resources = {
         pinos_do_atendimento: "Pinos do atendimento.",
 
         precisao: "Precisão",
+        preencha_inicio: "Preencha o início.",
         preencha_inicio_e_fim: "Preencha início e fim.",
         preencha_os_dados_essenciais: "Preencha os dados essenciais.",
+        duracao_em_minutos: "Duração (minutos)",
+        duracao_precisa_ser_maior_que_zero:
+          "A duração precisa ser maior que zero.",
+        diminuir_10_minutos: "-10 min",
+        aumentar_10_minutos: "+10 min",
 
         preventiva: "Preventiva",
         preventivas: "Preventivas",

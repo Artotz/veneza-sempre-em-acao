@@ -40,6 +40,17 @@ const normalizeDateInput = (value: string) => {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
+const sanitizeDurationInput = (value: string) =>
+  value.replace(/[^\d]/g, "");
+
+const parseDurationMinutes = (value: string) => {
+  const trimmed = sanitizeDurationInput(value);
+  if (!trimmed) return null;
+  const minutes = Number(trimmed);
+  if (!Number.isFinite(minutes) || minutes <= 0) return null;
+  return minutes;
+};
+
 export default function EditAppointment() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -60,7 +71,7 @@ export default function EditAppointment() {
   const [loading, setLoading] = useState(!appointmentFromState);
   const [error, setError] = useState<string | null>(null);
   const [startsAt, setStartsAt] = useState("");
-  const [endsAt, setEndsAt] = useState("");
+  const [durationMinutes, setDurationMinutes] = useState("60");
   const [saving, setSaving] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const [isOnline, setIsOnline] = useState(
@@ -78,8 +89,14 @@ export default function EditAppointment() {
 
   useEffect(() => {
     if (!appointment || initialized) return;
-    setStartsAt(toLocalInputValue(new Date(appointment.startAt)));
-    setEndsAt(toLocalInputValue(new Date(appointment.endAt)));
+    const startDate = new Date(appointment.startAt);
+    const endDate = new Date(appointment.endAt);
+    const duration = Math.max(
+      1,
+      Math.round((endDate.getTime() - startDate.getTime()) / 60000),
+    );
+    setStartsAt(toLocalInputValue(startDate));
+    setDurationMinutes(String(duration));
     setInitialized(true);
   }, [appointment, initialized]);
 
@@ -225,22 +242,26 @@ export default function EditAppointment() {
       return;
     }
 
-    if (!startsAt || !endsAt) {
-      setError(t("ui.preencha_inicio_e_fim"));
+    if (!startsAt) {
+      setError(t("ui.preencha_inicio"));
+      return;
+    }
+
+    const parsedDuration = parseDurationMinutes(durationMinutes);
+    if (!parsedDuration) {
+      setError(t("ui.duracao_precisa_ser_maior_que_zero"));
       return;
     }
 
     const startsAtDate = normalizeDateInput(startsAt);
-    const endsAtDate = normalizeDateInput(endsAt);
-    if (!startsAtDate || !endsAtDate) {
+    if (!startsAtDate) {
       setError(t("ui.datas_invalidas"));
       return;
     }
 
-    if (endsAtDate <= startsAtDate) {
-      setError(t("ui.fim_precisa_ser_depois_do_inicio"));
-      return;
-    }
+    const endsAtDate = new Date(
+      startsAtDate.getTime() + parsedDuration * 60 * 1000,
+    );
 
     const originalDate = new Date(appointment.startAt);
     if (
@@ -406,14 +427,41 @@ export default function EditAppointment() {
               />
             </label>
             <label className="space-y-2 text-sm font-semibold text-foreground">
-              <span>{t("ui.fim")}</span>
-              <input
-                type="datetime-local"
-                value={endsAt}
-                onChange={(event) => setEndsAt(event.target.value)}
-                className="w-full rounded-2xl border border-border bg-surface-muted px-4 py-3 text-sm font-normal text-foreground outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
-                required
-              />
+              <span>{t("ui.duracao_em_minutos")}</span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const current = parseDurationMinutes(durationMinutes) ?? 60;
+                    const next = Math.max(1, current - 10);
+                    setDurationMinutes(String(next));
+                  }}
+                  className="rounded-2xl border border-border bg-white px-3 py-3 text-xs font-semibold text-foreground transition hover:bg-surface-muted"
+                >
+                  {t("ui.diminuir_10_minutos")}
+                </button>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={durationMinutes}
+                  onChange={(event) =>
+                    setDurationMinutes(sanitizeDurationInput(event.target.value))
+                  }
+                  className="w-full rounded-2xl border border-border bg-surface-muted px-4 py-3 text-sm font-normal text-foreground outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const current = parseDurationMinutes(durationMinutes) ?? 60;
+                    const next = current + 10;
+                    setDurationMinutes(String(next));
+                  }}
+                  className="rounded-2xl border border-border bg-white px-3 py-3 text-xs font-semibold text-foreground transition hover:bg-surface-muted"
+                >
+                  {t("ui.aumentar_10_minutos")}
+                </button>
+              </div>
             </label>
           </div>
 

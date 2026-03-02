@@ -46,6 +46,17 @@ const toLocalInputValue = (date: Date) => {
   )}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 };
 
+const sanitizeDurationInput = (value: string) =>
+  value.replace(/[^\d]/g, "");
+
+const parseDurationMinutes = (value: string) => {
+  const trimmed = sanitizeDurationInput(value);
+  if (!trimmed) return null;
+  const minutes = Number(trimmed);
+  if (!Number.isFinite(minutes) || minutes <= 0) return null;
+  return minutes;
+};
+
 export default function NewAppointment() {
   const { id } = useParams();
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
@@ -62,7 +73,7 @@ export default function NewAppointment() {
   const [error, setError] = useState<string | null>(null);
 
   const [startsAt, setStartsAt] = useState("");
-  const [endsAt, setEndsAt] = useState("");
+  const [durationMinutes, setDurationMinutes] = useState("60");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -141,15 +152,12 @@ export default function NewAppointment() {
   }, [id]);
 
   useEffect(() => {
-    if (startsAt || endsAt) return;
+    if (startsAt) return;
     const now = new Date();
     const startValue = toLocalInputValue(now);
-    const endValue = toLocalInputValue(
-      new Date(now.getTime() + 60 * 60 * 1000),
-    );
     setStartsAt(startValue);
-    setEndsAt(endValue);
-  }, [startsAt, endsAt]);
+    setDurationMinutes("60");
+  }, [startsAt]);
 
   const filterCompanies = (items: Company[], term: string) => {
     const trimmed = term.trim().toLowerCase();
@@ -204,8 +212,8 @@ export default function NewAppointment() {
       return;
     }
 
-    if (!startsAt || !endsAt) {
-      setError(t("ui.preencha_inicio_e_fim"));
+    if (!startsAt) {
+      setError(t("ui.preencha_inicio"));
       return;
     }
 
@@ -215,8 +223,16 @@ export default function NewAppointment() {
       return;
     }
 
+    const parsedDuration = parseDurationMinutes(durationMinutes);
+    if (!parsedDuration) {
+      setError(t("ui.duracao_precisa_ser_maior_que_zero"));
+      return;
+    }
+
     const startsAtDate = new Date(startsAt);
-    const endsAtDate = new Date(endsAt);
+    const endsAtDate = new Date(
+      startsAtDate.getTime() + parsedDuration * 60 * 1000,
+    );
 
     if (
       Number.isNaN(startsAtDate.getTime()) ||
@@ -231,11 +247,6 @@ export default function NewAppointment() {
       return;
     }
 
-    if (endsAtDate <= startsAtDate) {
-      setError(t("ui.fim_precisa_ser_depois_do_inicio"));
-      return;
-    }
-
     const now = new Date();
     const nowMs = now.getTime();
     const toleranceMs = 5 * 60 * 1000;
@@ -247,8 +258,7 @@ export default function NewAppointment() {
     const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
     if (isOffline) {
       const isTodayStart = isSameDay(startsAtDate, now);
-      const isTodayEnd = isSameDay(endsAtDate, now);
-      if (!isTodayStart || !isTodayEnd) {
+      if (!isTodayStart) {
         setError(
           t(
             "ui.sem_conexao_so_e_possivel_criar_apontamentos_para_hoje_date",
@@ -481,14 +491,41 @@ export default function NewAppointment() {
               />
             </label>
             <label className="space-y-2 text-sm font-semibold text-foreground">
-              <span>{t("ui.fim")}</span>
-              <input
-                type="datetime-local"
-                value={endsAt}
-                onChange={(event) => setEndsAt(event.target.value)}
-                className="w-full rounded-2xl border border-border bg-surface-muted px-4 py-3 text-sm font-normal text-foreground outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
-                required
-              />
+              <span>{t("ui.duracao_em_minutos")}</span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const current = parseDurationMinutes(durationMinutes) ?? 60;
+                    const next = Math.max(1, current - 10);
+                    setDurationMinutes(String(next));
+                  }}
+                  className="rounded-2xl border border-border bg-white px-3 py-3 text-xs font-semibold text-foreground transition hover:bg-surface-muted"
+                >
+                  {t("ui.diminuir_10_minutos")}
+                </button>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={durationMinutes}
+                  onChange={(event) =>
+                    setDurationMinutes(sanitizeDurationInput(event.target.value))
+                  }
+                  className="w-full rounded-2xl border border-border bg-surface-muted px-4 py-3 text-sm font-normal text-foreground outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const current = parseDurationMinutes(durationMinutes) ?? 60;
+                    const next = current + 10;
+                    setDurationMinutes(String(next));
+                  }}
+                  className="rounded-2xl border border-border bg-white px-3 py-3 text-xs font-semibold text-foreground transition hover:bg-surface-muted"
+                >
+                  {t("ui.aumentar_10_minutos")}
+                </button>
+              </div>
             </label>
           </div>
 
