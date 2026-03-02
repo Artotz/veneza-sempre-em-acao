@@ -69,4 +69,5 @@ export type Company = {
   referencia?: string | null;
   createdAt?: string | null;
   segment?: string | null;
+  latestContact?: CompanyContact | null;
 };

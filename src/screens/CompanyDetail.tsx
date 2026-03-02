@@ -33,6 +33,7 @@ import { useSchedule } from "../state/useSchedule";
 import {
   getCompaniesSnapshot,
   saveCompaniesSnapshot,
+  updateCompanyLatestContact,
 } from "../storage/offlineSchedule";
 import { t } from "../i18n";
 
@@ -266,6 +267,7 @@ export default function CompanyDetail() {
 
     const loadContacts = async () => {
       if (!id) return;
+      const userEmail = user?.email?.trim();
       const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
       if (isOffline) {
         if (!active) return;
@@ -303,6 +305,11 @@ export default function CompanyDetail() {
 
       setContacts(mapped);
       setContactsLoading(false);
+
+      const latest = mapped[0] ?? null;
+      if (userEmail && latest) {
+        await updateCompanyLatestContact(userEmail, id, latest);
+      }
     };
 
     void loadContacts();
@@ -310,7 +317,7 @@ export default function CompanyDetail() {
     return () => {
       active = false;
     };
-  }, [id, supabase, t]);
+  }, [id, supabase, t, user?.email]);
 
   useEffect(() => {
     let active = true;

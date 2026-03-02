@@ -56,6 +56,7 @@ import {
   removePendingAction,
   savePendingAction,
   type PendingScheduleAction,
+  updateCompanyLatestContact,
 } from "../storage/offlineSchedule";
 import { syncAppointment } from "../sync/appointmentSync";
 import { compressImage } from "../utils/photoCompress";
@@ -1184,10 +1185,23 @@ export default function AppointmentDetail() {
         name: normalizedName,
         contact: normalizedContact,
       };
+      const localContact = {
+        id: `local-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        companyId: appointment.companyId,
+        name: normalizedName,
+        contact: normalizedContact,
+        appointmentId: appointment.id,
+        createdAt: new Date().toISOString(),
+      };
 
       try {
         if (typeof navigator !== "undefined" && !navigator.onLine) {
           await queuePendingCompanyContact(changes);
+          await updateCompanyLatestContact(
+            userEmail,
+            appointment.companyId,
+            localContact
+          );
           return;
         }
 
@@ -1197,9 +1211,25 @@ export default function AppointmentDetail() {
 
         if (error) {
           await queuePendingCompanyContact(changes);
+          await updateCompanyLatestContact(
+            userEmail,
+            appointment.companyId,
+            localContact
+          );
+          return;
         }
+        await updateCompanyLatestContact(
+          userEmail,
+          appointment.companyId,
+          localContact
+        );
       } catch (error) {
         await queuePendingCompanyContact(changes);
+        await updateCompanyLatestContact(
+          userEmail,
+          appointment.companyId,
+          localContact
+        );
       }
     },
     [appointment, queuePendingCompanyContact, supabase, user?.email],

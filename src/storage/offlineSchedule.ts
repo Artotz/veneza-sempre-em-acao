@@ -1,5 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
-import type { Appointment, Company } from "../lib/types";
+import type { Appointment, Company, CompanyContact } from "../lib/types";
 import type { ScheduleRange } from "../state/ScheduleContext";
 
 const DB_NAME = "pwa-cache";
@@ -112,6 +112,128 @@ const generateId = () => {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
 
+const eq = <T,>(a: T | null | undefined, b: T | null | undefined) =>
+  (a ?? null) === (b ?? null);
+
+const areContactsEqual = (
+  a?: CompanyContact | null,
+  b?: CompanyContact | null
+) => {
+  if (!a && !b) return true;
+  if (!a || !b) return false;
+  return (
+    eq(a.id, b.id) &&
+    eq(a.companyId, b.companyId) &&
+    eq(a.name, b.name) &&
+    eq(a.contact, b.contact) &&
+    eq(a.appointmentId, b.appointmentId) &&
+    eq(a.createdAt, b.createdAt)
+  );
+};
+
+const areCompaniesEqual = (a: Company, b: Company) =>
+  eq(a.id, b.id) &&
+  eq(a.name, b.name) &&
+  eq(a.document, b.document) &&
+  eq(a.state, b.state) &&
+  eq(a.lat, b.lat) &&
+  eq(a.lng, b.lng) &&
+  eq(a.csa, b.csa) &&
+  eq(a.emailCsa, b.emailCsa) &&
+  eq(a.carteiraDef, b.carteiraDef) &&
+  eq(a.clientClass, b.clientClass) &&
+  eq(a.carteiraDef2, b.carteiraDef2) &&
+  eq(a.classeCliente, b.classeCliente) &&
+  eq(a.validacao, b.validacao) &&
+  eq(a.referencia, b.referencia) &&
+  eq(a.createdAt, b.createdAt) &&
+  eq(a.segment, b.segment) &&
+  areContactsEqual(a.latestContact ?? null, b.latestContact ?? null);
+
+const areCompanyListsEqual = (a: Company[], b: Company[]) => {
+  if (a.length !== b.length) return false;
+  for (let index = 0; index < a.length; index += 1) {
+    if (!areCompaniesEqual(a[index], b[index])) return false;
+  }
+  return true;
+};
+
+const areAppointmentsEqual = (a: Appointment, b: Appointment) =>
+  eq(a.id, b.id) &&
+  eq(a.companyId, b.companyId) &&
+  eq(a.companyName, b.companyName) &&
+  eq(a.appointmentId, b.appointmentId) &&
+  eq(a.consultantId, b.consultantId) &&
+  eq(a.consultant, b.consultant) &&
+  eq(a.createdBy, b.createdBy) &&
+  eq(a.startAt, b.startAt) &&
+  eq(a.endAt, b.endAt) &&
+  eq(a.status, b.status) &&
+  eq(a.checkInAt, b.checkInAt) &&
+  eq(a.checkOutAt, b.checkOutAt) &&
+  eq(a.checkInLat, b.checkInLat) &&
+  eq(a.checkInLng, b.checkInLng) &&
+  eq(a.checkInAccuracyM, b.checkInAccuracyM) &&
+  eq(a.checkOutLat, b.checkOutLat) &&
+  eq(a.checkOutLng, b.checkOutLng) &&
+  eq(a.checkOutAccuracyM, b.checkOutAccuracyM) &&
+  eq(a.addressSnapshot, b.addressSnapshot) &&
+  eq(a.absenceReason, b.absenceReason) &&
+  eq(a.absenceNote, b.absenceNote) &&
+  eq(a.notes, b.notes) &&
+  eq(a.clientThermometer, b.clientThermometer) &&
+  eq(a.createdAt, b.createdAt) &&
+  eq(a.updatedAt, b.updatedAt) &&
+  eq(a.appointmentTitle, b.appointmentTitle) &&
+  eq(a.pendingSync, b.pendingSync) &&
+  eq(a.localCreatedAt, b.localCreatedAt) &&
+  eq(
+    (a.oportunidades ?? null)?.join("|") ?? null,
+    (b.oportunidades ?? null)?.join("|") ?? null
+  );
+
+const areAppointmentListsEqual = (a: Appointment[], b: Appointment[]) => {
+  if (a.length !== b.length) return false;
+  for (let index = 0; index < a.length; index += 1) {
+    if (!areAppointmentsEqual(a[index], b[index])) return false;
+  }
+  return true;
+};
+
+const areScheduleSnapshotsEqual = (
+  a: ScheduleSnapshot,
+  b: ScheduleSnapshot
+) =>
+  eq(a.userEmail, b.userEmail) &&
+  eq(a.range.startAt, b.range.startAt) &&
+  eq(a.range.endAt, b.range.endAt) &&
+  areAppointmentListsEqual(a.appointments, b.appointments) &&
+  areCompanyListsEqual(a.companies, b.companies);
+
+const mergeLatestContacts = (
+  companies: Company[],
+  existing?: CompaniesSnapshot | null
+) => {
+  if (!existing?.companies.length) return companies;
+  const latestById = new Map<string, CompanyContact | null>();
+  existing.companies.forEach((company) => {
+    if ("latestContact" in company) {
+      latestById.set(company.id, company.latestContact ?? null);
+    }
+  });
+
+  if (!latestById.size) return companies;
+
+  return companies.map((company) => {
+    if (company.latestContact != null) return company;
+    if (!latestById.has(company.id)) return company;
+    return {
+      ...company,
+      latestContact: latestById.get(company.id) ?? null,
+    };
+  });
+};
+
 export const saveScheduleSnapshot = async (
   userEmail: string,
   range: ScheduleRange,
@@ -119,12 +241,17 @@ export const saveScheduleSnapshot = async (
   companies: Company[]
 ) => {
   const db = await getDb();
+  const existingCompanies = await db.get(
+    COMPANY_STORE,
+    buildCompaniesKey(userEmail)
+  );
+  const mergedCompanies = mergeLatestContacts(companies, existingCompanies);
   const payload: ScheduleSnapshot = {
     key: buildRangeKey(userEmail, range),
     userEmail,
     range,
     appointments,
-    companies,
+    companies: mergedCompanies,
     createdAt: Date.now(),
   };
 
@@ -133,9 +260,24 @@ export const saveScheduleSnapshot = async (
     key: buildLatestKey(userEmail),
   };
 
+  const existingRange = await db.get(SCHEDULE_STORE, payload.key);
+  const existingLatest = await db.get(SCHEDULE_STORE, latest.key);
+  const shouldWriteRange =
+    !existingRange || !areScheduleSnapshotsEqual(existingRange, payload);
+  const shouldWriteLatest =
+    !existingLatest || !areScheduleSnapshotsEqual(existingLatest, latest);
+
+  if (!shouldWriteRange && !shouldWriteLatest) {
+    return;
+  }
+
   const tx = db.transaction(SCHEDULE_STORE, "readwrite");
-  await tx.store.put(payload);
-  await tx.store.put(latest);
+  if (shouldWriteRange) {
+    await tx.store.put(payload);
+  }
+  if (shouldWriteLatest) {
+    await tx.store.put(latest);
+  }
   await tx.done;
 };
 
@@ -144,12 +286,17 @@ export const saveCompaniesSnapshot = async (
   companies: Company[]
 ) => {
   const db = await getDb();
+  const existing = await db.get(COMPANY_STORE, buildCompaniesKey(userEmail));
+  const mergedCompanies = mergeLatestContacts(companies, existing);
   const payload: CompaniesSnapshot = {
     key: buildCompaniesKey(userEmail),
     userEmail,
-    companies,
+    companies: mergedCompanies,
     createdAt: Date.now(),
   };
+  if (existing && areCompanyListsEqual(existing.companies, payload.companies)) {
+    return;
+  }
   await db.put(COMPANY_STORE, payload);
 };
 
@@ -169,6 +316,10 @@ export const saveTodayAppointments = async (
     appointments,
     createdAt: Date.now(),
   };
+  const existing = await db.get(TODAY_APPOINTMENTS_STORE, payload.key);
+  if (existing && areAppointmentListsEqual(existing.appointments, appointments)) {
+    return;
+  }
   await db.put(TODAY_APPOINTMENTS_STORE, payload);
 };
 
@@ -268,4 +419,43 @@ export const listPendingAppointments = async (userEmail: string) => {
 export const removePendingAppointment = async (id: string) => {
   const db = await getDb();
   await db.delete(PENDING_APPOINTMENTS_STORE, id);
+};
+
+export const updateCompanyLatestContact = async (
+  userEmail: string,
+  companyId: string,
+  contact: CompanyContact | null
+) => {
+  const db = await getDb();
+  const existing = await db.get(COMPANY_STORE, buildCompaniesKey(userEmail));
+  if (!existing) return;
+
+  const nextCompanies = existing.companies.map((company) => {
+    if (company.id !== companyId) return company;
+    const current = company.latestContact ?? null;
+    if (contact) {
+      if (areContactsEqual(current, contact)) return company;
+      if (current?.createdAt && contact.createdAt) {
+        const currentDate = new Date(current.createdAt).getTime();
+        const nextDate = new Date(contact.createdAt).getTime();
+        if (Number.isFinite(currentDate) && Number.isFinite(nextDate)) {
+          if (nextDate <= currentDate) return company;
+        }
+      }
+    }
+    return {
+      ...company,
+      latestContact: contact,
+    };
+  });
+
+  if (areCompanyListsEqual(existing.companies, nextCompanies)) {
+    return;
+  }
+
+  await db.put(COMPANY_STORE, {
+    ...existing,
+    companies: nextCompanies,
+    createdAt: Date.now(),
+  });
 };
