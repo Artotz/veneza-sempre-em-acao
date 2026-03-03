@@ -94,6 +94,12 @@ export const resources = {
         dados_da_empresa: "Dados da empresa",
         dados_do_apontamento: "Dados do apontamento",
         editar_visita: "Editar visita",
+        deletar_visita: "Deletar visita",
+        deletar: "Deletar",
+        deletando: "Deletando...",
+        confirmar_exclusao_visita: "Confirmar exclusão da visita",
+        acao_irreversivel: "Esta ação não pode ser desfeita.",
+        nao_foi_possivel_deletar_visita: "Não foi possível deletar a visita.",
         salvar_alteracoes: "Salvar alterações",
         atualize_os_horarios_do_apontamento:
           "Atualize os horários do apontamento.",

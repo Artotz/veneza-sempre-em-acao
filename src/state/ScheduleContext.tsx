@@ -50,6 +50,7 @@ export type ScheduleContextValue = {
       id: string,
       payload: { startAt: string; endAt: string }
     ) => Promise<Appointment | null>;
+    removeAppointment: (id: string) => void;
     setPendingSync: (id: string, pending: boolean) => void;
   };
   selectors: {

@@ -42,6 +42,7 @@ type ScheduleAction =
   | { type: "error"; payload: string }
   | { type: "set_busy"; payload: { id: string; busy: boolean } }
   | { type: "update"; payload: { id: string; changes: Partial<Appointment> } }
+  | { type: "remove"; payload: { id: string } }
   | { type: "set_range"; payload: ScheduleRange }
   | { type: "set_loading" }
   | { type: "reset" };
@@ -85,6 +86,14 @@ const scheduleReducer = (
             ? { ...appointment, ...action.payload.changes }
             : appointment
         ),
+      };
+    case "remove":
+      return {
+        ...state,
+        appointments: state.appointments.filter(
+          (appointment) => appointment.id !== action.payload.id
+        ),
+        busyIds: state.busyIds.filter((id) => id !== action.payload.id),
       };
     case "set_range":
       if (
@@ -544,6 +553,18 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
     [persistSnapshot, state.appointments, state.companies]
   );
 
+  const applyLocalRemoval = useCallback(
+    (id: string) => {
+      const nextAppointments = state.appointments.filter(
+        (appointment) => appointment.id !== id
+      );
+      dispatch({ type: "remove", payload: { id } });
+      persistSnapshot(nextAppointments, state.companies);
+      return nextAppointments;
+    },
+    [persistSnapshot, state.appointments, state.companies]
+  );
+
   const actions = useMemo<ScheduleContextValue["actions"]>(
     () => ({
       setRange: (range: { startAt: Date; endAt: Date }) => {
@@ -617,12 +638,16 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
           applyLocalUpdate(id, localChanges);
           return updatedLocal;
         }),
+      removeAppointment: (id: string) => {
+        applyLocalRemoval(id);
+      },
       setPendingSync: (id: string, pending: boolean) => {
         applyLocalUpdate(id, { pendingSync: pending });
       },
     }),
     [
       applyLocalUpdate,
+      applyLocalRemoval,
       loadSchedule,
       runUpdate,
       state.appointments,

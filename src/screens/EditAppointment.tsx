@@ -19,7 +19,7 @@ import {
   mapCompany,
 } from "../lib/supabase";
 import type { Appointment, Company } from "../lib/types";
-import { isSameDay } from "../lib/date";
+import { addDays, isSameDay, setTime } from "../lib/date";
 import {
   formatAppointmentWindow,
   getAppointmentStatus,
@@ -74,6 +74,8 @@ export default function EditAppointment() {
   const [durationMinutes, setDurationMinutes] = useState("60");
   const [saving, setSaving] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [isOnline, setIsOnline] = useState(
     typeof navigator === "undefined" ? true : navigator.onLine,
   );
@@ -182,6 +184,14 @@ export default function EditAppointment() {
   useEffect(() => {
     void loadDetail();
   }, [loadDetail]);
+
+  const canDelete = useMemo(() => {
+    if (!appointment?.startAt) return false;
+    const startDate = new Date(appointment.startAt);
+    if (Number.isNaN(startDate.getTime())) return false;
+    const tomorrowStart = setTime(addDays(new Date(), 1), 0, 0);
+    return startDate >= tomorrowStart;
+  }, [appointment?.startAt]);
 
   if (!appointment && loading) {
     return (
@@ -358,6 +368,46 @@ export default function EditAppointment() {
     }
   };
 
+  const handleOpenDelete = () => {
+    if (!canDelete || deleting) return;
+    setIsDeleteOpen(true);
+  };
+
+  const handleCloseDelete = () => {
+    if (deleting) return;
+    setIsDeleteOpen(false);
+  };
+
+  const handleDelete = async () => {
+    if (!appointment) return;
+    if (!isOnline) {
+      setError(t("ui.sem_internet"));
+      setIsDeleteOpen(false);
+      return;
+    }
+    setDeleting(true);
+    setError(null);
+    try {
+      const { error: deleteError } = await supabase
+        .from("apontamentos")
+        .delete()
+        .eq("id", appointment.id)
+        .select("id")
+        .single();
+
+      if (deleteError) {
+        throw new Error(deleteError.message);
+      }
+
+      actions.removeAppointment(appointment.id);
+      setDeleting(false);
+      navigate("/cronograma", { replace: true });
+    } catch (deleteError) {
+      setDeleting(false);
+      setError(t("ui.nao_foi_possivel_deletar_visita"));
+    }
+  };
+
   if (!isEditable) {
     return (
       <AppShell
@@ -472,8 +522,60 @@ export default function EditAppointment() {
           >
             {saving ? t("ui.salvando") : t("ui.salvar_alteracoes")}
           </button>
+          <button
+            type="button"
+            onClick={handleOpenDelete}
+            disabled={!canDelete}
+            className={`w-full rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+              canDelete
+                ? "bg-danger text-white"
+                : "cursor-not-allowed bg-surface-muted text-foreground-muted"
+            }`}
+          >
+            {t("ui.deletar_visita")}
+          </button>
         </form>
       </div>
+      {isDeleteOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 px-4 py-6 sm:items-center"
+          onClick={handleCloseDelete}
+        >
+          <div
+            className="w-full max-w-md overflow-hidden rounded-3xl border border-border bg-white shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="border-b border-border px-5 py-4">
+              <h3 className="text-base font-semibold text-foreground">
+                {t("ui.confirmar_exclusao_visita")}
+              </h3>
+              <p className="mt-1 text-xs text-foreground-muted">
+                {t("ui.acao_irreversivel")}
+              </p>
+            </div>
+            <div className="flex items-center justify-end gap-2 border-t border-border px-5 py-4">
+              <button
+                type="button"
+                onClick={handleCloseDelete}
+                className={`rounded-full border border-border px-4 py-2 text-xs font-semibold ${
+                  "text-foreground-soft"
+                }`}
+              >
+                {t("ui.cancelar")}
+              </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
+                  "bg-danger text-white"
+                }`}
+              >
+                {t("ui.deletar")}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </AppShell>
   );
 }
