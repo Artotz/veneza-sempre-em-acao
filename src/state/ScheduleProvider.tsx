@@ -217,11 +217,15 @@ const filterAppointmentsByRange = (
   appointments: Appointment[],
   range: ScheduleRange
 ) => {
-  const start = new Date(range.startAt);
-  const end = new Date(range.endAt);
+  const rangeStart = new Date(range.startAt);
+  const rangeEnd = new Date(range.endAt);
   return appointments.filter((appointment) => {
-    const when = new Date(appointment.startAt);
-    return when >= start && when <= end;
+    const start = new Date(appointment.startAt);
+    const end = new Date(appointment.endAt);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      return false;
+    }
+    return start <= rangeEnd && end >= rangeStart;
   });
 };
 
@@ -429,8 +433,8 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
         let appointmentsQuery = supabase
           .from("apontamentos")
           .select(`${APPOINTMENT_LIST_SELECT}, companies(name)`)
-          .gte("starts_at", range.startAt)
           .lte("starts_at", range.endAt)
+          .gte("ends_at", range.startAt)
           .order("starts_at", { ascending: true });
 
         appointmentsQuery = appointmentsQuery.eq("consultant_name", userEmail);

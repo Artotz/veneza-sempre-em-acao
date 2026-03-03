@@ -1487,8 +1487,17 @@ export default function AppointmentDetail() {
     new Date(appointment.startAt),
     new Date(),
   );
+  const hasEarlierScheduled = dayAppointments.some((item) => {
+    if (item.id === appointment.id) return false;
+    if (getAppointmentStatus(item) !== "agendado") return false;
+    return (
+      new Date(item.startAt).getTime() <
+      new Date(appointment.startAt).getTime()
+    );
+  });
   const canCheckIn =
     !blocked &&
+    !hasEarlierScheduled &&
     isTodayAppointment &&
     (appointment.status ?? "scheduled") === "scheduled";
   const canCheckOut =
@@ -2231,6 +2240,17 @@ export default function AppointmentDetail() {
   const canConfirmRegistroModal = Boolean(registroTipo) && !isPhotoBusy;
   const canAddPhoto = status === "em_execucao";
   const inlineActionCols = "grid-cols-3";
+  const checkInBlockReasons =
+    (appointment.status ?? "scheduled") === "scheduled" && !canCheckIn
+      ? [
+          ...(blocked
+            ? [t("ui.check_in_bloqueado_apontamento_em_execucao")]
+            : []),
+          ...(hasEarlierScheduled
+            ? [t("ui.check_in_bloqueado_apontamento_anterior_agendado")]
+            : []),
+        ]
+      : [];
   let pendingRegistroIndex = 0;
   let uploadedRegistroIndex = pendingRegistroCount;
 
@@ -2439,6 +2459,13 @@ export default function AppointmentDetail() {
             // subtitle={t("ui.sincroniza_com_o_supabase")}
           />
           <div className="grid gap-2">
+            {checkInBlockReasons.length > 0 ? (
+              <div className="rounded-2xl border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-foreground-soft">
+                {checkInBlockReasons.map((reason) => (
+                  <p key={reason}>{reason}</p>
+                ))}
+              </div>
+            ) : null}
             <button
               type="button"
               disabled={

@@ -335,6 +335,7 @@ export default function EditAppointment() {
         changes,
       });
       actions.setPendingSync(appointment.id, true);
+      await actions.refresh();
       setSaving(false);
       navigate(`/apontamentos/${appointment.id}`, { replace: true });
       return;
@@ -353,6 +354,7 @@ export default function EditAppointment() {
       }
 
       actions.setPendingSync(appointment.id, false);
+      await actions.refresh();
       setSaving(false);
       navigate(`/apontamentos/${appointment.id}`, { replace: true });
     } catch (updateError) {
@@ -363,6 +365,7 @@ export default function EditAppointment() {
         changes,
       });
       actions.setPendingSync(appointment.id, true);
+      await actions.refresh();
       setSaving(false);
       setError(t("ui.alteracao_salva_pendente_para_sincronizar"));
     }

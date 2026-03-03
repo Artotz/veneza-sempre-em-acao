@@ -50,6 +50,10 @@ export const resources = {
 
         check_in: "Check-in",
         check_in_check_out: "Check-in / Check-out",
+        check_in_bloqueado_apontamento_em_execucao:
+          "Finalize o apontamento em execu\u00e7\u00e3o antes de fazer check-in em outro.",
+        check_in_bloqueado_apontamento_anterior_agendado:
+          "Voc\u00ea tem um apontamento agendado antes deste hor\u00e1rio. Resolva ele antes.",
         check_out: "Check-out",
         check_out_do_agendamento: "Check-out do agendamento",
         dados_de_recebimento: "Dados de recebimento",
