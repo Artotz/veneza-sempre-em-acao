@@ -271,8 +271,11 @@ export default function CompanyDetail() {
       const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
       if (isOffline) {
         if (!active) return;
-        setContacts([]);
-        setContactsError(t("ui.sem_conexao_e_sem_cache_local"));
+        const cached = company?.latestContact ?? null;
+        setContacts(cached ? [cached] : []);
+        setContactsError(
+          cached ? null : t("ui.sem_conexao_e_sem_cache_local")
+        );
         setContactsLoading(false);
         return;
       }
@@ -290,7 +293,8 @@ export default function CompanyDetail() {
 
       if (error) {
         setContactsError(error.message);
-        setContacts([]);
+        const cached = company?.latestContact ?? null;
+        setContacts(cached ? [cached] : []);
         setContactsLoading(false);
         return;
       }
@@ -317,7 +321,7 @@ export default function CompanyDetail() {
     return () => {
       active = false;
     };
-  }, [id, supabase, t, user?.email]);
+  }, [company?.latestContact, id, supabase, t, user?.email]);
 
   useEffect(() => {
     let active = true;

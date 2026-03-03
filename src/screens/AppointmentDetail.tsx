@@ -152,10 +152,7 @@ const mediaKindLabels: Record<MediaKind, string> = {
 
 const getRegistroLabel = (registroTipo?: string | null) => {
   if (!registroTipo) return null;
-  return (
-    registroLabels[registroTipo as RegistroTipo] ??
-    registroTipo
-  );
+  return registroLabels[registroTipo as RegistroTipo] ?? registroTipo;
 };
 
 const buildRegistroItemLabel = (
@@ -182,10 +179,9 @@ const ACCEPTED_FILE_TYPES = [
   "text/csv",
   "text/plain",
 ];
-const ACCEPTED_FILE_TYPES_INPUT = [
-  "image/*",
-  ...ACCEPTED_FILE_TYPES,
-].join(", ");
+const ACCEPTED_FILE_TYPES_INPUT = ["image/*", ...ACCEPTED_FILE_TYPES].join(
+  ", ",
+);
 
 const NEW_CONTACT_ID = "new-contact";
 
@@ -355,7 +351,9 @@ const applyPendingActionsToAppointment = (
           toNumberValue(changes.check_out_accuracy_m) ??
           current.checkOutAccuracyM ??
           null,
-        notes: hasNotes ? toStringValue(changes.notes) : current.notes ?? null,
+        notes: hasNotes
+          ? toStringValue(changes.notes)
+          : (current.notes ?? null),
         oportunidades: Array.isArray(changes.oportunidades)
           ? (changes.oportunidades as string[])
           : current.oportunidades,
@@ -528,7 +526,9 @@ export default function AppointmentDetail() {
     setError(null);
     const { data, error: requestError } = await supabase
       .from("apontamentos")
-      .select(`${APPOINTMENT_DETAIL_SELECT}, companies(${COMPANY_DETAIL_SELECT})`)
+      .select(
+        `${APPOINTMENT_DETAIL_SELECT}, companies(${COMPANY_DETAIL_SELECT})`,
+      )
       .eq("id", id)
       .eq("consultant_name", userEmail)
       .maybeSingle();
@@ -595,7 +595,9 @@ export default function AppointmentDetail() {
 
     const { data, error: requestError } = await supabase
       .from("apontamento_media")
-      .select("id, bucket, path, kind, registro_tipo, mime_type, bytes, created_at")
+      .select(
+        "id, bucket, path, kind, registro_tipo, mime_type, bytes, created_at",
+      )
       .eq("apontamento_id", id)
       .order("created_at", { ascending: true });
 
@@ -1285,7 +1287,7 @@ export default function AppointmentDetail() {
           await updateCompanyLatestContact(
             userEmail,
             appointment.companyId,
-            localContact
+            localContact,
           );
           return;
         }
@@ -1299,21 +1301,21 @@ export default function AppointmentDetail() {
           await updateCompanyLatestContact(
             userEmail,
             appointment.companyId,
-            localContact
+            localContact,
           );
           return;
         }
         await updateCompanyLatestContact(
           userEmail,
           appointment.companyId,
-          localContact
+          localContact,
         );
       } catch (error) {
         await queuePendingCompanyContact(changes);
         await updateCompanyLatestContact(
           userEmail,
           appointment.companyId,
-          localContact
+          localContact,
         );
       }
     },
@@ -1620,9 +1622,7 @@ export default function AppointmentDetail() {
     }
 
     if (registroCount >= MAX_REGISTROS) {
-      setError(
-        t("ui.limite_de_registros_atingido", { max: MAX_REGISTROS }),
-      );
+      setError(t("ui.limite_de_registros_atingido", { max: MAX_REGISTROS }));
       return;
     }
 
@@ -1630,9 +1630,7 @@ export default function AppointmentDetail() {
     const toProcess = files.slice(0, available);
 
     if (files.length > available) {
-      setError(
-        t("ui.limite_de_registros_atingido", { max: MAX_REGISTROS }),
-      );
+      setError(t("ui.limite_de_registros_atingido", { max: MAX_REGISTROS }));
     }
 
     for (const file of toProcess) {
@@ -1734,8 +1732,9 @@ export default function AppointmentDetail() {
     const normalizedContact = receiverContact.trim();
     if (!normalizedName || !normalizedContact) return;
     setError(null);
-    const oportunidades =
-      pendingCheckoutOpportunities ?? [...checkoutOpportunities];
+    const oportunidades = pendingCheckoutOpportunities ?? [
+      ...checkoutOpportunities,
+    ];
     const notes =
       pendingCheckoutObservation ??
       (checkoutObservation.trim().length ? checkoutObservation.trim() : null);
@@ -1755,8 +1754,9 @@ export default function AppointmentDetail() {
   const handleSkipCheckoutContact = () => {
     if (!canCheckOut || busy || geo.isCapturing || isPhotoBusy) return;
     setError(null);
-    const oportunidades =
-      pendingCheckoutOpportunities ?? [...checkoutOpportunities];
+    const oportunidades = pendingCheckoutOpportunities ?? [
+      ...checkoutOpportunities,
+    ];
     const notes =
       pendingCheckoutObservation ??
       (checkoutObservation.trim().length ? checkoutObservation.trim() : null);
@@ -1979,7 +1979,9 @@ export default function AppointmentDetail() {
     const receiverContactValue =
       overrides?.receiverContact?.trim() ?? receiverContact.trim();
     const thermometerValue =
-      overrides?.clientThermometer ?? pendingClientThermometer ?? clientThermometer;
+      overrides?.clientThermometer ??
+      pendingClientThermometer ??
+      clientThermometer;
     try {
       let position: { lat: number; lng: number; accuracy: number } | null =
         null;
@@ -2459,7 +2461,9 @@ export default function AppointmentDetail() {
                   type="button"
                   onClick={handleAddRegistroPhoto}
                   disabled={
-                    !canAddPhoto || isPhotoBusy || registroCount >= MAX_REGISTROS
+                    !canAddPhoto ||
+                    isPhotoBusy ||
+                    registroCount >= MAX_REGISTROS
                   }
                   className={`min-h-[56px] rounded-2xl px-2 py-3 text-center text-xs font-semibold leading-tight whitespace-normal break-words transition ${
                     canAddPhoto && !isPhotoBusy && registroCount < MAX_REGISTROS
@@ -2687,13 +2691,13 @@ export default function AppointmentDetail() {
                     >
                       {item.signedUrl ? (
                         isImage ? (
-                        <img
-                          src={item.signedUrl}
-                          alt={t("ui.foto_kind", {
-                            kind: kindLabel,
-                          })}
-                          className="h-28 w-full object-cover"
-                        />
+                          <img
+                            src={item.signedUrl}
+                            alt={t("ui.foto_kind", {
+                              kind: kindLabel,
+                            })}
+                            className="h-28 w-full object-cover"
+                          />
                         ) : (
                           <a
                             href={item.signedUrl}
@@ -2984,19 +2988,23 @@ export default function AppointmentDetail() {
                         <span>{t("ui.contatos_disponiveis")}</span>
                         <select
                           value={selectedContactId}
-                          onChange={(event) => handleSelectContact(event.target.value)}
+                          onChange={(event) =>
+                            handleSelectContact(event.target.value)
+                          }
                           disabled={isCheckoutBusy || contactsLoading}
                           className="w-full rounded-2xl border border-border bg-white px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-accent/40"
                         >
-                          <option value="">{t("ui.selecione_um_contato")}</option>
+                          <option value="">
+                            {t("ui.selecione_um_contato")}
+                          </option>
                           {contactOptions.map((contact) => (
                             <option key={contact.id} value={contact.id}>
                               {contact.name} - {contact.contact}
                             </option>
                           ))}
-                          <option value={NEW_CONTACT_ID}>
+                          {/* <option value={NEW_CONTACT_ID}>
                             {t("ui.novo_contato")}
-                          </option>
+                          </option> */}
                         </select>
                         {contactsLoading ? (
                           <span className="text-[11px] text-foreground-muted">
@@ -3147,7 +3155,10 @@ export default function AppointmentDetail() {
                     type="button"
                     onClick={handleFinalizeCheckout}
                     disabled={
-                      !canCheckOut || busy || isCheckoutBusy || !isCheckoutReceiverValid
+                      !canCheckOut ||
+                      busy ||
+                      isCheckoutBusy ||
+                      !isCheckoutReceiverValid
                     }
                     className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
                       canCheckOut &&
@@ -3220,7 +3231,9 @@ export default function AppointmentDetail() {
               </button>
               <button
                 type="button"
-                disabled={!canAbsence || busy || isPhotoBusy || !isAbsenceNoteValid}
+                disabled={
+                  !canAbsence || busy || isPhotoBusy || !isAbsenceNoteValid
+                }
                 onClick={handleAbsence}
                 className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
                   canAbsence && !busy && !isPhotoBusy && isAbsenceNoteValid

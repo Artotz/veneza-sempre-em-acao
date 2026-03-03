@@ -134,7 +134,7 @@ export const resources = {
         contatos: "Contatos",
         contatos_count: "{{count}} contatos",
         contatos_disponiveis: "Contatos disponíveis",
-        selecione_um_contato: "Selecione um contato",
+        selecione_um_contato: "Selecione ou insira um contato...",
         novo_contato: "Novo contato",
         carregando_contatos: "Carregando contatos...",
         nenhum_contato_disponivel: "Nenhum contato disponível",

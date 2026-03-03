@@ -332,6 +332,70 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
   const { user, loading: authLoading } = useAuth();
   const userEmail = user?.email?.trim() ?? null;
 
+  const loadScheduleFromCache = useCallback(
+    async (range: ScheduleRange, activeRef: { active: boolean }) => {
+      if (!userEmail) {
+        dispatch({
+          type: "error",
+          payload: t("ui.email_do_usuario_nao_encontrado"),
+        });
+        return false;
+      }
+
+      const [
+        todayCache,
+        companiesCache,
+        pendingAppointments,
+        pendingActions,
+        scheduleSnapshot,
+      ] = await Promise.all([
+        getTodayAppointments(userEmail),
+        getCompaniesSnapshot(userEmail),
+        listPendingAppointments(userEmail),
+        listPendingActions(userEmail),
+        getScheduleSnapshot(userEmail, range),
+      ]);
+      if (!activeRef.active) return false;
+
+      const snapshotAppointments = scheduleSnapshot?.appointments ?? [];
+      const snapshotCompanies = scheduleSnapshot?.companies ?? [];
+      const baseAppointments = snapshotAppointments.length
+        ? mergeAppointments(snapshotAppointments, todayCache?.appointments ?? [])
+        : todayCache?.appointments ?? [];
+      const baseCompanies = snapshotCompanies.length
+        ? snapshotCompanies
+        : companiesCache?.companies ?? [];
+
+      const today = new Date();
+      const pendingInRange = scheduleSnapshot
+        ? filterAppointmentsByRange(pendingAppointments, scheduleSnapshot.range)
+        : filterAppointmentsForDate(pendingAppointments, today);
+      const mergedAppointments = mergeAppointments(baseAppointments, pendingInRange);
+      const appointmentsWithPending = applyPendingActionsToAppointments(
+        mergedAppointments,
+        pendingActions
+      );
+
+      if (!appointmentsWithPending.length && !baseCompanies.length) {
+        dispatch({
+          type: "error",
+          payload: t("ui.sem_conexao_e_sem_cache_local"),
+        });
+        return false;
+      }
+
+      dispatch({
+        type: "init",
+        payload: {
+          appointments: appointmentsWithPending,
+          companies: baseCompanies,
+        },
+      });
+      return true;
+    },
+    [userEmail]
+  );
+
   const loadSchedule = useCallback(
     async (range: ScheduleRange, activeRef: { active: boolean }) => {
       if (!userEmail) {
@@ -343,64 +407,7 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
       }
       dispatch({ type: "set_loading" });
       if (typeof navigator !== "undefined" && !navigator.onLine) {
-        const [
-          todayCache,
-          companiesCache,
-          pendingAppointments,
-          pendingActions,
-          scheduleSnapshot,
-        ] = await Promise.all([
-          getTodayAppointments(userEmail),
-          getCompaniesSnapshot(userEmail),
-          listPendingAppointments(userEmail),
-          listPendingActions(userEmail),
-          getScheduleSnapshot(userEmail, range),
-        ]);
-        if (!activeRef.active) return;
-
-        const snapshotAppointments = scheduleSnapshot?.appointments ?? [];
-        const snapshotCompanies = scheduleSnapshot?.companies ?? [];
-        const baseAppointments = snapshotAppointments.length
-          ? mergeAppointments(
-              snapshotAppointments,
-              todayCache?.appointments ?? []
-            )
-          : todayCache?.appointments ?? [];
-        const baseCompanies = snapshotCompanies.length
-          ? snapshotCompanies
-          : companiesCache?.companies ?? [];
-
-        const today = new Date();
-        const pendingInRange = scheduleSnapshot
-          ? filterAppointmentsByRange(
-              pendingAppointments,
-              scheduleSnapshot.range
-            )
-          : filterAppointmentsForDate(pendingAppointments, today);
-        const mergedAppointments = mergeAppointments(
-          baseAppointments,
-          pendingInRange
-        );
-        const appointmentsWithPending = applyPendingActionsToAppointments(
-          mergedAppointments,
-          pendingActions
-        );
-
-        if (!appointmentsWithPending.length && !baseCompanies.length) {
-          dispatch({
-            type: "error",
-            payload: t("ui.sem_conexao_e_sem_cache_local"),
-          });
-          return;
-        }
-
-        dispatch({
-          type: "init",
-          payload: {
-            appointments: appointmentsWithPending,
-            companies: baseCompanies,
-          },
-        });
+        await loadScheduleFromCache(range, activeRef);
         return;
       }
       try {
@@ -473,13 +480,16 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         console.error(error);
         if (!activeRef.active) return;
-        dispatch({
-          type: "error",
-          payload: t("ui.nao_foi_possivel_carregar_o_cronograma"),
-        });
+        const usedCache = await loadScheduleFromCache(range, activeRef);
+        if (!usedCache && activeRef.active) {
+          dispatch({
+            type: "error",
+            payload: t("ui.nao_foi_possivel_carregar_o_cronograma"),
+          });
+        }
       }
     },
-    [supabase, userEmail]
+    [loadScheduleFromCache, supabase, userEmail]
   );
 
   useEffect(() => {
