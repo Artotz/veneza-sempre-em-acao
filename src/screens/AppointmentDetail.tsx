@@ -42,7 +42,7 @@ import {
   mapCompany,
 } from "../lib/supabase";
 import { createSupabaseBrowserClient } from "../lib/supabaseClient";
-import type { Appointment, Company } from "../lib/types";
+import type { Appointment, Company, CompanyContact } from "../lib/types";
 import type { CapturePhotoResult } from "../services/camera";
 import { uploadApontamentoImage } from "../services/storageUploads";
 import type { OfflinePhotoMeta } from "../storage/offlinePhotos";
@@ -186,6 +186,8 @@ const ACCEPTED_FILE_TYPES_INPUT = [
   "image/*",
   ...ACCEPTED_FILE_TYPES,
 ].join(", ");
+
+const NEW_CONTACT_ID = "new-contact";
 
 const isImageMime = (mimeType?: string | null) =>
   Boolean(mimeType && mimeType.startsWith("image/"));
@@ -452,6 +454,10 @@ export default function AppointmentDetail() {
   >(null);
   const [receiverName, setReceiverName] = useState("");
   const [receiverContact, setReceiverContact] = useState("");
+  const [contactOptions, setContactOptions] = useState<CompanyContact[]>([]);
+  const [contactsLoading, setContactsLoading] = useState(false);
+  const [contactsError, setContactsError] = useState<string | null>(null);
+  const [selectedContactId, setSelectedContactId] = useState("");
   const [clientThermometer, setClientThermometer] = useState<number>(5);
   const [pendingClientThermometer, setPendingClientThermometer] = useState<
     number | null
@@ -638,6 +644,75 @@ export default function AppointmentDetail() {
   }, [loadMedia]);
 
   useEffect(() => {
+    let active = true;
+
+    const loadContacts = async () => {
+      if (!appointment?.companyId) return;
+      setContactsError(null);
+
+      if (!isOnline) {
+        const cached = company?.latestContact ?? null;
+        setContactOptions(cached ? [cached] : []);
+        setContactsLoading(false);
+        return;
+      }
+
+      setContactsLoading(true);
+      const { data, error } = await supabase
+        .from("company_contacts")
+        .select("id, company_id, name, contact, created_at")
+        .eq("company_id", appointment.companyId)
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      if (!active) return;
+
+      if (error) {
+        setContactOptions([]);
+        setContactsError(error.message);
+        setContactsLoading(false);
+        return;
+      }
+
+      const mapped = (data ?? []).map((row) => ({
+        id: row.id,
+        companyId: row.company_id,
+        name: row.name,
+        contact: row.contact,
+        createdAt: row.created_at ?? null,
+      })) as CompanyContact[];
+
+      setContactOptions(mapped);
+      setContactsLoading(false);
+
+      const latest = mapped[0] ?? null;
+      const userEmail = user?.email?.trim();
+      if (userEmail && latest) {
+        await updateCompanyLatestContact(
+          userEmail,
+          appointment.companyId,
+          latest,
+        );
+      }
+    };
+
+    if (isCheckoutOpen) {
+      void loadContacts();
+    }
+
+    return () => {
+      active = false;
+    };
+  }, [
+    appointment?.companyId,
+    company?.latestContact,
+    isCheckoutOpen,
+    isOnline,
+    supabase,
+    user?.email,
+  ]);
+
+  useEffect(() => {
     if (typeof window === "undefined") return;
     const updateStatus = () => setIsOnline(navigator.onLine);
     updateStatus();
@@ -648,6 +723,16 @@ export default function AppointmentDetail() {
       window.removeEventListener("offline", updateStatus);
     };
   }, []);
+
+  useEffect(() => {
+    if (!selectedContactId || selectedContactId === NEW_CONTACT_ID) return;
+    const stillExists = contactOptions.some(
+      (contact) => contact.id === selectedContactId,
+    );
+    if (!stillExists) {
+      setSelectedContactId("");
+    }
+  }, [contactOptions, selectedContactId]);
 
   useEffect(() => {
     return () => {
@@ -1462,6 +1547,7 @@ export default function AppointmentDetail() {
     setPendingCheckoutObservation(null);
     setReceiverName("");
     setReceiverContact("");
+    setSelectedContactId("");
     setClientThermometer(appointment?.clientThermometer ?? 5);
     setPendingClientThermometer(null);
     setCheckoutStep("summary");
@@ -1603,6 +1689,7 @@ export default function AppointmentDetail() {
     setPendingCheckoutObservation(null);
     setReceiverName("");
     setReceiverContact("");
+    setSelectedContactId("");
     setClientThermometer(5);
     setPendingClientThermometer(null);
     geo.resetError();
@@ -1628,6 +1715,19 @@ export default function AppointmentDetail() {
     setCheckoutStep("receiver");
   };
 
+  const handleSelectContact = (value: string) => {
+    setSelectedContactId(value);
+    if (!value || value === NEW_CONTACT_ID) {
+      setReceiverName("");
+      setReceiverContact("");
+      return;
+    }
+    const existing = contactOptions.find((contact) => contact.id === value);
+    if (!existing) return;
+    setReceiverName(existing.name ?? "");
+    setReceiverContact(existing.contact ?? "");
+  };
+
   const handleFinalizeCheckout = () => {
     if (!canCheckOut || busy || geo.isCapturing || isPhotoBusy) return;
     const normalizedName = receiverName.trim();
@@ -1642,6 +1742,7 @@ export default function AppointmentDetail() {
     setPendingClientThermometer(clientThermometer);
     setIsCheckoutOpen(false);
     setCheckoutStep("summary");
+    setSelectedContactId("");
     void performCheckOut({
       oportunidades,
       notes,
@@ -1662,6 +1763,7 @@ export default function AppointmentDetail() {
     setPendingClientThermometer(clientThermometer);
     setReceiverName("");
     setReceiverContact("");
+    setSelectedContactId("");
     setIsCheckoutOpen(false);
     setCheckoutStep("summary");
     void performCheckOut({
@@ -1807,10 +1909,12 @@ export default function AppointmentDetail() {
       notes,
       clientThermometer,
     });
-    void syncCompanyContact({
-      name: receiverName,
-      contact: receiverContact,
-    });
+    if (shouldPersistContact) {
+      void syncCompanyContact({
+        name: receiverName,
+        contact: receiverContact,
+      });
+    }
   };
 
   const performCheckIn = async (shot: CapturePhotoResult) => {
@@ -2056,6 +2160,18 @@ export default function AppointmentDetail() {
   const showCheckoutNotes = checkoutNotes.length > 0;
   const hasThermometer = appointment.clientThermometer != null;
   const thermometerValue = appointment.clientThermometer ?? 0;
+  const selectedContact =
+    contactOptions.find((contact) => contact.id === selectedContactId) ?? null;
+  const shouldPersistContact = (() => {
+    const normalizedName = receiverName.trim();
+    const normalizedContact = receiverContact.trim();
+    if (!normalizedName || !normalizedContact) return false;
+    if (!selectedContact) return true;
+    return (
+      normalizedName !== selectedContact.name ||
+      normalizedContact !== selectedContact.contact
+    );
+  })();
   const isCheckoutReceiverValid =
     receiverName.trim().length > 0 && receiverContact.trim().length > 0;
   const thermometerLabel = t("ui.termometro_nota_value", {
@@ -2865,13 +2981,52 @@ export default function AppointmentDetail() {
                     </p>
                     <div className="mt-3 grid gap-3">
                       <label className="grid gap-2 text-xs font-semibold text-foreground">
+                        <span>{t("ui.contatos_disponiveis")}</span>
+                        <select
+                          value={selectedContactId}
+                          onChange={(event) => handleSelectContact(event.target.value)}
+                          disabled={isCheckoutBusy || contactsLoading}
+                          className="w-full rounded-2xl border border-border bg-white px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-accent/40"
+                        >
+                          <option value="">{t("ui.selecione_um_contato")}</option>
+                          {contactOptions.map((contact) => (
+                            <option key={contact.id} value={contact.id}>
+                              {contact.name} - {contact.contact}
+                            </option>
+                          ))}
+                          <option value={NEW_CONTACT_ID}>
+                            {t("ui.novo_contato")}
+                          </option>
+                        </select>
+                        {contactsLoading ? (
+                          <span className="text-[11px] text-foreground-muted">
+                            {t("ui.carregando_contatos")}
+                          </span>
+                        ) : contactOptions.length === 0 ? (
+                          <span className="text-[11px] text-foreground-muted">
+                            {t("ui.nenhum_contato_disponivel")}
+                          </span>
+                        ) : null}
+                        {contactsError ? (
+                          <span className="text-[11px] text-warning">
+                            {contactsError}
+                          </span>
+                        ) : null}
+                      </label>
+                      <label className="grid gap-2 text-xs font-semibold text-foreground">
                         <span>{t("ui.nome")}</span>
                         <input
                           type="text"
                           value={receiverName}
-                          onChange={(event) =>
-                            setReceiverName(event.target.value)
-                          }
+                          onChange={(event) => {
+                            setReceiverName(event.target.value);
+                            if (
+                              selectedContactId &&
+                              selectedContactId !== NEW_CONTACT_ID
+                            ) {
+                              setSelectedContactId(NEW_CONTACT_ID);
+                            }
+                          }}
                           placeholder={t("ui.ex_nome_de_quem_recebeu")}
                           className="w-full rounded-2xl border border-border bg-white px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-accent/40"
                           disabled={isCheckoutBusy}
@@ -2882,9 +3037,15 @@ export default function AppointmentDetail() {
                         <input
                           type="text"
                           value={receiverContact}
-                          onChange={(event) =>
-                            setReceiverContact(event.target.value)
-                          }
+                          onChange={(event) => {
+                            setReceiverContact(event.target.value);
+                            if (
+                              selectedContactId &&
+                              selectedContactId !== NEW_CONTACT_ID
+                            ) {
+                              setSelectedContactId(NEW_CONTACT_ID);
+                            }
+                          }}
                           placeholder={t("ui.ex_telefone_ou_email")}
                           className="w-full rounded-2xl border border-border bg-white px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-accent/40"
                           disabled={isCheckoutBusy}

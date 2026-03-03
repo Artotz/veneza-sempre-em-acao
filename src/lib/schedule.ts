@@ -60,15 +60,27 @@ export const getAppointmentWindow = (appointment: Appointment) => {
   const checkOutAt = appointment.checkOutAt
     ? new Date(appointment.checkOutAt)
     : null;
-  if (
-    checkInAt &&
-    checkOutAt &&
-    !Number.isNaN(checkInAt.getTime()) &&
-    !Number.isNaN(checkOutAt.getTime())
-  ) {
-    return { start: checkInAt, end: checkOutAt };
+  const isDone = getAppointmentStatus(appointment) === "concluido";
+  const validCheckIn =
+    checkInAt && !Number.isNaN(checkInAt.getTime()) ? checkInAt : null;
+  const validCheckOut =
+    checkOutAt && !Number.isNaN(checkOutAt.getTime()) ? checkOutAt : null;
+
+  if (isDone) {
+    return {
+      start: validCheckIn ?? new Date(appointment.startAt),
+      end: validCheckOut ?? new Date(appointment.endAt),
+    };
   }
-  return { start: new Date(appointment.startAt), end: new Date(appointment.endAt) };
+
+  if (validCheckIn && validCheckOut) {
+    return { start: validCheckIn, end: validCheckOut };
+  }
+
+  return {
+    start: new Date(appointment.startAt),
+    end: new Date(appointment.endAt),
+  };
 };
 
 export const isBlocked = (
