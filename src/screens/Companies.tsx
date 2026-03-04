@@ -288,6 +288,7 @@ export default function Companies() {
           .select("company_id, starts_at")
           .in("company_id", chunk)
           .eq("consultant_name", userEmail)
+          .eq("status", "done")
           .lte("starts_at", nowIso)
           .order("starts_at", { ascending: false });
 
