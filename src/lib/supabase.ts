@@ -42,6 +42,7 @@ type AppointmentRow = {
   absence_reason?: string | null;
   absence_note?: string | null;
   notes?: string | null;
+  creation_notes?: string | null;
   oportunidades?: string[] | null;
   client_thermometer?: number | null;
   created_at?: string | null;
@@ -57,10 +58,10 @@ export const COMPANY_DETAIL_SELECT =
   "id, document, name, state, lat, lng, csa, email_csa, carteira_def, client_class, carteira_def2, classe_cliente, validacao, referencia, created_at, fora_carteira";
 
 export const APPOINTMENT_LIST_SELECT =
-  "id, company_id, appointment_id, consultant_id, consultant_name, created_by, starts_at, ends_at, status, check_in_at, check_out_at, check_in_lat, check_in_lng, check_in_accuracy_m, check_out_lat, check_out_lng, check_out_accuracy_m, address_snapshot, absence_reason, absence_note, client_thermometer, created_at, updated_at";
+  "id, company_id, appointment_id, consultant_id, consultant_name, created_by, starts_at, ends_at, status, check_in_at, check_out_at, check_in_lat, check_in_lng, check_in_accuracy_m, check_out_lat, check_out_lng, check_out_accuracy_m, address_snapshot, absence_reason, absence_note, creation_notes, client_thermometer, created_at, updated_at";
 
 export const APPOINTMENT_DETAIL_SELECT =
-  "id, company_id, appointment_id, consultant_id, consultant_name, created_by, starts_at, ends_at, status, check_in_at, check_out_at, check_in_lat, check_in_lng, check_in_accuracy_m, check_out_lat, check_out_lng, check_out_accuracy_m, address_snapshot, absence_reason, absence_note, notes, oportunidades, client_thermometer, created_at, updated_at";
+  "id, company_id, appointment_id, consultant_id, consultant_name, created_by, starts_at, ends_at, status, check_in_at, check_out_at, check_in_lat, check_in_lng, check_in_accuracy_m, check_out_lat, check_out_lng, check_out_accuracy_m, address_snapshot, absence_reason, absence_note, notes, creation_notes, oportunidades, client_thermometer, created_at, updated_at";
 
 // Backward compatibility for older imports.
 export const APPOINTMENT_SELECT = APPOINTMENT_DETAIL_SELECT;
@@ -125,6 +126,7 @@ export const mapAppointment = (row: AppointmentRow): Appointment => {
     absenceReason: row.absence_reason ?? null,
     absenceNote: row.absence_note ?? null,
     notes: row.notes ?? null,
+    creationNotes: row.creation_notes ?? null,
     oportunidades: row.oportunidades ?? null,
     clientThermometer: row.client_thermometer ?? null,
     createdAt: row.created_at ?? null,

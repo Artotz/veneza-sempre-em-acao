@@ -341,6 +341,7 @@ export const resources = {
         registro_numero_tipo: "Registro {{numero}} - {{tipo}}",
         registros_count: "{{count}} de {{max}} registros",
 
+        nota_do_gestor: "Nota da sugestão",
         resumo_do_apontamento: "Resumo do apontamento",
         resumo_geral: "Resumo geral",
 
@@ -593,4 +594,3 @@ export const resources = {
 } as const;
 
 export default resources;
-

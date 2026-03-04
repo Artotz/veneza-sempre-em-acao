@@ -2169,6 +2169,8 @@ export default function AppointmentDetail() {
     appointment.status === "absent" && cancellationReason.length > 0;
   const checkoutNotes = appointment.notes?.trim() ?? "";
   const showCheckoutNotes = checkoutNotes.length > 0;
+  const creationNotes = appointment.creationNotes?.trim() ?? "";
+  const showCreationNotes = creationNotes.length > 0;
   const hasThermometer = appointment.clientThermometer != null;
   const thermometerValue = appointment.clientThermometer ?? 0;
   const selectedContact =
@@ -2440,6 +2442,15 @@ export default function AppointmentDetail() {
             <SectionHeader title={t("ui.motivo_do_cancelamento")} />
             <p className="text-sm text-foreground-muted whitespace-pre-wrap">
               {cancellationReason}
+            </p>
+          </section>
+        ) : null}
+
+        {showCreationNotes ? (
+          <section className="space-y-3 rounded-3xl border border-warning/80 bg-amber-100 p-4 shadow-sm ring-1 ring-warning/30">
+            <SectionHeader title={t("ui.nota_do_gestor")} />
+            <p className="text-sm text-foreground-muted whitespace-pre-wrap">
+              {creationNotes}
             </p>
           </section>
         ) : null}
