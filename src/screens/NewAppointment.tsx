@@ -13,6 +13,7 @@ import {
   saveCompaniesSnapshot,
   savePendingAppointment,
 } from "../storage/offlineSchedule";
+import { getCachedCsa, setCachedCsa } from "../storage/localCsa";
 import { formatDateShort, isSameDay } from "../lib/date";
 import {
   formatAppointmentWindow,
@@ -47,6 +48,12 @@ const toLocalInputValue = (date: Date) => {
 };
 
 const sanitizeDurationInput = (value: string) => value.replace(/[^\d]/g, "");
+
+const normalizeCompanyName = (value: string) =>
+  value
+    .trim()
+    .replace(/\s+/g, " ")
+    .toUpperCase();
 
 const parseDurationMinutes = (value: string) => {
   const trimmed = sanitizeDurationInput(value);
@@ -218,7 +225,7 @@ export default function NewAppointment() {
     event.preventDefault();
     setError(null);
 
-    const normalizedNewCompanyName = newCompanyName.trim();
+    const normalizedNewCompanyName = normalizeCompanyName(newCompanyName);
     const shouldCreateCompany =
       isForaCarteira && normalizedNewCompanyName.length > 0;
 
@@ -327,6 +334,15 @@ export default function NewAppointment() {
     let resolvedCompanyId = selectedCompanyId;
 
     if (shouldCreateCompany) {
+      const cachedCsa = getCachedCsa(userEmail);
+      const derivedCsa =
+        cachedCsa ??
+        companies.find((item) => item.csa?.trim())?.csa?.trim() ??
+        null;
+      if (!cachedCsa && derivedCsa) {
+        setCachedCsa(userEmail, derivedCsa);
+      }
+
       const { data: createdCompany, error: createError } = await supabase
         .from("companies")
         .insert({
@@ -334,6 +350,7 @@ export default function NewAppointment() {
           document: null,
           email_csa: userEmail,
           fora_carteira: true,
+          csa: derivedCsa,
         })
         .select("id, document, name, state, lat, lng, csa, email_csa")
         .single();
@@ -359,6 +376,9 @@ export default function NewAppointment() {
       };
       companyForAppointment = newCompany;
       resolvedCompanyId = createdCompany.id;
+      if (!cachedCsa && createdCompany.csa) {
+        setCachedCsa(userEmail, createdCompany.csa);
+      }
     }
 
     if (!companyForAppointment || !resolvedCompanyId) {
