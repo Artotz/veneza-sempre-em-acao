@@ -509,6 +509,7 @@ export default function NewAppointment() {
               onChange={(event) => {
                 const checked = event.target.checked;
                 setIsForaCarteira(checked);
+                setSelectedCompanyId("");
                 if (!checked) {
                   setNewCompanyName("");
                 }
