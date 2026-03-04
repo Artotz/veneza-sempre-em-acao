@@ -111,6 +111,8 @@ export const resources = {
           "Edição disponível apenas para apontamentos agendados.",
         edicao_apenas_para_horarios_no_mesmo_dia:
           "A edição permite alterar apenas horários no mesmo dia.",
+        edicao_apontamento_de_hoje_so_muda_horario:
+          "Para apontamentos de hoje, só é possível alterar o horário.",
         edite_apenas_os_horarios_do_apontamento:
           "Edite apenas os horários do apontamento.",
         alteracao_salva_pendente_para_sincronizar:
@@ -591,3 +593,4 @@ export const resources = {
 } as const;
 
 export default resources;
+

@@ -274,11 +274,21 @@ export default function EditAppointment() {
     );
 
     const originalDate = new Date(appointment.startAt);
-    if (
-      !isSameDay(startsAtDate, originalDate) ||
-      !isSameDay(endsAtDate, originalDate)
-    ) {
-      setError(t("ui.edicao_apenas_para_horarios_no_mesmo_dia"));
+    if (!isSameDay(startsAtDate, endsAtDate)) {
+      setError(t("ui.inicio_e_fim_precisam_ser_no_mesmo_dia"));
+      return;
+    }
+
+    const now = new Date();
+    const toleranceMs = 5 * 60 * 1000;
+    if (startsAtDate.getTime() < now.getTime() - toleranceMs) {
+      setError(t("ui.inicio_nao_pode_ser_menor_que_agora_5_min_de_tolerancia"));
+      return;
+    }
+
+    const isOriginalToday = isSameDay(originalDate, now);
+    if (isOriginalToday && !isSameDay(startsAtDate, originalDate)) {
+      setError(t("ui.edicao_apontamento_de_hoje_so_muda_horario"));
       return;
     }
 
