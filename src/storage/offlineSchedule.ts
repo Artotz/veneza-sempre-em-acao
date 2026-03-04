@@ -148,6 +148,7 @@ const areCompaniesEqual = (a: Company, b: Company) =>
   eq(a.referencia, b.referencia) &&
   eq(a.createdAt, b.createdAt) &&
   eq(a.segment, b.segment) &&
+  eq(a.foraCarteira, b.foraCarteira) &&
   areContactsEqual(a.latestContact ?? null, b.latestContact ?? null);
 
 const areCompanyListsEqual = (a: Company[], b: Company[]) => {
