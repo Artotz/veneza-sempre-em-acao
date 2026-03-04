@@ -29,6 +29,7 @@ export default function Companies() {
   const { user, loading: authLoading } = useAuth();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [query, setQuery] = useState("");
+  const [isForaCarteira, setIsForaCarteira] = useState(false);
   const [sortBy, setSortBy] = useState<
     | ""
     | "dias_desde_ultima_visita"
@@ -46,10 +47,20 @@ export default function Companies() {
     Record<string, string | null>
   >({});
 
-  const filterCompanies = (items: Company[], term: string) => {
+  const filterCompanies = (
+    items: Company[],
+    term: string,
+    shouldUseForaCarteira: boolean,
+  ) => {
     const trimmed = term.trim().toLowerCase();
-    if (!trimmed) return items;
+    const scoped = items.filter(
+      (item) => Boolean(item.foraCarteira) === shouldUseForaCarteira,
+    );
+    if (!trimmed) return scoped;
     return items.filter((company) => {
+      if (Boolean(company.foraCarteira) !== shouldUseForaCarteira) {
+        return false;
+      }
       const name = company.name?.toLowerCase() ?? "";
       const document = company.document?.toLowerCase() ?? "";
       return name.includes(trimmed) || document.includes(trimmed);
@@ -307,8 +318,8 @@ export default function Companies() {
   }, [companies, supabase, user?.email]);
 
   const filteredCompanies = useMemo(
-    () => filterCompanies(companies, query),
-    [companies, query],
+    () => filterCompanies(companies, query, isForaCarteira),
+    [companies, isForaCarteira, query],
   );
 
   const sortedCompanies = useMemo(() => {
@@ -377,6 +388,15 @@ export default function Companies() {
           placeholder={t("ui.buscar_empresa")}
           className="w-full rounded-2xl border border-border bg-surface-muted px-4 py-3 text-sm text-foreground outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
         />
+        <label className="flex w-full items-center justify-between gap-3 text-xs font-semibold text-foreground">
+          <span>{t("ui.fora_carteira")}</span>
+          <input
+            type="checkbox"
+            checked={isForaCarteira}
+            onChange={(event) => setIsForaCarteira(event.target.checked)}
+            className="h-4 w-4 accent-accent"
+          />
+        </label>
         <div className="flex w-full items-center gap-2 text-xs font-semibold">
           <span className="shrink-0 text-foreground-soft">
             {t("ui.ordenar_por")}

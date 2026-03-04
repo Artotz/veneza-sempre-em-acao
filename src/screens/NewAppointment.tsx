@@ -539,7 +539,7 @@ export default function NewAppointment() {
             </select>
           </label>
           {isForaCarteira ? (
-            <div className="space-y-2 mt-3">
+            <div className="mt-4">
               <div className="text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
                 {t("ui.ou")}
               </div>
