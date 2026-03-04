@@ -6,7 +6,7 @@ import { EmptyState } from "../components/EmptyState";
 import { SectionHeader } from "../components/SectionHeader";
 import { StatusFilters } from "../components/StatusFilters";
 import { useAuth } from "../contexts/useAuth";
-import { formatDateShort } from "../lib/date";
+import { formatDateShort, isSameDay, startOfWeekMonday, addDays } from "../lib/date";
 import {
   formatAppointmentWindow,
   getAppointmentStatus,
@@ -18,6 +18,13 @@ import {
 import type { Appointment, AppointmentStatus } from "../lib/types";
 import { createSupabaseBrowserClient } from "../lib/supabaseClient";
 import { APPOINTMENT_LIST_SELECT, mapAppointment } from "../lib/supabase";
+import {
+  getCompaniesSnapshot,
+  getScheduleSnapshot,
+  getTodayAppointments,
+  listPendingActions,
+  listPendingAppointments,
+} from "../storage/offlineSchedule";
 import { t } from "../i18n";
 
 const buildDayKey = (date: Date) =>
@@ -39,6 +46,151 @@ const PAGE_SIZE = 20;
 const META_SELECT =
   "id, company_id, consultant_name, created_by, starts_at, ends_at, status, check_in_at, check_out_at, absence_reason";
 
+const mergeAppointments = (base: Appointment[], extras: Appointment[]) => {
+  const map = new Map<string, Appointment>();
+  base.forEach((appointment) => map.set(appointment.id, appointment));
+  extras.forEach((appointment) => {
+    if (!map.has(appointment.id)) {
+      map.set(appointment.id, appointment);
+    }
+  });
+  return Array.from(map.values());
+};
+
+const filterAppointmentsForDate = (appointments: Appointment[], date: Date) =>
+  appointments.filter((appointment) => isSameDay(new Date(appointment.startAt), date));
+
+const filterAppointmentsByRange = (
+  appointments: Appointment[],
+  range: { startAt: string; endAt: string },
+) => {
+  const rangeStart = new Date(range.startAt);
+  const rangeEnd = new Date(range.endAt);
+  return appointments.filter((appointment) => {
+    const start = new Date(appointment.startAt);
+    const end = new Date(appointment.endAt);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      return false;
+    }
+    return start <= rangeEnd && end >= rangeStart;
+  });
+};
+
+const toStringValue = (value: unknown) =>
+  typeof value === "string" ? value : null;
+
+const toNumberValue = (value: unknown) =>
+  typeof value === "number" && Number.isFinite(value) ? value : null;
+
+const applyPendingActionsToAppointments = (
+  appointments: Appointment[],
+  pendingActions: Awaited<ReturnType<typeof listPendingActions>>,
+) => {
+  if (!pendingActions.length) return appointments;
+  const actionsByAppointment = new Map<string, Awaited<ReturnType<typeof listPendingActions>>>();
+
+  pendingActions.forEach((action) => {
+    const list = actionsByAppointment.get(action.appointmentId) ?? [];
+    list.push(action);
+    actionsByAppointment.set(action.appointmentId, list);
+  });
+
+  return appointments.map((appointment) => {
+    const actions = actionsByAppointment.get(appointment.id);
+    if (!actions?.length) return appointment;
+
+    const sorted = [...actions].sort((a, b) => a.createdAt - b.createdAt);
+    const next = sorted.reduce<Appointment>((current, action) => {
+      const changes = action.changes ?? {};
+      if (action.actionType === "reschedule") {
+        const startAt =
+          toStringValue(changes.starts_at) ??
+          toStringValue(changes.startAt) ??
+          current.startAt;
+        const endAt =
+          toStringValue(changes.ends_at) ??
+          toStringValue(changes.endAt) ??
+          current.endAt;
+        return {
+          ...current,
+          startAt,
+          endAt,
+        };
+      }
+      if (action.actionType === "checkIn") {
+        return {
+          ...current,
+          status:
+            (toStringValue(changes.status) as Appointment["status"]) ??
+            "in_progress",
+          checkInAt: toStringValue(changes.check_in_at) ?? current.checkInAt,
+          checkInLat:
+            toNumberValue(changes.check_in_lat) ?? current.checkInLat ?? null,
+          checkInLng:
+            toNumberValue(changes.check_in_lng) ?? current.checkInLng ?? null,
+          checkInAccuracyM:
+            toNumberValue(changes.check_in_accuracy_m) ??
+            current.checkInAccuracyM ??
+            null,
+        };
+      }
+      if (action.actionType === "checkOut") {
+        const hasNotes = Object.prototype.hasOwnProperty.call(changes, "notes");
+        return {
+          ...current,
+          status:
+            (toStringValue(changes.status) as Appointment["status"]) ?? "done",
+          checkOutAt: toStringValue(changes.check_out_at) ?? current.checkOutAt,
+          checkOutLat:
+            toNumberValue(changes.check_out_lat) ?? current.checkOutLat ?? null,
+          checkOutLng:
+            toNumberValue(changes.check_out_lng) ?? current.checkOutLng ?? null,
+          checkOutAccuracyM:
+            toNumberValue(changes.check_out_accuracy_m) ??
+            current.checkOutAccuracyM ??
+            null,
+          notes: hasNotes ? toStringValue(changes.notes) : current.notes ?? null,
+          oportunidades: Array.isArray(changes.oportunidades)
+            ? (changes.oportunidades as string[])
+            : current.oportunidades,
+        };
+      }
+      return {
+        ...current,
+        status:
+          (toStringValue(changes.status) as Appointment["status"]) ?? "absent",
+        absenceReason:
+          toStringValue(changes.absence_reason) ?? current.absenceReason,
+        absenceNote: toStringValue(changes.absence_note) ?? current.absenceNote,
+      };
+    }, appointment);
+
+    return {
+      ...next,
+      pendingSync: true,
+    };
+  });
+};
+
+const mergeCompanyNames = (
+  appointments: Appointment[],
+  companies: { id: string; name: string }[],
+) => {
+  if (!companies.length) return appointments;
+  const namesById = new Map(companies.map((company) => [company.id, company.name]));
+  return appointments.map((appointment) => {
+    if (appointment.companyName !== undefined && appointment.companyName !== null) {
+      return appointment;
+    }
+    const name = namesById.get(appointment.companyId);
+    if (!name) return appointment;
+    return {
+      ...appointment,
+      companyName: name,
+    };
+  });
+};
+
 export default function AllAppointments() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -49,6 +201,7 @@ export default function AllAppointments() {
   const [loadingPage, setLoadingPage] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const [usingCache, setUsingCache] = useState(false);
   const [statusFilters, setStatusFilters] = useState<AppointmentStatus[]>(
     () => ["em_execucao", "agendado"],
   );
@@ -69,9 +222,74 @@ export default function AllAppointments() {
       return;
     }
     let active = true;
+    const loadFromCache = async () => {
+      setLoadingMeta(true);
+      setError(null);
+      const today = new Date();
+      const startAt = startOfWeekMonday(today);
+      const endAt = addDays(startAt, 6);
+      endAt.setHours(23, 59, 59, 999);
+      const range = {
+        startAt: startAt.toISOString(),
+        endAt: endAt.toISOString(),
+      };
+
+      const [
+        todayCache,
+        companiesCache,
+        pendingAppointments,
+        pendingActions,
+        scheduleSnapshot,
+      ] = await Promise.all([
+        getTodayAppointments(userEmail),
+        getCompaniesSnapshot(userEmail),
+        listPendingAppointments(userEmail),
+        listPendingActions(userEmail),
+        getScheduleSnapshot(userEmail, range),
+      ]);
+      if (!active) return false;
+
+      const snapshotAppointments = scheduleSnapshot?.appointments ?? [];
+      const snapshotCompanies =
+        scheduleSnapshot?.companies ?? companiesCache?.companies ?? [];
+      const baseAppointments = snapshotAppointments.length
+        ? mergeAppointments(snapshotAppointments, todayCache?.appointments ?? [])
+        : todayCache?.appointments ?? [];
+      const pendingInRange = scheduleSnapshot
+        ? filterAppointmentsByRange(pendingAppointments, scheduleSnapshot.range)
+        : filterAppointmentsForDate(pendingAppointments, today);
+      const mergedAppointments = mergeAppointments(baseAppointments, pendingInRange);
+      const appointmentsWithPending = applyPendingActionsToAppointments(
+        mergedAppointments,
+        pendingActions,
+      );
+      const withCompanyNames = mergeCompanyNames(
+        appointmentsWithPending,
+        snapshotCompanies,
+      );
+
+      if (!withCompanyNames.length) {
+        setError(t("ui.sem_conexao_e_sem_cache_local"));
+        setMetaAppointments([]);
+        setAppointments([]);
+        setLoadingMeta(false);
+        setLoadingPage(false);
+        setUsingCache(true);
+        return false;
+      }
+
+      setMetaAppointments(withCompanyNames);
+      setLoadingMeta(false);
+      setUsingCache(true);
+      return true;
+    };
     const fetchMeta = async () => {
       setLoadingMeta(true);
       setError(null);
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        await loadFromCache();
+        return;
+      }
       const { data, error: requestError } = await supabase
         .from("apontamentos")
         .select(META_SELECT)
@@ -79,13 +297,18 @@ export default function AllAppointments() {
         .order("starts_at", { ascending: true });
       if (!active) return;
       if (requestError) {
-        setError(requestError.message);
-        setMetaAppointments([]);
-        setAppointments([]);
-        setLoadingMeta(false);
+        const usedCache = await loadFromCache();
+        if (!usedCache && active) {
+          setError(requestError.message);
+          setMetaAppointments([]);
+          setAppointments([]);
+          setLoadingMeta(false);
+          setUsingCache(false);
+        }
         return;
       }
       setMetaAppointments((data ?? []).map(mapAppointment));
+      setUsingCache(false);
       setLoadingMeta(false);
     };
     void fetchMeta();
@@ -140,6 +363,16 @@ export default function AllAppointments() {
     const fetchPage = async () => {
       setLoadingPage(true);
       setError(null);
+      if (usingCache) {
+        const byId = new Map(metaAppointments.map((item) => [item.id, item]));
+        const ordered = pagedIds
+          .map((id) => byId.get(id))
+          .filter((item): item is Appointment => Boolean(item));
+        if (!active) return;
+        setAppointments(ordered);
+        setLoadingPage(false);
+        return;
+      }
       const { data, error: requestError } = await supabase
         .from("apontamentos")
         .select(`${APPOINTMENT_LIST_SELECT}, companies(name)`)
@@ -164,7 +397,7 @@ export default function AllAppointments() {
     return () => {
       active = false;
     };
-  }, [pagedIds, supabase]);
+  }, [metaAppointments, pagedIds, supabase, usingCache]);
 
   const dayGroups = useMemo(
     () => buildDayGroups(appointments),
