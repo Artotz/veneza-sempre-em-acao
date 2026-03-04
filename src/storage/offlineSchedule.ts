@@ -3,12 +3,13 @@ import type { Appointment, Company, CompanyContact } from "../lib/types";
 import type { ScheduleRange } from "../state/ScheduleContext";
 
 const DB_NAME = "pwa-cache";
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 const SCHEDULE_STORE = "scheduleCache";
 const ACTION_STORE = "pendingActions";
 const COMPANY_STORE = "companiesCache";
 const TODAY_APPOINTMENTS_STORE = "todayAppointmentsCache";
 const PENDING_APPOINTMENTS_STORE = "pendingAppointments";
+const CHECKOUT_DRAFT_STORE = "checkoutDrafts";
 
 export type ScheduleSnapshot = {
   key: string;
@@ -47,6 +48,20 @@ export type PendingAppointment = Appointment & {
   localCreatedAt: number;
 };
 
+export type CheckoutDraft = {
+  key: string;
+  userEmail: string;
+  appointmentId: string;
+  oportunidades: string[];
+  notes: string;
+  receiverName: string;
+  receiverContact: string;
+  selectedContactId: string;
+  clientThermometer: number;
+  step: "summary" | "receiver";
+  updatedAt: number;
+};
+
 interface ScheduleDB extends DBSchema {
   scheduleCache: {
     key: string;
@@ -67,6 +82,10 @@ interface ScheduleDB extends DBSchema {
   pendingAppointments: {
     key: string;
     value: PendingAppointment;
+  };
+  checkoutDrafts: {
+    key: string;
+    value: CheckoutDraft;
   };
 }
 
@@ -91,6 +110,9 @@ const getDb = () => {
         if (!db.objectStoreNames.contains(PENDING_APPOINTMENTS_STORE)) {
           db.createObjectStore(PENDING_APPOINTMENTS_STORE, { keyPath: "id" });
         }
+        if (!db.objectStoreNames.contains(CHECKOUT_DRAFT_STORE)) {
+          db.createObjectStore(CHECKOUT_DRAFT_STORE, { keyPath: "key" });
+        }
       },
     });
   }
@@ -104,6 +126,7 @@ const buildRangeKey = (userEmail: string, range: ScheduleRange) =>
 const buildLatestKey = (userEmail: string) => `latest:${userEmail}`;
 const buildCompaniesKey = (userEmail: string) => `companies:${userEmail}`;
 const buildTodayKey = (userEmail: string) => `today:${userEmail}`;
+const buildCheckoutDraftKey = (userEmail: string) => `checkout:${userEmail}`;
 
 const generateId = () => {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -459,4 +482,38 @@ export const updateCompanyLatestContact = async (
     companies: nextCompanies,
     createdAt: Date.now(),
   });
+};
+
+export const saveCheckoutDraft = async (
+  userEmail: string,
+  appointmentId: string,
+  draft: Omit<CheckoutDraft, "key" | "userEmail" | "appointmentId" | "updatedAt">
+) => {
+  const db = await getDb();
+  const payload: CheckoutDraft = {
+    key: buildCheckoutDraftKey(userEmail),
+    userEmail,
+    appointmentId,
+    ...draft,
+    updatedAt: Date.now(),
+  };
+  await db.put(CHECKOUT_DRAFT_STORE, payload);
+  return payload;
+};
+
+export const getCheckoutDraft = async (
+  userEmail: string
+) => {
+  const db = await getDb();
+  return (
+    (await db.get(CHECKOUT_DRAFT_STORE, buildCheckoutDraftKey(userEmail))) ??
+    null
+  );
+};
+
+export const removeCheckoutDraft = async (
+  userEmail: string
+) => {
+  const db = await getDb();
+  await db.delete(CHECKOUT_DRAFT_STORE, buildCheckoutDraftKey(userEmail));
 };

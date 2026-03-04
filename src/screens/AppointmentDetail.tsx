@@ -55,6 +55,9 @@ import {
   listPendingActions,
   removePendingAction,
   savePendingAction,
+  getCheckoutDraft,
+  saveCheckoutDraft,
+  removeCheckoutDraft,
   type PendingScheduleAction,
   updateCompanyLatestContact,
 } from "../storage/offlineSchedule";
@@ -432,6 +435,9 @@ export default function AppointmentDetail() {
     typeof navigator === "undefined" ? true : navigator.onLine,
   );
   const pendingPreviewUrlsRef = useRef<Record<string, string>>({});
+  const [checkoutDraftHydrated, setCheckoutDraftHydrated] = useState(false);
+  const hasCheckoutDraftRef = useRef(false);
+  const checkoutDraftSaveTimeout = useRef<number | null>(null);
   const registroFileInputRef = useRef<HTMLInputElement | null>(null);
   const [detailsTab, setDetailsTab] = useState<"fotos" | "mapa" | "recursos">(
     "fotos",
@@ -485,6 +491,82 @@ export default function AppointmentDetail() {
       setCompany(companyFromState);
     }
   }, [appointmentFromState, companyFromState]);
+
+  useEffect(() => {
+    hasCheckoutDraftRef.current = false;
+    setCheckoutDraftHydrated(false);
+    const userEmail = user?.email?.trim();
+    if (!appointment?.id || !userEmail) return;
+    let isActive = true;
+    void (async () => {
+      const draft = await getCheckoutDraft(userEmail);
+      if (!isActive) return;
+      if (draft && draft.appointmentId === appointment.id) {
+        hasCheckoutDraftRef.current = true;
+        setCheckoutOpportunities(draft.oportunidades ?? []);
+        setCheckoutObservation(draft.notes ?? "");
+        setReceiverName(draft.receiverName ?? "");
+        setReceiverContact(draft.receiverContact ?? "");
+        setSelectedContactId(draft.selectedContactId ?? "");
+        setClientThermometer(draft.clientThermometer ?? 5);
+        setCheckoutStep(draft.step ?? "summary");
+      }
+      setCheckoutDraftHydrated(true);
+    })();
+    return () => {
+      isActive = false;
+    };
+  }, [appointment?.id, user?.email]);
+
+  useEffect(() => {
+    const userEmail = user?.email?.trim();
+    if (!appointment?.id || !userEmail || !checkoutDraftHydrated) return;
+    if (!isCheckoutOpen) return;
+    const hasData =
+      checkoutObservation.trim().length > 0 ||
+      checkoutOpportunities.length > 0 ||
+      receiverName.trim().length > 0 ||
+      receiverContact.trim().length > 0 ||
+      selectedContactId.trim().length > 0 ||
+      clientThermometer !== 5 ||
+      checkoutStep !== "summary";
+
+    if (!hasData) return;
+
+    if (checkoutDraftSaveTimeout.current) {
+      window.clearTimeout(checkoutDraftSaveTimeout.current);
+    }
+
+    checkoutDraftSaveTimeout.current = window.setTimeout(() => {
+      void saveCheckoutDraft(userEmail, appointment.id, {
+        oportunidades: checkoutOpportunities,
+        notes: checkoutObservation,
+        receiverName,
+        receiverContact,
+        selectedContactId,
+        clientThermometer,
+        step: checkoutStep,
+      });
+    }, 300);
+
+    return () => {
+      if (checkoutDraftSaveTimeout.current) {
+        window.clearTimeout(checkoutDraftSaveTimeout.current);
+      }
+    };
+  }, [
+    appointment?.id,
+    checkoutDraftHydrated,
+    checkoutObservation,
+    checkoutOpportunities,
+    checkoutStep,
+    clientThermometer,
+    isCheckoutOpen,
+    receiverContact,
+    receiverName,
+    selectedContactId,
+    user?.email,
+  ]);
 
   useEffect(() => {
     if (!appointment?.startAt) return;
@@ -1552,16 +1634,19 @@ export default function AppointmentDetail() {
   const handleCheckOut = () => {
     if (!canCheckOut || busy || geo.isCapturing || isPhotoBusy) return;
     setError(null);
-    setCheckoutOpportunities([]);
+    const hasDraft = hasCheckoutDraftRef.current;
+    if (!hasDraft) {
+      setCheckoutOpportunities([]);
+      setCheckoutObservation(appointment?.notes ?? "");
+      setReceiverName("");
+      setReceiverContact("");
+      setSelectedContactId("");
+      setClientThermometer(appointment?.clientThermometer ?? 5);
+      setCheckoutStep("summary");
+    }
     setPendingCheckoutOpportunities(null);
-    setCheckoutObservation(appointment?.notes ?? "");
     setPendingCheckoutObservation(null);
-    setReceiverName("");
-    setReceiverContact("");
-    setSelectedContactId("");
-    setClientThermometer(appointment?.clientThermometer ?? 5);
     setPendingClientThermometer(null);
-    setCheckoutStep("summary");
     setIsCheckoutOpen(true);
   };
 
@@ -1688,6 +1773,10 @@ export default function AppointmentDetail() {
 
   const handleCloseCheckout = () => {
     if (isCheckoutBusy) return;
+    const userEmail = user?.email?.trim();
+    if (appointment?.id && userEmail) {
+      void removeCheckoutDraft(userEmail);
+    }
     setIsCheckoutOpen(false);
     setCheckoutStep("summary");
     setCheckoutOpportunities([]);
@@ -1873,6 +1962,10 @@ export default function AppointmentDetail() {
     receiverContact: string;
   }) => {
     const now = new Date().toISOString();
+    const userEmail = user?.email?.trim();
+    if (appointment?.id && userEmail) {
+      void removeCheckoutDraft(userEmail);
+    }
     setAppointment((current) =>
       current
         ? {
