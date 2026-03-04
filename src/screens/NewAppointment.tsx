@@ -46,8 +46,7 @@ const toLocalInputValue = (date: Date) => {
   )}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 };
 
-const sanitizeDurationInput = (value: string) =>
-  value.replace(/[^\d]/g, "");
+const sanitizeDurationInput = (value: string) => value.replace(/[^\d]/g, "");
 
 const parseDurationMinutes = (value: string) => {
   const trimmed = sanitizeDurationInput(value);
@@ -71,6 +70,8 @@ export default function NewAppointment() {
   const [companyQuery, setCompanyQuery] = useState("");
   const [debouncedCompanyQuery, setDebouncedCompanyQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [isForaCarteira, setIsForaCarteira] = useState(false);
+  const [newCompanyName, setNewCompanyName] = useState("");
 
   const [startsAt, setStartsAt] = useState("");
   const [durationMinutes, setDurationMinutes] = useState("60");
@@ -159,10 +160,18 @@ export default function NewAppointment() {
     setDurationMinutes("60");
   }, [startsAt]);
 
-  const filterCompanies = (items: Company[], term: string) => {
+  const filterCompanies = (
+    items: Company[],
+    term: string,
+    shouldUseForaCarteira: boolean,
+  ) => {
     const trimmed = term.trim().toLowerCase();
-    if (!trimmed) return items;
+    const scoped = items.filter(
+      (item) => Boolean(item.foraCarteira) === shouldUseForaCarteira,
+    );
+    if (!trimmed) return scoped;
     return items.filter((item) => {
+      if (Boolean(item.foraCarteira) !== shouldUseForaCarteira) return false;
       const name = item.name?.toLowerCase() ?? "";
       const document = item.document?.toLowerCase() ?? "";
       return name.includes(trimmed) || document.includes(trimmed);
@@ -173,41 +182,55 @@ export default function NewAppointment() {
     companies.find((item) => item.id === selectedCompanyId) ?? null;
 
   const filteredCompanies = useMemo(() => {
-    const filtered = filterCompanies(companies, debouncedCompanyQuery);
+    const filtered = filterCompanies(
+      companies,
+      debouncedCompanyQuery,
+      isForaCarteira,
+    );
     if (!company || filtered.some((item) => item.id === company.id)) {
       return filtered;
     }
     return [company, ...filtered];
-  }, [companies, company, debouncedCompanyQuery]);
+  }, [companies, company, debouncedCompanyQuery, isForaCarteira]);
 
   useEffect(() => {
-    const handle = setTimeout(() => {
-      setDebouncedCompanyQuery(companyQuery);
-    }, companyQuery.trim().length ? 300 : 0);
+    const handle = setTimeout(
+      () => {
+        setDebouncedCompanyQuery(companyQuery);
+      },
+      companyQuery.trim().length ? 300 : 0,
+    );
     return () => clearTimeout(handle);
   }, [companyQuery]);
 
   useEffect(() => {
     if (!selectedCompanyId) return;
     if (companiesLoading) return;
-    if (!companyQuery.trim()) return;
     const stillVisible = filteredCompanies.some(
       (item) => item.id === selectedCompanyId,
     );
     if (!stillVisible) {
       setSelectedCompanyId("");
     }
-  }, [companiesLoading, companyQuery, filteredCompanies, selectedCompanyId]);
+  }, [companiesLoading, filteredCompanies, selectedCompanyId]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
 
-    if (!selectedCompanyId) {
+    const normalizedNewCompanyName = newCompanyName.trim();
+    const shouldCreateCompany =
+      isForaCarteira && normalizedNewCompanyName.length > 0;
+
+    if (isForaCarteira && !selectedCompanyId && !shouldCreateCompany) {
+      setError(t("ui.selecione_ou_informe_empresa_fora_carteira"));
+      return;
+    }
+    if (!isForaCarteira && !selectedCompanyId) {
       setError(t("ui.empresa_nao_encontrada_2"));
       return;
     }
-    if (!company) {
+    if (!isForaCarteira && !company) {
       setError(t("ui.empresa_nao_encontrada_2"));
       return;
     }
@@ -256,14 +279,17 @@ export default function NewAppointment() {
     }
 
     const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
+    if (shouldCreateCompany && isOffline) {
+      setError(t("ui.sem_internet_para_cadastrar_empresa_fora_carteira"));
+      return;
+    }
     if (isOffline) {
       const isTodayStart = isSameDay(startsAtDate, now);
       if (!isTodayStart) {
         setError(
-          t(
-            "ui.sem_conexao_so_e_possivel_criar_apontamentos_para_hoje_date",
-            { date: formatDateShort(now) },
-          ),
+          t("ui.sem_conexao_so_e_possivel_criar_apontamentos_para_hoje_date", {
+            date: formatDateShort(now),
+          }),
         );
         return;
       }
@@ -289,24 +315,67 @@ export default function NewAppointment() {
 
     if (conflict) {
       setError(
-        t(
-          "ui.conflito_de_horario_ja_existe_um_apontamento_em_window",
-          { window: formatAppointmentWindow(conflict) },
-        ),
+        t("ui.conflito_de_horario_ja_existe_um_apontamento_em_window", {
+          window: formatAppointmentWindow(conflict),
+        }),
       );
       return;
     }
 
     setSaving(true);
-    const addressSnapshot = buildAddressSnapshot(company);
+    let companyForAppointment = company;
+    let resolvedCompanyId = selectedCompanyId;
+
+    if (shouldCreateCompany) {
+      const { data: createdCompany, error: createError } = await supabase
+        .from("companies")
+        .insert({
+          name: normalizedNewCompanyName,
+          document: null,
+          email_csa: userEmail,
+          fora_carteira: true,
+        })
+        .select("id, document, name, state, lat, lng, csa, email_csa")
+        .single();
+
+      if (createError || !createdCompany?.id) {
+        setSaving(false);
+        setError(
+          createError?.message ?? t("ui.nao_foi_possivel_criar_a_empresa"),
+        );
+        return;
+      }
+
+      const newCompany: Company = {
+        id: createdCompany.id,
+        name: createdCompany.name,
+        document: createdCompany.document ?? null,
+        state: createdCompany.state ?? null,
+        lat: createdCompany.lat ?? null,
+        lng: createdCompany.lng ?? null,
+        csa: createdCompany.csa ?? null,
+        emailCsa: createdCompany.email_csa ?? null,
+        foraCarteira: true,
+      };
+      companyForAppointment = newCompany;
+      resolvedCompanyId = createdCompany.id;
+    }
+
+    if (!companyForAppointment || !resolvedCompanyId) {
+      setSaving(false);
+      setError(t("ui.empresa_nao_encontrada_2"));
+      return;
+    }
+
+    const addressSnapshot = buildAddressSnapshot(companyForAppointment);
 
     if (isOffline) {
       const nowIso = new Date().toISOString();
       const localAppointmentId = generateLocalAppointmentId();
       await savePendingAppointment(userEmail, {
         id: localAppointmentId,
-        companyId: selectedCompanyId,
-        companyName: company.name ?? null,
+        companyId: resolvedCompanyId,
+        companyName: companyForAppointment.name ?? null,
         appointmentId: null,
         consultantId: user?.id ?? null,
         consultant: userEmail,
@@ -329,7 +398,7 @@ export default function NewAppointment() {
     const { data: insertData, error: insertError } = await supabase
       .from("apontamentos")
       .insert({
-        company_id: selectedCompanyId,
+        company_id: resolvedCompanyId,
         starts_at: startsAtDate.toISOString(),
         ends_at: endsAtDate.toISOString(),
         consultant_id: user?.id ?? null,
@@ -412,6 +481,26 @@ export default function NewAppointment() {
               {companiesError}
             </div>
           ) : null}
+          <label className="flex w-full items-center justify-between gap-3 text-xs font-semibold text-foreground">
+            <span>{t("ui.fora_carteira")}</span>
+            <input
+              type="checkbox"
+              checked={isForaCarteira}
+              onChange={(event) => {
+                const checked = event.target.checked;
+                setIsForaCarteira(checked);
+                if (!checked) {
+                  setNewCompanyName("");
+                }
+              }}
+              className="h-4 w-4 accent-accent"
+            />
+          </label>
+          {/* {isForaCarteira ? (
+            <p className="text-[11px] text-foreground-muted">
+              {t("ui.selecione_ou_informe_empresa_fora_carteira")}
+            </p>
+          ) : null} */}
           <div className="space-y-2">
             <SectionHeader
               title={t("ui.busca_rapida")}
@@ -428,7 +517,12 @@ export default function NewAppointment() {
             {/* <span>Empresa</span> */}
             <select
               value={selectedCompanyId}
-              onChange={(event) => setSelectedCompanyId(event.target.value)}
+              onChange={(event) => {
+                setSelectedCompanyId(event.target.value);
+                if (isForaCarteira) {
+                  setNewCompanyName("");
+                }
+              }}
               className="w-full rounded-2xl border border-border bg-surface-muted px-4 py-3 text-sm font-normal text-foreground outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
             >
               <option value="" disabled>
@@ -444,6 +538,29 @@ export default function NewAppointment() {
               ))}
             </select>
           </label>
+          {isForaCarteira ? (
+            <div className="space-y-2 mt-3">
+              <div className="text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-foreground-soft">
+                {t("ui.ou")}
+              </div>
+              <label className="space-y-2 text-sm font-semibold text-foreground">
+                <span>{t("ui.nome_da_empresa")}</span>
+                <input
+                  type="text"
+                  value={newCompanyName}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setNewCompanyName(value);
+                    if (value.trim().length > 0) {
+                      setSelectedCompanyId("");
+                    }
+                  }}
+                  placeholder={t("ui.ex_nome_da_empresa")}
+                  className="w-full rounded-2xl border border-border bg-surface-muted px-4 py-3 text-sm font-normal text-foreground outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
+                />
+              </label>
+            </div>
+          ) : null}
           {/* {company ? (
             <div className="space-y-1">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-foreground-soft">
@@ -509,7 +626,9 @@ export default function NewAppointment() {
                   inputMode="numeric"
                   value={durationMinutes}
                   onChange={(event) =>
-                    setDurationMinutes(sanitizeDurationInput(event.target.value))
+                    setDurationMinutes(
+                      sanitizeDurationInput(event.target.value),
+                    )
                   }
                   className="w-full rounded-2xl border border-border bg-surface-muted px-4 py-3 text-sm font-normal text-foreground outline-none transition focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
                   required

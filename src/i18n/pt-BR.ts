@@ -185,6 +185,7 @@ export const resources = {
         arquivo: "Arquivo",
         abrir_arquivo: "Abrir arquivo",
         nome_arquivo: "Nome do arquivo",
+        fora_carteira: "Fora carteira?",
 
         garantia_basica: "Garantia básica",
         garantia_estendida: "Garantia estendida",
@@ -242,6 +243,8 @@ export const resources = {
 
         nome: "Nome",
         nome_ou_documento: "Nome ou documento.",
+        nome_da_empresa: "Nome da empresa",
+        ex_nome_da_empresa: "Ex: Empresa ABC",
         nova_foto: "Nova foto",
         novo_apontamento: "Novo apontamento",
         ex_nome_de_quem_recebeu: "Ex: João Silva",
@@ -348,6 +351,8 @@ export const resources = {
         segmento_segment: "Segmento {{segment}}",
 
         selecione_uma_empresa: "Selecione uma empresa",
+        selecione_ou_informe_empresa_fora_carteira:
+          "Selecione uma empresa existente ou informe um novo nome.",
 
         sem_agendamentos: "Sem agendamentos",
         sem_apontamentos: "Sem apontamentos",
@@ -356,6 +361,8 @@ export const resources = {
         sem_criador_definido: "Sem criador definido",
         sem_documento: "Sem documento",
         sem_internet: "Sem internet.",
+        sem_internet_para_cadastrar_empresa_fora_carteira:
+          "Sem internet para cadastrar empresa fora da carteira.",
         sem_preview: "Sem preview",
 
         semana: "Semana",
@@ -371,6 +378,7 @@ export const resources = {
         status_e_sugestoes: "Status e sugestões.",
         status_value: "Status: {{value}}",
         sugestoes: "Sugestões",
+        ou: "Ou",
 
         tentar_novamente: "Tentar novamente",
         tirar_foto: "Tirar foto",
@@ -476,6 +484,7 @@ export const resources = {
           "Não foi possível carregar o cronograma.",
         nao_foi_possivel_comprimir_a_imagem:
           "Não foi possível comprimir a imagem.",
+        nao_foi_possivel_criar_a_empresa: "Não foi possível criar a empresa.",
         nao_foi_possivel_criar_o_apontamento:
           "Não foi possível criar o apontamento.",
         nao_foi_possivel_entrar_com_email_e_senha_verifique_os_dados_e_tente_novamente:

@@ -70,4 +70,5 @@ export type Company = {
   createdAt?: string | null;
   segment?: string | null;
   latestContact?: CompanyContact | null;
+  foraCarteira?: boolean | null;
 };
