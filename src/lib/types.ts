@@ -39,7 +39,6 @@ export type Appointment = {
   creationNotes?: string | null;
   oportunidades?: string[] | null;
   clientThermometer?: number | null;
-  atuacaoResultado?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
   appointmentTitle?: string | null;

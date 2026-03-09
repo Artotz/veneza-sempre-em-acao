@@ -134,6 +134,16 @@ type ApontamentoMediaRow = {
   created_at?: string | null;
 };
 
+type ApontamentoAcaoRow = {
+  id?: string;
+  resultado: string;
+  nf_ou_os?: string | null;
+  valor?: number | null;
+  motivo_perda?: string | null;
+  observacao?: string | null;
+  created_at?: string | null;
+};
+
 type AppointmentMediaItem = {
   id?: string;
   bucket: string;
@@ -421,15 +431,13 @@ export default function AppointmentDetail() {
     "checkin" | "registro" | null
   >(null);
   const [isRegistroModalOpen, setIsRegistroModalOpen] = useState(false);
-  const [registroModalAction, setRegistroModalAction] = useState<
-    "camera" | "file" | null
-  >(null);
   const [registroTipo, setRegistroTipo] = useState<RegistroTipo | "">("");
   const [pendingRegistroTipo, setPendingRegistroTipo] =
     useState<RegistroTipo | null>(null);
   const [mediaItems, setMediaItems] = useState<AppointmentMediaItem[]>([]);
   const [mediaLoading, setMediaLoading] = useState(false);
   const [mediaError, setMediaError] = useState<string | null>(null);
+  const [atuacao, setAtuacao] = useState<ApontamentoAcaoRow | null>(null);
   const [pendingPhotos, setPendingPhotos] = useState<OfflinePhotoPreview[]>([]);
   const [pendingLoading, setPendingLoading] = useState(false);
   const [pendingError, setPendingError] = useState<string | null>(null);
@@ -724,6 +732,31 @@ export default function AppointmentDetail() {
     setMediaLoading(false);
   }, [id, isOnline, supabase]);
 
+  const loadAtuacao = useCallback(async () => {
+    if (!id) return;
+    if (!isOnline) {
+      setAtuacao(null);
+      return;
+    }
+
+    const { data, error: requestError } = await supabase
+      .from("apontamento_acoes")
+      .select(
+        "id, resultado, nf_ou_os, valor, motivo_perda, observacao, created_at",
+      )
+      .eq("apontamento_id", id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (requestError) {
+      setAtuacao(null);
+      return;
+    }
+
+    setAtuacao((data ?? null) as ApontamentoAcaoRow | null);
+  }, [id, isOnline, supabase]);
+
   useEffect(() => {
     void loadDetail();
   }, [loadDetail]);
@@ -731,6 +764,10 @@ export default function AppointmentDetail() {
   useEffect(() => {
     void loadMedia();
   }, [loadMedia]);
+
+  useEffect(() => {
+    void loadAtuacao();
+  }, [loadAtuacao]);
 
   useEffect(() => {
     let active = true;
@@ -1666,42 +1703,36 @@ export default function AppointmentDetail() {
     }
   };
 
-  const openRegistroModal = (action: "camera" | "file") => {
+  const openRegistroModal = () => {
     if (!canAddPhoto || isPhotoBusy || registroCount >= MAX_REGISTROS) return;
     setRegistroTipo("");
     setPendingRegistroTipo(null);
-    setRegistroModalAction(action);
     setIsRegistroModalOpen(true);
   };
 
   const handleAddRegistroPhoto = () => {
-    openRegistroModal("camera");
-  };
-
-  const handleAddRegistroFile = () => {
-    openRegistroModal("file");
+    openRegistroModal();
   };
 
   const handleCloseRegistroModal = () => {
     if (isPhotoBusy) return;
     setIsRegistroModalOpen(false);
-    setRegistroModalAction(null);
     setRegistroTipo("");
     setPendingRegistroTipo(null);
   };
 
-  const handleConfirmRegistroModal = () => {
-    const action = registroModalAction;
-    if (!registroTipo || !action) return;
+  const handleConfirmRegistroModal = (action: "camera" | "file") => {
+    if (!registroTipo) return;
     setPendingRegistroTipo(registroTipo);
     setIsRegistroModalOpen(false);
-    setRegistroModalAction(null);
     setRegistroTipo("");
     if (action === "camera") {
       setCameraIntent("registro");
       return;
     }
-    registroFileInputRef.current?.click();
+    window.setTimeout(() => {
+      registroFileInputRef.current?.click();
+    }, 0);
   };
 
   const handleRegistroFileChange = async (
@@ -2274,7 +2305,7 @@ export default function AppointmentDetail() {
   const showCreationNotes = creationNotes.length > 0;
   const hasThermometer = appointment.clientThermometer != null;
   const thermometerValue = appointment.clientThermometer ?? 0;
-  const atuacaoResultadoRaw = appointment.atuacaoResultado?.trim() ?? "";
+  const atuacaoResultadoRaw = atuacao?.resultado?.trim() ?? "";
   const atuacaoResultadoLabel = atuacaoResultadoRaw
     ? atuacaoResultadoLabels[atuacaoResultadoRaw] ?? atuacaoResultadoRaw
     : "";
@@ -2341,12 +2372,8 @@ export default function AppointmentDetail() {
       : cameraIntent === "registro"
         ? t("ui.adicionar_registro")
         : t("ui.capturar_foto");
-  const registroModalActionLabel =
-    registroModalAction === "file"
-      ? t("ui.adicionar_arquivo")
-      : t("ui.tirar_foto");
   const canConfirmRegistroModal = Boolean(registroTipo) && !isPhotoBusy;
-  const canAddPhoto = status === "em_execucao";
+  const canAddPhoto = showAddPhoto;
   const inlineActionCols = "grid-cols-3";
   const checkInBlockReasons =
     (appointment.status ?? "scheduled") === "scheduled" && !canCheckIn
@@ -2726,36 +2753,6 @@ export default function AppointmentDetail() {
                     max: MAX_REGISTROS,
                   })}
                 </div>
-                {showAddPhoto ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={handleAddRegistroFile}
-                      disabled={
-                        !canAddPhoto ||
-                        isPhotoBusy ||
-                        registroCount >= MAX_REGISTROS
-                      }
-                      className={`rounded-full border px-3 py-1 text-[10px] font-semibold transition ${
-                        canAddPhoto &&
-                        !isPhotoBusy &&
-                        registroCount < MAX_REGISTROS
-                          ? "border-accent bg-white text-foreground"
-                          : "cursor-not-allowed border-border bg-surface-muted text-foreground-muted"
-                      }`}
-                    >
-                      {t("ui.adicionar_arquivo")}
-                    </button>
-                    <input
-                      ref={registroFileInputRef}
-                      type="file"
-                      accept={ACCEPTED_FILE_TYPES_INPUT}
-                      multiple
-                      onChange={handleRegistroFileChange}
-                      className="hidden"
-                    />
-                  </>
-                ) : null}
               </div>
               {mediaLoading || pendingLoading ? (
                 <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground-soft">
@@ -3465,7 +3462,7 @@ export default function AppointmentDetail() {
               </button>
               <button
                 type="button"
-                onClick={handleConfirmRegistroModal}
+                onClick={() => handleConfirmRegistroModal("camera")}
                 disabled={!canConfirmRegistroModal}
                 className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
                   canConfirmRegistroModal
@@ -3473,7 +3470,19 @@ export default function AppointmentDetail() {
                     : "cursor-not-allowed bg-surface-muted text-foreground-muted"
                 }`}
               >
-                {registroModalActionLabel}
+                {t("ui.tirar_foto")}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleConfirmRegistroModal("file")}
+                disabled={!canConfirmRegistroModal}
+                className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
+                  canConfirmRegistroModal
+                    ? "bg-info text-white"
+                    : "cursor-not-allowed bg-surface-muted text-foreground-muted"
+                }`}
+              >
+                {t("ui.adicionar_arquivo")}
               </button>
             </div>
           </div>
@@ -3530,6 +3539,14 @@ export default function AppointmentDetail() {
         onClose={() => setCameraIntent(null)}
         onConfirm={handleCameraConfirm}
         onError={(message) => setError(message)}
+      />
+      <input
+        ref={registroFileInputRef}
+        type="file"
+        accept={ACCEPTED_FILE_TYPES_INPUT}
+        multiple
+        onChange={handleRegistroFileChange}
+        className="hidden"
       />
     </AppShell>
   );
