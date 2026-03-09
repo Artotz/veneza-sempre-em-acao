@@ -411,7 +411,7 @@ export const resources = {
         valor_cot_3m: "Valor Cot (3m)",
         valor_cot_1m: "Valor Cot (1m)",
         valor_cotacoes_abertas: "Valor cotações abertas",
-        valor_value: "Valor: {{value}}",
+        valor_value: "Valor Final: {{value}}",
         total_value: "Total: {{value}}",
         qtd_preventivas: "Qtd Preventivas",
         qtd_reconexoes: "Qtd Reconexões",
