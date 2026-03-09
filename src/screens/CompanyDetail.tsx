@@ -403,6 +403,7 @@ export default function CompanyDetail() {
           ].join(","),
         )
         .eq("cnpj", document)
+        .eq("status", "ABERTO")
         .order("vs1_numorc", { ascending: false })
         .order("vs3_codite", { ascending: true });
 
