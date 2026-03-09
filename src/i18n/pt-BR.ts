@@ -65,6 +65,8 @@ export const resources = {
         cliente_solicitou_remarcacao: "Cliente solicitou remarcação",
         concluido: "Concluído",
         concluidos: "Concluídos",
+        atuado: "Atuado",
+        atuados: "Atuados",
         confirmar: "Confirmar",
         confirmar_check_out: "Confirmar check-out",
         continuar_check_out: "Continuar check-out",
@@ -258,6 +260,9 @@ export const resources = {
         motivo_do_cancelamento: "Motivo do cancelamento",
         observacao_do_check_out: "Observação do check-out",
         observacoes_do_check_out: "Observações do check-out",
+        resultado_da_atuacao: "Resultado da atuação",
+        vendido: "Vendido",
+        perdido: "Perdido",
 
         offline: "Offline",
         online: "Online",

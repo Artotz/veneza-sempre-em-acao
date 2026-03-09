@@ -38,6 +38,7 @@ const statusCardStyle: Record<AppointmentStatus, string> = {
   expirado: "border-foreground/20 bg-foreground/10 text-foreground-muted",
   em_execucao: "border-info/30 bg-info/15 text-info",
   concluido: "border-success/30 bg-success/15 text-success",
+  atuado: "border-primary/30 bg-primary/15 text-primary",
   cancelado: "border-danger/30 bg-danger/15 text-danger",
 };
 

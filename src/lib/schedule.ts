@@ -16,6 +16,7 @@ const getTodayStart = () => {
 export const getAppointmentStatus = (
   appointment: Appointment,
 ): AppointmentStatus => {
+  if (appointment.status === "atuado") return "atuado";
   if (appointment.status === "absent" || appointment.absenceReason)
     return "cancelado";
   if (appointment.status === "done" || appointment.checkOutAt)
@@ -60,7 +61,8 @@ export const getAppointmentWindow = (appointment: Appointment) => {
   const checkOutAt = appointment.checkOutAt
     ? new Date(appointment.checkOutAt)
     : null;
-  const isDone = getAppointmentStatus(appointment) === "concluido";
+  const resolvedStatus = getAppointmentStatus(appointment);
+  const isDone = resolvedStatus === "concluido" || resolvedStatus === "atuado";
   const validCheckIn =
     checkInAt && !Number.isNaN(checkInAt.getTime()) ? checkInAt : null;
   const validCheckOut =

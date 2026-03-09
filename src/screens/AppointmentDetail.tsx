@@ -84,6 +84,11 @@ const oportunidadeLabels = Object.fromEntries(
   oportunidadeOptions.map((option) => [option.value, option.label]),
 ) as Record<string, string>;
 
+const atuacaoResultadoLabels: Record<string, string> = {
+  vendido: t("ui.vendido"),
+  perdido: t("ui.perdido"),
+};
+
 type MediaKind = "checkin" | "checkout" | "absence" | "registro";
 type RegistroTipo =
   | "reconexao"
@@ -1589,9 +1594,10 @@ export default function AppointmentDetail() {
   const canAbsence =
     status === "agendado" || status === "expirado" || status === "em_execucao";
   const canEditVisit = status === "agendado";
-  const showAddPhoto = status === "em_execucao" || status === "concluido";
+  const showAddPhoto =
+    status === "em_execucao" || status === "concluido" || status === "atuado";
   const showEditVisit = status !== "em_execucao";
-  const showAbsenceButton = status !== "concluido";
+  const showAbsenceButton = status !== "concluido" && status !== "atuado";
   const isCheckInCapturing = geo.isCapturing && geoIntent === "check_in";
   const isCheckOutCapturing = geo.isCapturing && geoIntent === "check_out";
   const isPhotoBusy = Boolean(photoStatus) || isCameraOpen;
@@ -2254,7 +2260,9 @@ export default function AppointmentDetail() {
 
   const oportunidades = appointment.oportunidades ?? [];
   const showOportunidades = Boolean(
-    appointment.checkOutAt || appointment.status === "done",
+    appointment.checkOutAt ||
+      appointment.status === "done" ||
+      appointment.status === "atuado",
   );
   const showRegistrosRealizados = registrosRealizados.length > 0;
   const cancellationReason = appointment.absenceNote?.trim() ?? "";
@@ -2266,6 +2274,11 @@ export default function AppointmentDetail() {
   const showCreationNotes = creationNotes.length > 0;
   const hasThermometer = appointment.clientThermometer != null;
   const thermometerValue = appointment.clientThermometer ?? 0;
+  const atuacaoResultadoRaw = appointment.atuacaoResultado?.trim() ?? "";
+  const atuacaoResultadoLabel = atuacaoResultadoRaw
+    ? atuacaoResultadoLabels[atuacaoResultadoRaw] ?? atuacaoResultadoRaw
+    : "";
+  const showAtuacaoResultado = atuacaoResultadoRaw.length > 0;
   const selectedContact =
     contactOptions.find((contact) => contact.id === selectedContactId) ?? null;
   const shouldPersistContact = (() => {
@@ -2440,6 +2453,14 @@ export default function AppointmentDetail() {
                   {t("ui.termometro_nota_value", {
                     value: thermometerValue,
                   })}
+                </span>
+              </div>
+            ) : null}
+            {showAtuacaoResultado ? (
+              <div className="flex items-center justify-between">
+                <span>{t("ui.resultado_da_atuacao")}</span>
+                <span className="font-semibold text-foreground">
+                  {atuacaoResultadoLabel}
                 </span>
               </div>
             ) : null}

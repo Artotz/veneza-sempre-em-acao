@@ -6,6 +6,7 @@ type StatusSummary = {
   expirado: number;
   em_execucao: number;
   concluido: number;
+  atuado: number;
   cancelado: number;
 };
 
@@ -56,6 +57,13 @@ export function StatusFilters({
       count: summary.concluido,
       baseClass: "bg-success/15 text-success",
       ringClass: "ring-success/30",
+    },
+    {
+      status: "atuado" as const,
+      label: t("ui.atuados"),
+      count: summary.atuado,
+      baseClass: "bg-primary/15 text-primary",
+      ringClass: "ring-primary/30",
     },
     {
       status: "cancelado" as const,

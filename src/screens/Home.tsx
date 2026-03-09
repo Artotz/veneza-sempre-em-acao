@@ -126,11 +126,12 @@ export default function Home() {
         expirado: 0,
         em_execucao: 0,
         concluido: 0,
+        atuado: 0,
         cancelado: 0,
       },
     );
   }, [todayAppointments]);
-  const completedCount = daySummary.concluido;
+  const completedCount = daySummary.concluido + daySummary.atuado;
   const scheduledCount = daySummary.agendado;
   const inProgressCount = daySummary.em_execucao;
   const totalCount = completedCount + scheduledCount + inProgressCount;

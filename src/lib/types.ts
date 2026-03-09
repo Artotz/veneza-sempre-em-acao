@@ -3,12 +3,14 @@ export type AppointmentStatus =
   | "expirado"
   | "em_execucao"
   | "concluido"
+  | "atuado"
   | "cancelado";
 
 export type SupabaseAppointmentStatus =
   | "scheduled"
   | "in_progress"
   | "done"
+  | "atuado"
   | "absent";
 
 export type Appointment = {
@@ -37,6 +39,7 @@ export type Appointment = {
   creationNotes?: string | null;
   oportunidades?: string[] | null;
   clientThermometer?: number | null;
+  atuacaoResultado?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
   appointmentTitle?: string | null;

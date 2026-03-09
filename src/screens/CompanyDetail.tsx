@@ -477,6 +477,7 @@ export default function CompanyDetail() {
         expirado: 0,
         em_execucao: 0,
         concluido: 0,
+        atuado: 0,
         cancelado: 0,
       },
     );

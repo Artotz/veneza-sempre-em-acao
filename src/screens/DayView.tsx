@@ -163,6 +163,7 @@ export default function DayView() {
         expirado: 0,
         em_execucao: 0,
         concluido: 0,
+        atuado: 0,
         cancelado: 0,
       },
     );

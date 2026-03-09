@@ -6,6 +6,7 @@ const statusCopy: Record<AppointmentStatus, string> = {
   expirado: t("ui.expirado"),
   em_execucao: t("ui.em_execucao"),
   concluido: t("ui.concluido"),
+  atuado: t("ui.atuado"),
   cancelado: t("ui.cancelado"),
 };
 
@@ -14,6 +15,7 @@ const statusStyle: Record<AppointmentStatus, string> = {
   expirado: "bg-foreground/10 text-foreground-muted",
   em_execucao: "bg-info/15 text-info",
   concluido: "bg-success/15 text-success",
+  atuado: "bg-primary/15 text-primary",
   cancelado: "bg-danger/15 text-danger",
 };
 
