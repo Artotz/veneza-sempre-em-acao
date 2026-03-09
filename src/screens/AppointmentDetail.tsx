@@ -24,6 +24,7 @@ import {
   isSameDay,
   startOfWeekMonday,
 } from "../lib/date";
+import { formatCurrencyBRL } from "../lib/format";
 import {
   formatAppointmentWindow,
   getAppointmentStatus,
@@ -2310,6 +2311,19 @@ export default function AppointmentDetail() {
     ? atuacaoResultadoLabels[atuacaoResultadoRaw] ?? atuacaoResultadoRaw
     : "";
   const showAtuacaoResultado = atuacaoResultadoRaw.length > 0;
+  const atuacaoObservacao = atuacao?.observacao?.trim() ?? "";
+  const showAtuacaoObservacao = atuacaoObservacao.length > 0;
+  const showAtuacaoSection = showAtuacaoResultado || showAtuacaoObservacao;
+  const atuacaoNfOuOs = atuacao?.nf_ou_os?.trim() ?? "";
+  const showAtuacaoNfOuOs = atuacaoNfOuOs.length > 0;
+  const atuacaoValor = atuacao?.valor ?? null;
+  const showAtuacaoValor = typeof atuacaoValor === "number";
+  const atuacaoMotivoPerda = atuacao?.motivo_perda?.trim() ?? "";
+  const atuacaoMotivoPerdaLabel = atuacaoMotivoPerda
+    ? (t(`ui.lossReasons.${atuacaoMotivoPerda}`) as string) ??
+      atuacaoMotivoPerda
+    : "";
+  const showAtuacaoMotivoPerda = atuacaoMotivoPerda.length > 0;
   const selectedContact =
     contactOptions.find((contact) => contact.id === selectedContactId) ?? null;
   const shouldPersistContact = (() => {
@@ -2483,14 +2497,6 @@ export default function AppointmentDetail() {
                 </span>
               </div>
             ) : null}
-            {showAtuacaoResultado ? (
-              <div className="flex items-center justify-between">
-                <span>{t("ui.resultado_da_atuacao")}</span>
-                <span className="font-semibold text-foreground">
-                  {atuacaoResultadoLabel}
-                </span>
-              </div>
-            ) : null}
           </div>
 
           {/* {blocked ? (
@@ -2584,6 +2590,58 @@ export default function AppointmentDetail() {
             <p className="text-sm text-foreground-muted whitespace-pre-wrap">
               {cancellationReason}
             </p>
+          </section>
+        ) : null}
+
+        {showAtuacaoSection ? (
+          <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
+            <SectionHeader title={t("ui.atuacao")} />
+            <div className="space-y-2 text-sm text-foreground-muted">
+              {showAtuacaoResultado ? (
+                <div className="flex items-center justify-between">
+                  <span>{t("ui.resultado_da_atuacao")}</span>
+                  <span className="font-semibold text-foreground">
+                    {atuacaoResultadoLabel}
+                  </span>
+                </div>
+              ) : null}
+              {showAtuacaoNfOuOs ? (
+                <div className="flex items-center justify-between">
+                  <span>{t("ui.nf_ou_os")}</span>
+                  <span className="font-semibold text-foreground">
+                    {atuacaoNfOuOs}
+                  </span>
+                </div>
+              ) : null}
+              {showAtuacaoValor ? (
+                <div className="flex items-center justify-between">
+                  <span>{t("ui.valor")}</span>
+                  <span className="font-semibold text-foreground">
+                    {formatCurrencyBRL(atuacaoValor)}
+                  </span>
+                </div>
+              ) : null}
+              {showAtuacaoMotivoPerda ? (
+                <div>
+                  <p className="text-[11px] font-semibold text-foreground-soft">
+                    {t("ui.motivo_perda")}
+                  </p>
+                  <p className="mt-1 text-sm text-foreground-muted whitespace-pre-wrap">
+                    {atuacaoMotivoPerdaLabel}
+                  </p>
+                </div>
+              ) : null}
+              {showAtuacaoObservacao ? (
+                <div>
+                  <p className="text-[11px] font-semibold text-foreground-soft">
+                    {t("ui.observacao_da_atuacao")}
+                  </p>
+                  <p className="mt-1 text-sm text-foreground-muted whitespace-pre-wrap">
+                    {atuacaoObservacao}
+                  </p>
+                </div>
+              ) : null}
+            </div>
           </section>
         ) : null}
 

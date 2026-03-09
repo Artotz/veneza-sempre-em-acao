@@ -261,8 +261,12 @@ export const resources = {
         observacao_do_check_out: "Observação do check-out",
         observacoes_do_check_out: "Observações do check-out",
         resultado_da_atuacao: "Resultado da atuação",
+        observacao_da_atuacao: "Observação da atuação",
+        nf_ou_os: "NF ou OS",
+        motivo_perda: "Motivo da perda",
         vendido: "Vendido",
         perdido: "Perdido",
+        valor: "Valor",
 
         offline: "Offline",
         online: "Online",
@@ -272,6 +276,7 @@ export const resources = {
         oportunidades: "Oportunidades",
         oportunidades_percebidas: "Oportunidades percebidas",
         atividades_realizadas: "Atividades realizadas",
+        atuacao: "Atuação",
         nenhuma_oportunidade_encontrada: "Nenhuma oportunidade encontrada",
         nenhuma_oportunidade_disponivel_no_momento:
           "Nenhuma oportunidade disponível no momento.",
@@ -425,6 +430,19 @@ export const resources = {
         visitas_atrasadas: "Visitas atrasadas",
         visitas_canceladas: "Visitas canceladas",
         visitas_sugeridas: "Visitas sugeridas",
+        lossReasons: {
+          preco_da_peca: "Preço da peça",
+          preco_da_mao_de_obra: "Preço da mão de obra",
+          preco_do_deslocamento: "Preço do deslocamento",
+          indisponibilidade_tecnica: "Indisponibilidade técnica",
+          indisponibilidade_de_peca: "Indisponibilidade de peça",
+          experiencia_anterior_negativa: "Experiência anterior negativa",
+          mao_de_obra_propria: "Mão de obra própria",
+          mao_de_obra_terceirizada: "Mão de obra terceirizada",
+          postergou_o_servico: "Postergou o serviço",
+          pendencia_financeira: "Pendência financeira",
+          falta_de_flexibilidade_comercial: "Falta de flexibilidade comercial",
+        },
 
         a_rota_solicitada_nao_existe_ou_foi_movida:
           "A rota solicitada não existe ou foi movida.",
