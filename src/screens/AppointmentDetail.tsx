@@ -203,6 +203,30 @@ const ACCEPTED_FILE_TYPES_INPUT = ["image/*", ...ACCEPTED_FILE_TYPES].join(
 );
 
 const NEW_CONTACT_ID = "new-contact";
+const DASHBOARD_APPOINTMENT_BASE_URL =
+  "https://venezafieldservicedashboard.vercel.app/cronograma";
+
+const partsConsultants = [
+  { nameKey: "ui.consultor_pecas_ana_rocha", phone: "+55 81 8940-1727" },
+  { nameKey: "ui.consultor_pecas_david_santana", phone: "+55 87 9195-4758" },
+  { nameKey: "ui.consultor_pecas_diogo_satiro", phone: "+55 81 9251-5560" },
+  {
+    nameKey: "ui.consultor_pecas_edmilson_almeida",
+    phone: "+55 71 8270-8091",
+  },
+  {
+    nameKey: "ui.consultor_pecas_natalia_mendonca",
+    phone: "+55 81 9272-8634",
+  },
+  { nameKey: "ui.consultor_pecas_rannyel_borges", phone: "+55 83 9196-7885" },
+  { nameKey: "ui.consultor_pecas_weldon_santos", phone: "+55 71 8187-0122" },
+  { nameKey: "ui.consultor_pecas_marcos_ferreira", phone: "+55 73 8178-1690" },
+  {
+    nameKey: "ui.consultor_pecas_marcelo_veneza_equipamentos",
+    phone: "+55 81 7329-0717",
+  },
+  { nameKey: "ui.consultor_pecas_breno_sousa", phone: "+55 85 9125-9600" },
+] as const;
 
 const isImageMime = (mimeType?: string | null) =>
   Boolean(mimeType && mimeType.startsWith("image/"));
@@ -245,6 +269,11 @@ const mimeToExtension = (mimeType: string) => {
   if (normalized === "text/csv") return "csv";
   if (normalized === "text/plain") return "txt";
   return "bin";
+};
+
+const buildWhatsAppUrl = (phone: string, message: string) => {
+  const digitsOnly = phone.replace(/\D/g, "");
+  return `https://wa.me/${digitsOnly}?text=${encodeURIComponent(message)}`;
 };
 
 const markerIconOptions: L.IconOptions = {
@@ -432,6 +461,7 @@ export default function AppointmentDetail() {
     "checkin" | "registro" | null
   >(null);
   const [isRegistroModalOpen, setIsRegistroModalOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [registroTipo, setRegistroTipo] = useState<RegistroTipo | "">("");
   const [pendingRegistroTipo, setPendingRegistroTipo] =
     useState<RegistroTipo | null>(null);
@@ -492,7 +522,8 @@ export default function AppointmentDetail() {
       isAbsenceOpen ||
       isCameraOpen ||
       isGeoModalOpen ||
-      isRegistroModalOpen,
+      isRegistroModalOpen ||
+      isShareModalOpen,
   );
 
   useEffect(() => {
@@ -1634,7 +1665,8 @@ export default function AppointmentDetail() {
   const canEditVisit = status === "agendado";
   const showAddPhoto =
     status === "em_execucao" || status === "concluido" || status === "atuado";
-  const showEditVisit = status !== "em_execucao";
+  const showShareVisit = status === "concluido";
+  const showEditVisit = status !== "em_execucao" && status !== "concluido";
   const showAbsenceButton = status !== "concluido" && status !== "atuado";
   const isCheckInCapturing = geo.isCapturing && geoIntent === "check_in";
   const isCheckOutCapturing = geo.isCapturing && geoIntent === "check_out";
@@ -1807,6 +1839,14 @@ export default function AppointmentDetail() {
   const handleEditVisit = () => {
     if (!canEditVisit) return;
     navigate(`/apontamentos/${appointment.id}/editar`);
+  };
+
+  const handleOpenShareModal = () => {
+    setIsShareModalOpen(true);
+  };
+
+  const handleCloseShareModal = () => {
+    setIsShareModalOpen(false);
   };
 
   const handleCloseCheckout = () => {
@@ -2379,6 +2419,8 @@ export default function AppointmentDetail() {
   const pendingItemCount =
     pendingItemBase +
     (appointment.pendingSync && pendingItemBase === 0 ? 1 : 0);
+  const dashboardVisitUrl = `${DASHBOARD_APPOINTMENT_BASE_URL}/${appointment.id}`;
+  const whatsappShareMessage = `${t("ui.confira_essa_visita_que_fiz")}\n${dashboardVisitUrl}`;
 
   const cameraTitle =
     cameraIntent === "checkin"
@@ -2751,6 +2793,15 @@ export default function AppointmentDetail() {
                   }`}
                 >
                   {t("ui.editar_visita")}
+                </button>
+              ) : null}
+              {showShareVisit ? (
+                <button
+                  type="button"
+                  onClick={handleOpenShareModal}
+                  className="min-h-[56px] rounded-2xl bg-foreground px-2 py-3 text-center text-xs font-semibold leading-tight whitespace-normal break-words text-white transition"
+                >
+                  {t("ui.compartilhar_visita")}
                 </button>
               ) : null}
             </div>
@@ -3541,6 +3592,76 @@ export default function AppointmentDetail() {
                 }`}
               >
                 {t("ui.adicionar_arquivo")}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {isShareModalOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 px-4 py-6 sm:items-center"
+          onClick={handleCloseShareModal}
+        >
+          <div
+            className="w-full max-w-md overflow-hidden rounded-3xl border border-border bg-white shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="border-b border-border px-5 py-4">
+              <h3 className="text-base font-semibold text-foreground">
+                {t("ui.compartilhar_visita")}
+              </h3>
+              <p className="mt-1 text-xs text-foreground-muted">
+                {t("ui.selecione_o_destino_do_compartilhamento")}
+              </p>
+            </div>
+
+            <div className="space-y-4 px-5 py-4">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  className="rounded-full bg-info px-3 py-2 text-xs font-semibold text-white"
+                >
+                  {t("ui.pecas")}
+                </button>
+                <button
+                  type="button"
+                  disabled
+                  className="cursor-not-allowed rounded-full bg-surface-muted px-3 py-2 text-xs font-semibold text-foreground-muted"
+                >
+                  {t("ui.servicos")}
+                </button>
+              </div>
+
+              <div className="space-y-2 rounded-2xl border border-border bg-surface-muted p-3">
+                <p className="text-xs font-semibold text-foreground">
+                  {t("ui.consultores_de_pecas")}
+                </p>
+                <div className="grid max-h-64 gap-2 overflow-y-auto pr-1">
+                  {partsConsultants.map((consultant) => (
+                    <a
+                      key={consultant.phone}
+                      href={buildWhatsAppUrl(
+                        consultant.phone,
+                        whatsappShareMessage,
+                      )}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-2xl border border-border bg-white px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-surface-muted"
+                    >
+                      {t(consultant.nameKey)}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 border-t border-border px-5 py-4">
+              <button
+                type="button"
+                onClick={handleCloseShareModal}
+                className="rounded-full border border-border px-4 py-2 text-xs font-semibold text-foreground-soft"
+              >
+                {t("ui.fechar")}
               </button>
             </div>
           </div>
