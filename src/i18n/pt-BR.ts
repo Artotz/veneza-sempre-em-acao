@@ -103,6 +103,7 @@ export const resources = {
         selecione_o_destino_do_compartilhamento:
           "Selecione o destino do compartilhamento.",
         consultores_de_pecas: "Consultores de peças",
+        consultores_de_servicos: "Consultores de serviços",
         consultor_pecas_ana_rocha: "Ana Rocha",
         consultor_pecas_david_santana: "David Santana",
         consultor_pecas_diogo_satiro: "Diogo Sátiro",
@@ -113,6 +114,16 @@ export const resources = {
         consultor_pecas_marcos_ferreira: "Marcos Ferreira",
         consultor_pecas_marcelo_andrade: "Marcelo Andrade",
         consultor_pecas_breno_sousa: "Breno Sousa",
+        consultor_servicos_ricardo_coutinho: "Ricardo Coutinho",
+        consultor_servicos_vitor_almeida: "Vitor Almeida",
+        consultor_servicos_breno_silva: "Breno Silva",
+        consultor_servicos_rick_jansen: "Rick Jansen",
+        consultor_servicos_viviane_maia: "Viviane Maia",
+        consultor_servicos_ronaldo_carvalho: "Ronaldo Carvalho",
+        consultor_servicos_daniel_silva: "Daniel Silva",
+        consultor_servicos_cicero_sousa: "Cícero Sousa",
+        consultor_servicos_rhayssa_cavalcante: "Rhayssa Cavalcante",
+        consultor_servicos_julio_mendonca: "Júlio Mendonça",
         pecas: "Peças",
         servicos: "Serviços",
         confira_essa_visita_que_fiz: "Confira essa visita que fiz:",
@@ -192,6 +203,7 @@ export const resources = {
 
         fechar: "Fechar",
         filtros_do_dia: "Filtros do dia",
+        filtros_da_semana: "Filtros da semana",
         filtros_do_mes: "Filtros do mês",
 
         fim: "Fim",
@@ -352,6 +364,8 @@ export const resources = {
         itens: "Itens",
         mostrar_itens: "Mostrar itens",
         ocultar_itens: "Ocultar itens",
+        expandir_filtros: "Expandir",
+        colapsar_filtros: "Colapsar",
         nenhum_item_encontrado: "Nenhum item encontrado",
         nenhum_orcamento_disponivel_no_momento:
           "Nenhum orçamento disponível no momento.",
@@ -387,6 +401,7 @@ export const resources = {
           "Selecione uma empresa existente ou informe um novo nome.",
 
         sem_agendamentos: "Sem agendamentos",
+        nenhum_agendamento_na_semana: "Nenhum agendamento nesta semana.",
         sem_apontamentos: "Sem apontamentos",
         sem_conexao_e_sem_cache_local: "Sem conexão e sem cache local.",
 

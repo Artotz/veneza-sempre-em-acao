@@ -228,6 +228,40 @@ const partsConsultants = [
   { nameKey: "ui.consultor_pecas_breno_sousa", phone: "+55 85 9125-9600" },
 ] as const;
 
+const serviceConsultants = [
+  {
+    nameKey: "ui.consultor_servicos_ricardo_coutinho",
+    phone: "+55 81 99246-3966",
+  },
+  {
+    nameKey: "ui.consultor_servicos_vitor_almeida",
+    phone: "+55 81 99907-9499",
+  },
+  { nameKey: "ui.consultor_servicos_breno_silva", phone: "+55 81 99254-8938" },
+  { nameKey: "ui.consultor_servicos_rick_jansen", phone: "+55 81 97344-9143" },
+  {
+    nameKey: "ui.consultor_servicos_viviane_maia",
+    phone: "+55 87 99197-4159",
+  },
+  {
+    nameKey: "ui.consultor_servicos_ronaldo_carvalho",
+    phone: "+55 85 99231-6668",
+  },
+  {
+    nameKey: "ui.consultor_servicos_daniel_silva",
+    phone: "+55 84 98161-1420",
+  },
+  { nameKey: "ui.consultor_servicos_cicero_sousa", phone: "+55 85 99606-2359" },
+  {
+    nameKey: "ui.consultor_servicos_rhayssa_cavalcante",
+    phone: "+55 85 99221-2125",
+  },
+  {
+    nameKey: "ui.consultor_servicos_julio_mendonca",
+    phone: "+55 85 99202-9703",
+  },
+] as const;
+
 const isImageMime = (mimeType?: string | null) =>
   Boolean(mimeType && mimeType.startsWith("image/"));
 
@@ -481,6 +515,9 @@ export default function AppointmentDetail() {
   >(null);
   const [isRegistroModalOpen, setIsRegistroModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [shareTarget, setShareTarget] = useState<"pecas" | "servicos">(
+    "servicos",
+  );
   const [registroTipo, setRegistroTipo] = useState<RegistroTipo | "">("");
   const [pendingRegistroTipo, setPendingRegistroTipo] =
     useState<RegistroTipo | null>(null);
@@ -1860,6 +1897,7 @@ export default function AppointmentDetail() {
   };
 
   const handleOpenShareModal = () => {
+    setShareTarget("servicos");
     setIsShareModalOpen(true);
   };
 
@@ -2478,6 +2516,12 @@ export default function AppointmentDetail() {
     (appointment.pendingSync && pendingItemBase === 0 ? 1 : 0);
   const dashboardVisitUrl = `${DASHBOARD_APPOINTMENT_BASE_URL}/${appointment.id}`;
   const whatsappShareMessage = `${t("ui.confira_essa_visita_que_fiz")}\n${dashboardVisitUrl}`;
+  const activeConsultants =
+    shareTarget === "pecas" ? partsConsultants : serviceConsultants;
+  const activeConsultantsTitle =
+    shareTarget === "pecas"
+      ? t("ui.consultores_de_pecas")
+      : t("ui.consultores_de_servicos");
 
   const cameraTitle =
     cameraIntent === "checkin"
@@ -3676,14 +3720,23 @@ export default function AppointmentDetail() {
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
-                  className="rounded-full bg-info px-3 py-2 text-xs font-semibold text-white"
+                  onClick={() => setShareTarget("pecas")}
+                  className={`rounded-full px-3 py-2 text-xs font-semibold ${
+                    shareTarget === "pecas"
+                      ? "bg-info text-white"
+                      : "bg-surface-muted text-foreground-muted"
+                  }`}
                 >
                   {t("ui.pecas")}
                 </button>
                 <button
                   type="button"
-                  disabled
-                  className="cursor-not-allowed rounded-full bg-surface-muted px-3 py-2 text-xs font-semibold text-foreground-muted"
+                  onClick={() => setShareTarget("servicos")}
+                  className={`rounded-full px-3 py-2 text-xs font-semibold ${
+                    shareTarget === "servicos"
+                      ? "bg-info text-white"
+                      : "bg-surface-muted text-foreground-muted"
+                  }`}
                 >
                   {t("ui.servicos")}
                 </button>
@@ -3691,10 +3744,10 @@ export default function AppointmentDetail() {
 
               <div className="space-y-2 rounded-2xl border border-border bg-surface-muted p-3">
                 <p className="text-xs font-semibold text-foreground">
-                  {t("ui.consultores_de_pecas")}
+                  {activeConsultantsTitle}
                 </p>
                 <div className="grid max-h-64 gap-2 overflow-y-auto pr-1">
-                  {partsConsultants.map((consultant) => {
+                  {activeConsultants.map((consultant) => {
                     const consultantName = t(consultant.nameKey);
                     const alreadyShared = Boolean(
                       appointment.sharedWith?.includes(consultantName),
