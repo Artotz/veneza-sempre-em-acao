@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AppShell } from "../components/AppShell";
+import { AppointmentFiltersPanel } from "../components/AppointmentFiltersPanel";
 import { AppointmentCard } from "../components/AppointmentCard";
 import { EmptyState } from "../components/EmptyState";
 import { SectionHeader } from "../components/SectionHeader";
-import { StatusFilters } from "../components/StatusFilters";
 import { useAuth } from "../contexts/useAuth";
 import { buildMonthWeeks, formatDateShort, formatMonthYear } from "../lib/date";
 import { formatCurrencyBRL, formatQuantity } from "../lib/format";
@@ -714,26 +714,19 @@ export default function CompanyDetail() {
               />
             ) : (
               <div className="space-y-3">
-                <div className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
-                  <SectionHeader
-                    title={t("ui.filtros_do_mes")}
-                    subtitle={t("ui.status_e_sugestoes")}
-                    rightSlot={t("ui.ag_count", {
-                      count: filteredAppointments.length,
-                    })}
-                  />
-                  <StatusFilters
-                    summary={summary}
-                    statusFilters={statusFilters}
-                    onChange={setStatusFilters}
-                    showSuggestions={showSuggestions}
-                    onToggleSuggestions={() =>
-                      setShowSuggestions((current) => !current)
-                    }
-                    suggestionCount={suggestionCount}
-                    className="grid grid-cols-3 gap-2 text-[11px] font-semibold"
-                  />
-                </div>
+                <AppointmentFiltersPanel
+                  title={t("ui.filtros")}
+                  subtitle={t("ui.status_e_sugestoes")}
+                  summary={summary}
+                  filteredCount={filteredAppointments.length}
+                  statusFilters={statusFilters}
+                  onChange={setStatusFilters}
+                  showSuggestions={showSuggestions}
+                  onToggleSuggestions={() =>
+                    setShowSuggestions((current) => !current)
+                  }
+                  suggestionCount={suggestionCount}
+                />
 
                 {state.error ? (
                   <div className="rounded-2xl border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-foreground-soft">

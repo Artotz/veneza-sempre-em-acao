@@ -1,7 +1,7 @@
 import type { AppointmentStatus } from "../lib/types";
 import { t } from "../i18n";
 
-type StatusSummary = {
+export type StatusSummary = {
   agendado: number;
   expirado: number;
   em_execucao: number;

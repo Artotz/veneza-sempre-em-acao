@@ -202,6 +202,7 @@ export const resources = {
         fazer_check_out: "Fazer check-out",
 
         fechar: "Fechar",
+        filtros: "Filtros",
         filtros_do_dia: "Filtros do dia",
         filtros_da_semana: "Filtros da semana",
         filtros_do_mes: "Filtros do mês",

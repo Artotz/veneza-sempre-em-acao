@@ -4,12 +4,14 @@ type SectionHeaderProps = {
   title: string;
   subtitle?: string;
   rightSlot?: ReactNode;
+  rightSlotWrapped?: boolean;
 };
 
 export const SectionHeader = ({
   title,
   // subtitle,
   rightSlot,
+  rightSlotWrapped = true,
 }: SectionHeaderProps) => {
   return (
     <div className="flex items-start justify-between gap-3">
@@ -20,9 +22,13 @@ export const SectionHeader = ({
         ) : null} */}
       </div>
       {rightSlot ? (
+        rightSlotWrapped ? (
         <div className="rounded-full bg-surface-muted px-3 py-1 text-[10px] font-semibold text-foreground-muted">
           {rightSlot}
         </div>
+        ) : (
+          rightSlot
+        )
       ) : null}
     </div>
   );

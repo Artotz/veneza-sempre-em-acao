@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { AppShell } from "../components/AppShell";
+import { AppointmentFiltersPanel } from "../components/AppointmentFiltersPanel";
 import { AppointmentCard } from "../components/AppointmentCard";
 import { CalendarTabs } from "../components/CalendarTabs";
 import { CheckInOutMap } from "../components/CheckInOutMap";
@@ -8,7 +9,6 @@ import { DateSelector } from "../components/DateSelector";
 import { DetailsMapTabs } from "../components/DetailsMapTabs";
 import { EmptyState } from "../components/EmptyState";
 import { SectionHeader } from "../components/SectionHeader";
-import { StatusFilters } from "../components/StatusFilters";
 import { useAuth } from "../contexts/useAuth";
 import {
   buildMonthOptions,
@@ -294,26 +294,19 @@ export default function DayView() {
                   ) : null} */}
                 </div>
 
-                <div className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
-                  <SectionHeader
-                    title={t("ui.filtros_do_dia")}
-                    subtitle={t("ui.status_e_sugestoes")}
-                    rightSlot={t("ui.ag_count", {
-                      count: filteredAppointments.length,
-                    })}
-                  />
-                  <StatusFilters
-                    summary={daySummary}
-                    statusFilters={statusFilters}
-                    onChange={setStatusFilters}
-                    showSuggestions={showSuggestions}
-                    onToggleSuggestions={() =>
-                      setShowSuggestions((current) => !current)
-                    }
-                    suggestionCount={suggestionCount}
-                    className="grid grid-cols-3 gap-2 text-[11px] font-semibold"
-                  />
-                </div>
+                <AppointmentFiltersPanel
+                  title={t("ui.filtros")}
+                  subtitle={t("ui.status_e_sugestoes")}
+                  summary={daySummary}
+                  filteredCount={filteredAppointments.length}
+                  statusFilters={statusFilters}
+                  onChange={setStatusFilters}
+                  showSuggestions={showSuggestions}
+                  onToggleSuggestions={() =>
+                    setShowSuggestions((current) => !current)
+                  }
+                  suggestionCount={suggestionCount}
+                />
 
                 <div className="space-y-3">
                   {filteredAppointments.length ? (

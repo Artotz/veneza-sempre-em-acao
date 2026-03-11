@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { AppShell } from "../components/AppShell";
+import { AppointmentFiltersPanel } from "../components/AppointmentFiltersPanel";
 import { CalendarTabs } from "../components/CalendarTabs";
 import { CheckInOutMap } from "../components/CheckInOutMap";
 import { DateSelector } from "../components/DateSelector";
 import { DetailsMapTabs } from "../components/DetailsMapTabs";
 import { EmptyState } from "../components/EmptyState";
 import { SectionHeader } from "../components/SectionHeader";
+import { useAuth } from "../contexts/useAuth";
 import {
   buildMonthOptions,
   buildMonthWeeks,
@@ -18,6 +20,7 @@ import {
 import {
   getAppointmentStatus,
   getAppointmentWindow,
+  isSuggested,
   sortByStart,
 } from "../lib/schedule";
 import type { AppointmentStatus } from "../lib/types";
@@ -44,6 +47,7 @@ const statusCardStyle: Record<AppointmentStatus, string> = {
 
 export default function WeekView() {
   const { state, actions, selectors } = useSchedule();
+  const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
@@ -79,6 +83,14 @@ export default function WeekView() {
   const [selectedWeekIndex, setSelectedWeekIndex] = useState(fallbackWeekIndex);
   const [activeTab, setActiveTab] = useState<"details" | "map">("details");
   const [now, setNow] = useState(() => new Date());
+  const [statusFilters, setStatusFilters] = useState<AppointmentStatus[]>(() => [
+    "em_execucao",
+    "agendado",
+    "expirado",
+    "concluido",
+    "atuado",
+  ]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   useEffect(() => {
     const tick = () => setNow(new Date());
@@ -117,6 +129,51 @@ export default function WeekView() {
     actions.setRange({ startAt: week.startAt, endAt: week.endAt });
   }, [actions, week.endAt, week.startAt]);
 
+  const weekAppointments = useMemo(() => {
+    return state.appointments
+      .filter((appointment) => {
+        const { start, end } = getAppointmentWindow(appointment);
+        if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+          return false;
+        }
+        return start <= week.endAt && end >= week.startAt;
+      })
+      .sort(sortByStart);
+  }, [state.appointments, week.endAt, week.startAt]);
+  const weekSummary = useMemo(() => {
+    return weekAppointments.reduce(
+      (acc, appointment) => {
+        acc[getAppointmentStatus(appointment)] += 1;
+        return acc;
+      },
+      {
+        agendado: 0,
+        expirado: 0,
+        em_execucao: 0,
+        concluido: 0,
+        atuado: 0,
+        cancelado: 0,
+      },
+    );
+  }, [weekAppointments]);
+  const suggestionCount = useMemo(
+    () =>
+      weekAppointments.filter((appointment) =>
+        isSuggested(appointment, user?.email),
+      ).length,
+    [user?.email, weekAppointments],
+  );
+  const filteredWeekAppointments = useMemo(() => {
+    if (statusFilters.length === 0 && !showSuggestions) return [];
+    return weekAppointments.filter((appointment) => {
+      const matchesStatus = statusFilters.includes(
+        getAppointmentStatus(appointment),
+      );
+      const matchesSuggestion =
+        showSuggestions && isSuggested(appointment, user?.email);
+      return matchesStatus || matchesSuggestion;
+    });
+  }, [showSuggestions, statusFilters, user?.email, weekAppointments]);
   const dayGroups = useMemo(() => {
     return week.days.map((day) => {
       const dayStart = new Date(day.date);
@@ -124,7 +181,7 @@ export default function WeekView() {
       const dayEnd = new Date(dayStart);
       dayEnd.setDate(dayEnd.getDate() + 1);
 
-      const items = state.appointments.flatMap((appointment) => {
+      const items = filteredWeekAppointments.flatMap((appointment) => {
         const { start, end } = getAppointmentWindow(appointment);
         if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
           return [];
@@ -148,19 +205,8 @@ export default function WeekView() {
       );
       return items;
     });
-  }, [state.appointments, week]);
-
-  const weekAppointments = useMemo(() => {
-    return state.appointments
-      .filter((appointment) => {
-        const { start, end } = getAppointmentWindow(appointment);
-        if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-          return false;
-        }
-        return start <= week.endAt && end >= week.startAt;
-      })
-      .sort(sortByStart);
-  }, [state.appointments, week.endAt, week.startAt]);
+  }, [filteredWeekAppointments, week]);
+  const hasWeekAppointments = weekAppointments.length > 0;
 
   const timeRange = useMemo(() => {
     let minHour = DEFAULT_MIN_HOUR;
@@ -309,139 +355,172 @@ export default function WeekView() {
         ) : (
           <>
             {activeTab === "details" ? (
-              <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
+              <>
+                <AppointmentFiltersPanel
+                  title={t("ui.filtros")}
+                  subtitle={t("ui.status_e_sugestoes")}
+                  summary={weekSummary}
+                  filteredCount={filteredWeekAppointments.length}
+                  statusFilters={statusFilters}
+                  onChange={setStatusFilters}
+                  showSuggestions={showSuggestions}
+                  onToggleSuggestions={() =>
+                    setShowSuggestions((current) => !current)
+                  }
+                  suggestionCount={suggestionCount}
+                />
+                <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
                 <SectionHeader
                   title={t("ui.agenda_da_semana")}
                   subtitle={t("ui.dias_lado_a_lado_com_escala_horaria")}
                 />
-                <div className="overflow-hidden rounded-2xl border border-border">
-                  <div className="overflow-hidden">
-                    <div className="min-w-0">
-                      <div className="sticky top-0 z-10 grid grid-cols-[48px_repeat(7,minmax(0,1fr))] border-b border-border/60 bg-surface-muted/90 text-[9px] font-semibold uppercase text-foreground-muted backdrop-blur">
-                        <div className="flex items-center justify-center border-r border-border/60 px-1 py-1.5">
-                          {t("ui.hora")}
-                        </div>
-                        {week.days.map((day) => {
-                          const isToday = isSameDay(day.date, now);
-                          return (
-                            <div
-                              key={day.id}
-                              className={`flex flex-col items-center justify-center gap-0.5 px-1 py-1.5 ${
-                                isToday
-                                  ? "bg-accent/15 text-foreground"
-                                  : "text-foreground-muted"
-                              }`}
-                            >
-                              <span className="text-[9px]">
-                                {day.short.toLowerCase()}
-                              </span>
-                              <span className="text-[10px] font-semibold text-foreground">
-                                {day.date.getDate()}
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                      <div className="grid grid-cols-[48px_repeat(7,minmax(0,1fr))]">
-                        <div
-                          className="relative border-r border-border/60 bg-surface-muted/40"
-                          style={{ height: gridHeight }}
-                        >
-                          {slotMarkers.map((slot) => (
-                            <div
-                              key={slot.key}
-                              className={`absolute left-0 right-0 ${
-                                slot.isHour
-                                  ? "border-t border-border/60"
-                                  : "border-t border-border/20"
-                              }`}
-                              style={{
-                                top:
-                                  GRID_PADDING +
-                                  slot.minutesFromStart * pixelsPerMinute,
-                              }}
-                            >
-                              {slot.isHour ? (
-                                <span className="absolute -top-2 right-1 bg-surface-muted/80 px-1 text-[9px] font-semibold text-foreground-muted">
-                                  {slot.label}
+                {filteredWeekAppointments.length ? (
+                  <div className="overflow-hidden rounded-2xl border border-border">
+                    <div className="overflow-hidden">
+                      <div className="min-w-0">
+                        <div className="sticky top-0 z-10 grid grid-cols-[48px_repeat(7,minmax(0,1fr))] border-b border-border/60 bg-surface-muted/90 text-[9px] font-semibold uppercase text-foreground-muted backdrop-blur">
+                          <div className="flex items-center justify-center border-r border-border/60 px-1 py-1.5">
+                            {t("ui.hora")}
+                          </div>
+                          {week.days.map((day) => {
+                            const isToday = isSameDay(day.date, now);
+                            return (
+                              <div
+                                key={day.id}
+                                className={`flex flex-col items-center justify-center gap-0.5 px-1 py-1.5 ${
+                                  isToday
+                                    ? "bg-accent/15 text-foreground"
+                                    : "text-foreground-muted"
+                                }`}
+                              >
+                                <span className="text-[9px]">
+                                  {day.short.toLowerCase()}
                                 </span>
-                              ) : null}
-                            </div>
-                          ))}
+                                <span className="text-[10px] font-semibold text-foreground">
+                                  {day.date.getDate()}
+                                </span>
+                              </div>
+                            );
+                          })}
                         </div>
-                        {week.days.map((day, dayIndex) => {
-                          const dayAppointments = dayGroups[dayIndex] ?? [];
-                          const isToday = isSameDay(day.date, now);
-                          return (
-                            <div
-                              key={day.id}
-                              className={`relative border-r border-border/40 ${
-                                isToday ? "bg-accent/5" : "bg-white"
-                              }`}
-                              style={{ height: gridHeight }}
-                            >
-                              {isToday && isCurrentTimeVisible ? (
-                                <div
-                                  className="absolute left-0 right-0 z-10 border-t-2 border-accent"
-                                  style={{ top: currentTop }}
-                                />
-                              ) : null}
-                              {slotMarkers.map((slot) => (
-                                <div
-                                  key={`${day.id}-${slot.key}`}
-                                  className={`absolute left-0 right-0 ${
-                                    slot.isHour
-                                      ? "border-t border-border/50"
-                                      : "border-t border-border/15"
-                                  }`}
-                                  style={{
-                                    top:
-                                      GRID_PADDING +
-                                      slot.minutesFromStart * pixelsPerMinute,
-                                  }}
-                                />
-                              ))}
-                              {dayAppointments.map((segment) => {
-                                const appointment = segment.appointment;
-                                const companyName =
-                                  appointment.companyName ??
-                                  selectors.getCompany(appointment.companyId)
-                                    ?.name ??
-                                  t("ui.empresa");
-                                const status = getAppointmentStatus(appointment);
-                                const style = getAppointmentStyle(segment);
-                                if (!style) return null;
-                                return (
-                                  <button
-                                    key={appointment.id}
-                                    type="button"
-                                    onClick={() =>
-                                      handleOpenAppointment(appointment.id)
-                                    }
-                                    className={`absolute left-0.5 right-0.5 flex flex-col gap-0.5 overflow-hidden rounded-md border px-1 py-0.5 text-left text-[9px] font-semibold transition hover:shadow-sm ${statusCardStyle[status]}`}
-                                    style={style}
-                                  >
-                                    <span
-                                      className="text-[9px] leading-tight"
-                                      style={{
-                                        display: "-webkit-box",
-                                        WebkitLineClamp: 2,
-                                        WebkitBoxOrient: "vertical",
-                                      }}
+                        <div className="grid grid-cols-[48px_repeat(7,minmax(0,1fr))]">
+                          <div
+                            className="relative border-r border-border/60 bg-surface-muted/40"
+                            style={{ height: gridHeight }}
+                          >
+                            {slotMarkers.map((slot) => (
+                              <div
+                                key={slot.key}
+                                className={`absolute left-0 right-0 ${
+                                  slot.isHour
+                                    ? "border-t border-border/60"
+                                    : "border-t border-border/20"
+                                }`}
+                                style={{
+                                  top:
+                                    GRID_PADDING +
+                                    slot.minutesFromStart * pixelsPerMinute,
+                                }}
+                              >
+                                {slot.isHour ? (
+                                  <span className="absolute -top-2 right-1 bg-surface-muted/80 px-1 text-[9px] font-semibold text-foreground-muted">
+                                    {slot.label}
+                                  </span>
+                                ) : null}
+                              </div>
+                            ))}
+                          </div>
+                          {week.days.map((day, dayIndex) => {
+                            const dayAppointments = dayGroups[dayIndex] ?? [];
+                            const isToday = isSameDay(day.date, now);
+                            return (
+                              <div
+                                key={day.id}
+                                className={`relative border-r border-border/40 ${
+                                  isToday ? "bg-accent/5" : "bg-white"
+                                }`}
+                                style={{ height: gridHeight }}
+                              >
+                                {isToday && isCurrentTimeVisible ? (
+                                  <div
+                                    className="absolute left-0 right-0 z-10 border-t-2 border-accent"
+                                    style={{ top: currentTop }}
+                                  />
+                                ) : null}
+                                {slotMarkers.map((slot) => (
+                                  <div
+                                    key={`${day.id}-${slot.key}`}
+                                    className={`absolute left-0 right-0 ${
+                                      slot.isHour
+                                        ? "border-t border-border/50"
+                                        : "border-t border-border/15"
+                                    }`}
+                                    style={{
+                                      top:
+                                        GRID_PADDING +
+                                        slot.minutesFromStart * pixelsPerMinute,
+                                    }}
+                                  />
+                                ))}
+                                {dayAppointments.map((segment) => {
+                                  const appointment = segment.appointment;
+                                  const companyName =
+                                    appointment.companyName ??
+                                    selectors.getCompany(appointment.companyId)
+                                      ?.name ??
+                                    t("ui.empresa");
+                                  const status =
+                                    getAppointmentStatus(appointment);
+                                  const style = getAppointmentStyle(segment);
+                                  if (!style) return null;
+                                  return (
+                                    <button
+                                      key={appointment.id}
+                                      type="button"
+                                      onClick={() =>
+                                        handleOpenAppointment(appointment.id)
+                                      }
+                                      className={`absolute left-0.5 right-0.5 flex flex-col gap-0.5 overflow-hidden rounded-md border px-1 py-0.5 text-left text-[9px] font-semibold transition hover:shadow-sm ${statusCardStyle[status]}`}
+                                      style={style}
                                     >
-                                      {companyName}
-                                    </span>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          );
-                        })}
+                                      <span
+                                        className="text-[9px] leading-tight"
+                                        style={{
+                                          display: "-webkit-box",
+                                          WebkitLineClamp: 2,
+                                          WebkitBoxOrient: "vertical",
+                                        }}
+                                      >
+                                        {companyName}
+                                      </span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </section>
+                ) : (
+                  <EmptyState
+                    title={t("ui.sem_agendamentos")}
+                    description={
+                      !hasWeekAppointments
+                        ? t("ui.nenhum_agendamento_na_semana")
+                        : statusFilters.length === 0
+                          ? t(
+                              "ui.nenhum_filtro_ativo_ligue_ao_menos_um_status_acima",
+                            )
+                          : t(
+                              "ui.nenhum_agendamento_encontrado_para_os_filtros_ativos",
+                            )
+                    }
+                  />
+                )}
+                </section>
+              </>
             ) : (
               <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
                 <SectionHeader

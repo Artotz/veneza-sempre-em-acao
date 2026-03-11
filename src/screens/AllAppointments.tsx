@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppShell } from "../components/AppShell";
+import { AppointmentFiltersPanel } from "../components/AppointmentFiltersPanel";
 import { AppointmentCard } from "../components/AppointmentCard";
 import { EmptyState } from "../components/EmptyState";
-import { SectionHeader } from "../components/SectionHeader";
-import { StatusFilters } from "../components/StatusFilters";
 import { useAuth } from "../contexts/useAuth";
 import { formatDateShort, isSameDay, startOfWeekMonday, addDays } from "../lib/date";
 import {
@@ -468,24 +467,19 @@ export default function AllAppointments() {
           />
         ) : (
           <div className="space-y-4">
-            <section className="space-y-3 rounded-3xl border border-border bg-white p-4 shadow-sm">
-              <SectionHeader
-                title={t("ui.resumo_geral")}
-                subtitle={t("ui.distribuicao_por_status")}
-                rightSlot={t("ui.ag_count", { count: displaySummary.total })}
-              />
-              <StatusFilters
-                summary={displaySummary}
-                statusFilters={statusFilters}
-                onChange={setStatusFilters}
-                showSuggestions={showSuggestions}
-                onToggleSuggestions={() =>
-                  setShowSuggestions((current) => !current)
-                }
-                suggestionCount={displaySuggestionCount}
-                className="grid grid-cols-3 gap-2 text-[11px] font-semibold"
-              />
-            </section>
+            <AppointmentFiltersPanel
+              title={t("ui.filtros")}
+              subtitle={t("ui.distribuicao_por_status")}
+              summary={displaySummary}
+              filteredCount={filteredMeta.length}
+              statusFilters={statusFilters}
+              onChange={setStatusFilters}
+              showSuggestions={showSuggestions}
+              onToggleSuggestions={() =>
+                setShowSuggestions((current) => !current)
+              }
+              suggestionCount={displaySuggestionCount}
+            />
 
             <section className="space-y-3">
               {loadingMeta || loadingPage ? (
