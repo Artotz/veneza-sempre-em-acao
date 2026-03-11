@@ -24,7 +24,13 @@ export type PendingScheduleAction = {
   id: string;
   userEmail: string;
   appointmentId: string;
-  actionType: "checkIn" | "checkOut" | "absence" | "reschedule" | "companyContact";
+  actionType:
+    | "checkIn"
+    | "checkOut"
+    | "absence"
+    | "reschedule"
+    | "share"
+    | "companyContact";
   changes: Record<string, unknown>;
   createdAt: number;
 };
@@ -205,6 +211,10 @@ const areAppointmentsEqual = (a: Appointment, b: Appointment) =>
   eq(a.absenceReason, b.absenceReason) &&
   eq(a.absenceNote, b.absenceNote) &&
   eq(a.notes, b.notes) &&
+  eq(
+    (a.sharedWith ?? null)?.join("|") ?? null,
+    (b.sharedWith ?? null)?.join("|") ?? null
+  ) &&
   eq(a.clientThermometer, b.clientThermometer) &&
   eq(a.createdAt, b.createdAt) &&
   eq(a.updatedAt, b.updatedAt) &&

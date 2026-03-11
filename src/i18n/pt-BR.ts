@@ -111,8 +111,7 @@ export const resources = {
         consultor_pecas_rannyel_borges: "Rannyel Borges",
         consultor_pecas_weldon_santos: "Weldon Santos",
         consultor_pecas_marcos_ferreira: "Marcos Ferreira",
-        consultor_pecas_marcelo_veneza_equipamentos:
-          "Marcelo Veneza Equipamentos",
+        consultor_pecas_marcelo_andrade: "Marcelo Andrade",
         consultor_pecas_breno_sousa: "Breno Sousa",
         pecas: "Peças",
         servicos: "Serviços",
@@ -250,6 +249,8 @@ export const resources = {
         nao_foi_possivel_gerar_a_foto: "Não foi possível gerar a foto.",
         nao_foi_possivel_iniciar_a_camera: "Não foi possível iniciar a câmera.",
         nao_foi_possivel_salvar_a_foto: "Não foi possível salvar a foto.",
+        nao_foi_possivel_salvar_o_compartilhamento:
+          "Não foi possível salvar o compartilhamento.",
         formato_de_arquivo_nao_suportado: "Formato de arquivo não suportado.",
         arquivo_muito_grande: "Arquivo maior que {{max}}MB.",
         limite_de_registros_atingido: "Limite de {{max}} registros atingido.",

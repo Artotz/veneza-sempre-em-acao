@@ -222,7 +222,7 @@ const partsConsultants = [
   { nameKey: "ui.consultor_pecas_weldon_santos", phone: "+55 71 8187-0122" },
   { nameKey: "ui.consultor_pecas_marcos_ferreira", phone: "+55 73 8178-1690" },
   {
-    nameKey: "ui.consultor_pecas_marcelo_veneza_equipamentos",
+    nameKey: "ui.consultor_pecas_marcelo_andrade",
     phone: "+55 81 7329-0717",
   },
   { nameKey: "ui.consultor_pecas_breno_sousa", phone: "+55 85 9125-9600" },
@@ -344,6 +344,11 @@ const toStringValue = (value: unknown) =>
 const toNumberValue = (value: unknown) =>
   typeof value === "number" && Number.isFinite(value) ? value : null;
 
+const toStringArrayValue = (value: unknown) =>
+  Array.isArray(value) && value.every((item) => typeof item === "string")
+    ? (value as string[])
+    : null;
+
 const applyPendingActionsToAppointment = (
   appointment: Appointment,
   pendingActions: PendingScheduleAction[],
@@ -405,22 +410,36 @@ const applyPendingActionsToAppointment = (
         oportunidades: Array.isArray(changes.oportunidades)
           ? (changes.oportunidades as string[])
           : current.oportunidades,
+        sharedWith:
+          toStringArrayValue(changes.shared_with) ?? current.sharedWith,
         clientThermometer:
           toNumberValue(changes.client_thermometer) ??
           current.clientThermometer ??
           null,
       };
     }
+    if (action.actionType === "share") {
+      return {
+        ...current,
+        sharedWith:
+          toStringArrayValue(changes.shared_with) ?? current.sharedWith,
+      };
+    }
     if (action.actionType === "companyContact") {
       return current;
     }
+    if (action.actionType === "absence") {
+      return {
+        ...current,
+        status:
+          (toStringValue(changes.status) as Appointment["status"]) ?? "absent",
+        absenceReason:
+          toStringValue(changes.absence_reason) ?? current.absenceReason,
+        absenceNote: toStringValue(changes.absence_note) ?? current.absenceNote,
+      };
+    }
     return {
       ...current,
-      status:
-        (toStringValue(changes.status) as Appointment["status"]) ?? "absent",
-      absenceReason:
-        toStringValue(changes.absence_reason) ?? current.absenceReason,
-      absenceNote: toStringValue(changes.absence_note) ?? current.absenceNote,
     };
   }, appointment);
 
@@ -1140,7 +1159,7 @@ export default function AppointmentDetail() {
 
   const queuePendingActionOnly = useCallback(
     async (params: {
-      actionType: "checkIn" | "checkOut" | "absence";
+      actionType: "checkIn" | "checkOut" | "absence" | "share";
       changes: Record<string, unknown>;
     }) => {
       if (!appointment) {
@@ -1235,7 +1254,7 @@ export default function AppointmentDetail() {
 
   const createPendingAction = useCallback(
     async (params: {
-      actionType: "checkIn" | "checkOut" | "absence";
+      actionType: "checkIn" | "checkOut" | "absence" | "share";
       changes: Record<string, unknown>;
     }) => {
       if (!appointment) {
@@ -1647,8 +1666,7 @@ export default function AppointmentDetail() {
     if (item.id === appointment.id) return false;
     if (getAppointmentStatus(item) !== "agendado") return false;
     return (
-      new Date(item.startAt).getTime() <
-      new Date(appointment.startAt).getTime()
+      new Date(item.startAt).getTime() < new Date(appointment.startAt).getTime()
     );
   });
   const canCheckIn =
@@ -1847,6 +1865,45 @@ export default function AppointmentDetail() {
 
   const handleCloseShareModal = () => {
     setIsShareModalOpen(false);
+  };
+
+  const handleShareWithConsultant = async (
+    consultantName: string,
+    phone: string,
+  ) => {
+    if (!appointment) return;
+    setError(null);
+
+    const nextSharedWith = Array.from(
+      new Set([...(appointment.sharedWith ?? []), consultantName]),
+    );
+    const changes = { shared_with: nextSharedWith };
+    setAppointment((current) =>
+      current ? { ...current, sharedWith: nextSharedWith } : current,
+    );
+
+    try {
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        await queuePendingActionOnly({ actionType: "share", changes });
+      } else {
+        await updateAppointmentRemote(changes);
+      }
+    } catch (error) {
+      try {
+        await queuePendingActionOnly({ actionType: "share", changes });
+      } catch (pendingError) {
+        setError(
+          pendingError instanceof Error
+            ? pendingError.message
+            : error instanceof Error
+              ? error.message
+              : t("ui.nao_foi_possivel_salvar_o_compartilhamento"),
+        );
+      }
+    }
+
+    const url = buildWhatsAppUrl(phone, whatsappShareMessage);
+    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   const handleCloseCheckout = () => {
@@ -2333,8 +2390,8 @@ export default function AppointmentDetail() {
   const oportunidades = appointment.oportunidades ?? [];
   const showOportunidades = Boolean(
     appointment.checkOutAt ||
-      appointment.status === "done" ||
-      appointment.status === "atuado",
+    appointment.status === "done" ||
+    appointment.status === "atuado",
   );
   const showRegistrosRealizados = registrosRealizados.length > 0;
   const cancellationReason = appointment.absenceNote?.trim() ?? "";
@@ -2348,7 +2405,7 @@ export default function AppointmentDetail() {
   const thermometerValue = appointment.clientThermometer ?? 0;
   const atuacaoResultadoRaw = atuacao?.resultado?.trim() ?? "";
   const atuacaoResultadoLabel = atuacaoResultadoRaw
-    ? atuacaoResultadoLabels[atuacaoResultadoRaw] ?? atuacaoResultadoRaw
+    ? (atuacaoResultadoLabels[atuacaoResultadoRaw] ?? atuacaoResultadoRaw)
     : "";
   const showAtuacaoResultado = atuacaoResultadoRaw.length > 0;
   const atuacaoObservacao = atuacao?.observacao?.trim() ?? "";
@@ -2360,8 +2417,8 @@ export default function AppointmentDetail() {
   const showAtuacaoValor = typeof atuacaoValor === "number";
   const atuacaoMotivoPerda = atuacao?.motivo_perda?.trim() ?? "";
   const atuacaoMotivoPerdaLabel = atuacaoMotivoPerda
-    ? (t(`ui.lossReasons.${atuacaoMotivoPerda}`) as string) ??
-      atuacaoMotivoPerda
+    ? ((t(`ui.lossReasons.${atuacaoMotivoPerda}`) as string) ??
+      atuacaoMotivoPerda)
     : "";
   const showAtuacaoMotivoPerda = atuacaoMotivoPerda.length > 0;
   const selectedContact =
@@ -3637,20 +3694,32 @@ export default function AppointmentDetail() {
                   {t("ui.consultores_de_pecas")}
                 </p>
                 <div className="grid max-h-64 gap-2 overflow-y-auto pr-1">
-                  {partsConsultants.map((consultant) => (
-                    <a
-                      key={consultant.phone}
-                      href={buildWhatsAppUrl(
-                        consultant.phone,
-                        whatsappShareMessage,
-                      )}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="rounded-2xl border border-border bg-white px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-surface-muted"
-                    >
-                      {t(consultant.nameKey)}
-                    </a>
-                  ))}
+                  {partsConsultants.map((consultant) => {
+                    const consultantName = t(consultant.nameKey);
+                    const alreadyShared = Boolean(
+                      appointment.sharedWith?.includes(consultantName),
+                    );
+                    return (
+                      <button
+                        key={consultant.phone}
+                        type="button"
+                        onClick={() =>
+                          void handleShareWithConsultant(
+                            consultantName,
+                            consultant.phone,
+                          )
+                        }
+                        className="flex items-center justify-between gap-2 rounded-2xl border border-border bg-white px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-surface-muted"
+                      >
+                        <span>{consultantName}</span>
+                        {alreadyShared ? (
+                          <span className="rounded-full bg-success/15 px-2 py-1 text-[10px] font-semibold text-success">
+                            {t("ui.enviado")}
+                          </span>
+                        ) : null}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>

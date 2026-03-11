@@ -249,6 +249,11 @@ const toStringValue = (value: unknown) =>
 const toNumberValue = (value: unknown) =>
   typeof value === "number" && Number.isFinite(value) ? value : null;
 
+const toStringArrayValue = (value: unknown) =>
+  Array.isArray(value) && value.every((item) => typeof item === "string")
+    ? (value as string[])
+    : null;
+
 const applyPendingActionsToAppointments = (
   appointments: Appointment[],
   pendingActions: PendingScheduleAction[]
@@ -320,15 +325,33 @@ const applyPendingActionsToAppointments = (
           oportunidades: Array.isArray(changes.oportunidades)
             ? (changes.oportunidades as string[])
             : current.oportunidades,
+          sharedWith:
+            toStringArrayValue(changes.shared_with) ?? current.sharedWith,
         };
+      }
+      if (action.actionType === "share") {
+        return {
+          ...current,
+          sharedWith:
+            toStringArrayValue(changes.shared_with) ?? current.sharedWith,
+        };
+      }
+      if (action.actionType === "absence") {
+        return {
+          ...current,
+          status:
+            (toStringValue(changes.status) as Appointment["status"]) ??
+            "absent",
+          absenceReason:
+            toStringValue(changes.absence_reason) ?? current.absenceReason,
+          absenceNote: toStringValue(changes.absence_note) ?? current.absenceNote,
+        };
+      }
+      if (action.actionType === "companyContact") {
+        return current;
       }
       return {
         ...current,
-        status:
-          (toStringValue(changes.status) as Appointment["status"]) ?? "absent",
-        absenceReason:
-          toStringValue(changes.absence_reason) ?? current.absenceReason,
-        absenceNote: toStringValue(changes.absence_note) ?? current.absenceNote,
       };
     }, appointment);
 
