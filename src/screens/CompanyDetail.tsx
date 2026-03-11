@@ -118,7 +118,14 @@ export default function CompanyDetail() {
   const [companyLoading, setCompanyLoading] = useState(true);
   const [companyError, setCompanyError] = useState<string | null>(null);
   const [statusFilters, setStatusFilters] = useState<AppointmentStatus[]>(
-    () => ["em_execucao", "agendado"],
+    () => [
+      "em_execucao",
+      "agendado",
+      "expirado",
+      "concluido",
+      "atuado",
+      "cancelado",
+    ],
   );
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [companyTab, setCompanyTab] = useState<CompanyTab>("agendamentos");

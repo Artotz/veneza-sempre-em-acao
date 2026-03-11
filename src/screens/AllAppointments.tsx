@@ -202,7 +202,14 @@ export default function AllAppointments() {
   const [page, setPage] = useState(1);
   const [usingCache, setUsingCache] = useState(false);
   const [statusFilters, setStatusFilters] = useState<AppointmentStatus[]>(
-    () => ["em_execucao", "agendado"],
+    () => [
+      "em_execucao",
+      "agendado",
+      "expirado",
+      "concluido",
+      "atuado",
+      "cancelado",
+    ],
   );
   const [showSuggestions, setShowSuggestions] = useState(false);
 
