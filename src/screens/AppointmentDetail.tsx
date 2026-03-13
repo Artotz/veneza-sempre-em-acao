@@ -271,6 +271,10 @@ const partsConsultants = [
 
 const serviceConsultants = [
   {
+    nameKey: "ui.consultor_servicos_glaucia_lima",
+    phone: "+55 71 8107-5650",
+  },
+  {
     nameKey: "ui.consultor_servicos_ronaldo_carvalho",
     phone: "+55 85 99231-6668",
   },
@@ -3785,17 +3789,6 @@ export default function AppointmentDetail() {
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
-                  onClick={() => setShareTarget("pecas")}
-                  className={`rounded-full px-3 py-2 text-xs font-semibold ${
-                    shareTarget === "pecas"
-                      ? "bg-info text-white"
-                      : "bg-surface-muted text-foreground-muted"
-                  }`}
-                >
-                  {t("ui.pecas")}
-                </button>
-                <button
-                  type="button"
                   onClick={() => setShareTarget("servicos")}
                   className={`rounded-full px-3 py-2 text-xs font-semibold ${
                     shareTarget === "servicos"
@@ -3804,6 +3797,17 @@ export default function AppointmentDetail() {
                   }`}
                 >
                   {t("ui.servicos")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShareTarget("pecas")}
+                  className={`rounded-full px-3 py-2 text-xs font-semibold ${
+                    shareTarget === "pecas"
+                      ? "bg-info text-white"
+                      : "bg-surface-muted text-foreground-muted"
+                  }`}
+                >
+                  {t("ui.pecas")}
                 </button>
               </div>
 

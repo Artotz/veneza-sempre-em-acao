@@ -122,6 +122,7 @@ export const resources = {
         consultor_servicos_breno_silva: "Breno Silva",
         consultor_servicos_rick_jansen: "Rick Jansen",
         consultor_servicos_viviane_maia: "Viviane Maia",
+        consultor_servicos_glaucia_lima: "Gláucia Lima",
         consultor_servicos_ronaldo_carvalho: "Ronaldo Carvalho",
         consultor_servicos_daniel_silva: "Daniel Silva",
         consultor_servicos_cicero_sousa: "Cícero Sousa",
