@@ -15,7 +15,7 @@ const statusStyle: Record<AppointmentStatus, string> = {
   expirado: "bg-foreground/10 text-foreground-muted",
   em_execucao: "bg-info/15 text-info",
   concluido: "bg-success/15 text-success",
-  atuado: "bg-primary/15 text-primary",
+  atuado: "border border-violet-300 bg-violet-50 text-violet-900",
   cancelado: "bg-danger/15 text-danger",
 };
 

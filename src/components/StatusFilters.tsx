@@ -62,8 +62,8 @@ export function StatusFilters({
       status: "atuado" as const,
       label: t("ui.atuados"),
       count: summary.atuado,
-      baseClass: "bg-primary/15 text-primary",
-      ringClass: "ring-primary/30",
+      baseClass: "border border-violet-300 bg-violet-50 text-violet-900",
+      ringClass: "ring-violet-300/60",
     },
     {
       status: "cancelado" as const,
