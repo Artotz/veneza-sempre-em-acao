@@ -100,10 +100,17 @@ export const resources = {
         dados_da_empresa: "Dados da empresa",
         dados_do_apontamento: "Dados do apontamento",
         compartilhar_visita: "Compartilhar visita",
+        compartilhar_visita_indisponivel_offline: "Compartilhar visita",
         selecione_o_destino_do_compartilhamento:
           "Selecione o destino do compartilhamento.",
         consultores_de_pecas: "Consultores de peças",
         consultores_de_servicos: "Consultores de serviços",
+        carregando_contatos_do_compartilhamento:
+          "Carregando contatos do compartilhamento...",
+        nao_foi_possivel_carregar_contatos_do_compartilhamento:
+          "Não foi possível carregar os contatos do compartilhamento.",
+        nenhum_contato_de_compartilhamento_disponivel:
+          "Nenhum contato de compartilhamento disponível.",
         consultor_pecas_ana_rocha: "Ana Rocha",
         consultor_pecas_david_santana: "David Santana",
         consultor_pecas_diogo_satiro: "Diogo Sátiro",

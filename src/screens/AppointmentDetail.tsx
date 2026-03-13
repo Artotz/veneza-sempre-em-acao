@@ -43,7 +43,12 @@ import {
   mapCompany,
 } from "../lib/supabase";
 import { createSupabaseBrowserClient } from "../lib/supabaseClient";
-import type { Appointment, Company, CompanyContact } from "../lib/types";
+import type {
+  Appointment,
+  Company,
+  CompanyContact,
+  ShareContact,
+} from "../lib/types";
 import type { CapturePhotoResult } from "../services/camera";
 import { uploadApontamentoImage } from "../services/storageUploads";
 import type { OfflinePhotoMeta } from "../storage/offlinePhotos";
@@ -162,6 +167,19 @@ type OfflinePhotoPreview = OfflinePhotoMeta & {
   previewUrl: string | null;
 };
 
+type ShareContactRow = {
+  id: string;
+  name: string;
+  phone: string;
+  segment: "pecas" | "servicos";
+  state_uf?: string | null;
+  is_wtg?: boolean | null;
+  sort_order?: number | null;
+  active?: boolean | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
 const mediaKindLabels: Record<MediaKind, string> = {
   checkin: t("ui.check_in"),
   checkout: t("ui.check_out"),
@@ -206,12 +224,6 @@ const NEW_CONTACT_ID = "new-contact";
 const DASHBOARD_APPOINTMENT_BASE_URL =
   "https://venezafieldservicedashboard.vercel.app/cronograma";
 
-type ShareConsultant = {
-  nameKey: string;
-  phone?: string;
-  isWtg?: boolean;
-};
-
 const dddToStateKey: Record<string, string> = {
   "71": "ui.estado_bahia",
   "73": "ui.estado_bahia",
@@ -223,7 +235,20 @@ const dddToStateKey: Record<string, string> = {
   "87": "ui.estado_pernambuco",
 };
 
-const getConsultantStateKey = (phone?: string) => {
+const ufToStateKey: Record<string, string> = {
+  BA: "ui.estado_bahia",
+  CE: "ui.estado_ceara",
+  PB: "ui.estado_paraiba",
+  PE: "ui.estado_pernambuco",
+  RN: "ui.estado_rio_grande_do_norte",
+  SE: "ui.estado_sergipe",
+};
+
+const getConsultantStateKey = (phone?: string, stateUf?: string | null) => {
+  const normalizedUf = stateUf?.trim().toUpperCase();
+  if (normalizedUf && normalizedUf in ufToStateKey) {
+    return ufToStateKey[normalizedUf];
+  }
   if (!phone) return null;
   const digitsOnly = phone.replace(/\D/g, "");
   const ddd = digitsOnly.startsWith("55")
@@ -231,105 +256,6 @@ const getConsultantStateKey = (phone?: string) => {
     : digitsOnly.slice(0, 2);
   return dddToStateKey[ddd] ?? null;
 };
-
-const partsConsultants = [
-  {
-    nameKey: "ui.consultor_pecas_edmilson_almeida",
-    phone: "+55 71 8270-8091",
-  },
-  { nameKey: "ui.consultor_pecas_weldon_santos", phone: "+55 71 8187-0122" },
-  {
-    nameKey: "ui.consultor_pecas_elysson_paulo",
-    phone: "+55 71 8303-1821",
-    isWtg: true,
-  },
-  { nameKey: "ui.consultor_pecas_marcos_ferreira", phone: "+55 73 8178-1690" },
-  { nameKey: "ui.consultor_pecas_rannyel_borges", phone: "+55 83 9196-7885" },
-  { nameKey: "ui.consultor_pecas_breno_sousa", phone: "+55 85 9125-9600" },
-  {
-    nameKey: "ui.consultor_pecas_lorena_felix",
-    phone: "+55 85 9154-8084",
-    isWtg: true,
-  },
-  { nameKey: "ui.consultor_pecas_david_santana", phone: "+55 87 9195-4758" },
-  { nameKey: "ui.consultor_pecas_ana_rocha", phone: "+55 81 8940-1727" },
-  { nameKey: "ui.consultor_pecas_diogo_satiro", phone: "+55 81 9251-5560" },
-  {
-    nameKey: "ui.consultor_pecas_natalia_mendonca",
-    phone: "+55 81 9272-8634",
-  },
-  {
-    nameKey: "ui.consultor_pecas_marcelo_andrade",
-    phone: "+55 81 7329-0717",
-  },
-  {
-    nameKey: "ui.consultor_pecas_gabriela_almeida",
-    phone: "+55 81 8932-8232",
-    isWtg: true,
-  },
-] as const satisfies readonly ShareConsultant[];
-
-const serviceConsultants = [
-  {
-    nameKey: "ui.consultor_servicos_glaucia_lima",
-    phone: "+55 71 8107-5650",
-  },
-  {
-    nameKey: "ui.consultor_servicos_ronaldo_carvalho",
-    phone: "+55 85 99231-6668",
-  },
-  { nameKey: "ui.consultor_servicos_cicero_sousa", phone: "+55 85 99606-2359" },
-  {
-    nameKey: "ui.consultor_servicos_rhayssa_cavalcante",
-    phone: "+55 85 99221-2125",
-  },
-  {
-    nameKey: "ui.consultor_servicos_julio_mendonca",
-    phone: "+55 85 99202-9703",
-  },
-  {
-    nameKey: "ui.consultor_servicos_daniel_silva",
-    phone: "+55 84 98161-1420",
-  },
-  {
-    nameKey: "ui.consultor_servicos_deividy_carlos",
-    phone: "+55 79 8135-1948",
-  },
-  {
-    nameKey: "ui.consultor_servicos_ricardo_coutinho",
-    phone: "+55 81 99246-3966",
-  },
-  {
-    nameKey: "ui.consultor_servicos_gabriely_silva",
-    phone: "+55 81 9164-1862",
-  },
-  {
-    nameKey: "ui.consultor_servicos_vitor_almeida",
-    phone: "+55 81 99907-9499",
-  },
-  { nameKey: "ui.consultor_servicos_breno_silva", phone: "+55 81 99254-8938" },
-  { nameKey: "ui.consultor_servicos_rick_jansen", phone: "+55 81 97344-9143" },
-  {
-    nameKey: "ui.consultor_servicos_daiane_kellys",
-    phone: "+55 81 9490-3504",
-    isWtg: true,
-  },
-  {
-    nameKey: "ui.consultor_servicos_webster_herculano",
-    phone: "+55 81 9263-8141",
-    isWtg: true,
-  },
-  {
-    nameKey: "ui.consultor_servicos_luiz_vinicius",
-    phone: "+55 81 8943-4515",
-    isWtg: true,
-  },
-  {
-    nameKey: "ui.consultor_servicos_viviane_maia",
-    phone: "+55 87 99197-4159",
-  },
-  // { nameKey: "ui.consultor_servicos_mauro_augusto", phone: undefined },
-] as const satisfies readonly ShareConsultant[];
 
 const isImageMime = (mimeType?: string | null) =>
   Boolean(mimeType && mimeType.startsWith("image/"));
@@ -586,6 +512,11 @@ export default function AppointmentDetail() {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [shareTarget, setShareTarget] = useState<"pecas" | "servicos">(
     "servicos",
+  );
+  const [shareContacts, setShareContacts] = useState<ShareContact[]>([]);
+  const [shareContactsLoading, setShareContactsLoading] = useState(false);
+  const [shareContactsError, setShareContactsError] = useState<string | null>(
+    null,
   );
   const [registroTipo, setRegistroTipo] = useState<RegistroTipo | "">("");
   const [pendingRegistroTipo, setPendingRegistroTipo] =
@@ -1006,6 +937,67 @@ export default function AppointmentDetail() {
       window.removeEventListener("offline", updateStatus);
     };
   }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadShareContacts = async () => {
+      if (!isShareModalOpen) return;
+
+      setShareContactsError(null);
+
+      if (!isOnline) {
+        setShareContacts([]);
+        setShareContactsLoading(false);
+        return;
+      }
+
+      setShareContactsLoading(true);
+      const { data, error } = await supabase
+        .from("share_contacts")
+        .select(
+          "id, name, phone, segment, state_uf, is_wtg, sort_order, active, created_at, updated_at",
+        )
+        .eq("active", true)
+        .order("segment", { ascending: true })
+        .order("sort_order", { ascending: true, nullsFirst: false })
+        .order("name", { ascending: true });
+
+      if (!active) return;
+
+      if (error) {
+        setShareContacts([]);
+        setShareContactsError(error.message);
+        setShareContactsLoading(false);
+        return;
+      }
+
+      const mapped = (data ?? []).map((row) => {
+        const item = row as ShareContactRow;
+        return {
+          id: item.id,
+          name: item.name,
+          phone: item.phone,
+          segment: item.segment,
+          stateUf: item.state_uf ?? null,
+          isWtg: item.is_wtg ?? null,
+          sortOrder: item.sort_order ?? null,
+          active: item.active ?? null,
+          createdAt: item.created_at ?? null,
+          updatedAt: item.updated_at ?? null,
+        };
+      }) as ShareContact[];
+
+      setShareContacts(mapped);
+      setShareContactsLoading(false);
+    };
+
+    void loadShareContacts();
+
+    return () => {
+      active = false;
+    };
+  }, [isOnline, isShareModalOpen, supabase]);
 
   useEffect(() => {
     if (!selectedContactId || selectedContactId === NEW_CONTACT_ID) return;
@@ -1966,6 +1958,7 @@ export default function AppointmentDetail() {
   };
 
   const handleOpenShareModal = () => {
+    if (!isOnline) return;
     setShareTarget("servicos");
     setIsShareModalOpen(true);
   };
@@ -1978,37 +1971,28 @@ export default function AppointmentDetail() {
     consultantName: string,
     phone?: string,
   ) => {
-    if (!appointment || !phone) return;
+    if (!appointment || !phone || !isOnline) return;
     setError(null);
 
     const nextSharedWith = Array.from(
       new Set([...(appointment.sharedWith ?? []), consultantName]),
     );
     const changes = { shared_with: nextSharedWith };
+
+    try {
+      await updateAppointmentRemote(changes);
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : t("ui.nao_foi_possivel_salvar_o_compartilhamento"),
+      );
+      return;
+    }
+
     setAppointment((current) =>
       current ? { ...current, sharedWith: nextSharedWith } : current,
     );
-
-    try {
-      if (typeof navigator !== "undefined" && !navigator.onLine) {
-        await queuePendingActionOnly({ actionType: "share", changes });
-      } else {
-        await updateAppointmentRemote(changes);
-      }
-    } catch (error) {
-      try {
-        await queuePendingActionOnly({ actionType: "share", changes });
-      } catch (pendingError) {
-        setError(
-          pendingError instanceof Error
-            ? pendingError.message
-            : error instanceof Error
-              ? error.message
-              : t("ui.nao_foi_possivel_salvar_o_compartilhamento"),
-        );
-      }
-    }
-
     const url = buildWhatsAppUrl(phone, whatsappShareMessage);
     window.open(url, "_blank", "noopener,noreferrer");
   };
@@ -2585,8 +2569,9 @@ export default function AppointmentDetail() {
     (appointment.pendingSync && pendingItemBase === 0 ? 1 : 0);
   const dashboardVisitUrl = `${DASHBOARD_APPOINTMENT_BASE_URL}/${appointment.id}`;
   const whatsappShareMessage = `${t("ui.confira_essa_visita_que_fiz")}\n${dashboardVisitUrl}`;
-  const activeConsultants: readonly ShareConsultant[] =
-    shareTarget === "pecas" ? partsConsultants : serviceConsultants;
+  const activeConsultants = shareContacts.filter(
+    (consultant) => consultant.segment === shareTarget,
+  );
   const activeConsultantsTitle =
     shareTarget === "pecas"
       ? t("ui.consultores_de_pecas")
@@ -2969,9 +2954,16 @@ export default function AppointmentDetail() {
                 <button
                   type="button"
                   onClick={handleOpenShareModal}
-                  className="min-h-[56px] rounded-2xl bg-foreground px-2 py-3 text-center text-xs font-semibold leading-tight whitespace-normal break-words text-white transition"
+                  disabled={!isOnline}
+                  className={`min-h-[56px] rounded-2xl px-2 py-3 text-center text-xs font-semibold leading-tight whitespace-normal break-words transition ${
+                    isOnline
+                      ? "bg-foreground text-white"
+                      : "cursor-not-allowed bg-surface-muted text-foreground-muted"
+                  }`}
                 >
-                  {t("ui.compartilhar_visita")}
+                  {isOnline
+                    ? t("ui.compartilhar_visita")
+                    : t("ui.compartilhar_visita_indisponivel_offline")}
                 </button>
               ) : null}
             </div>
@@ -3816,21 +3808,38 @@ export default function AppointmentDetail() {
                   {activeConsultantsTitle}
                 </p>
                 <div className="grid max-h-64 gap-2 overflow-y-auto pr-1">
+                  {shareContactsLoading ? (
+                    <div className="rounded-2xl border border-border bg-white px-3 py-3 text-xs text-foreground-muted">
+                      {t("ui.carregando_contatos_do_compartilhamento")}
+                    </div>
+                  ) : null}
+                  {!shareContactsLoading && shareContactsError ? (
+                    <div className="rounded-2xl border border-danger/40 bg-danger/10 px-3 py-3 text-xs text-danger">
+                      {t("ui.nao_foi_possivel_carregar_contatos_do_compartilhamento")}
+                    </div>
+                  ) : null}
+                  {!shareContactsLoading &&
+                  !shareContactsError &&
+                  activeConsultants.length === 0 ? (
+                    <div className="rounded-2xl border border-border bg-white px-3 py-3 text-xs text-foreground-muted">
+                      {t("ui.nenhum_contato_de_compartilhamento_disponivel")}
+                    </div>
+                  ) : null}
                   {activeConsultants.map((consultant) => {
-                    const consultantName = t(consultant.nameKey);
                     const consultantStateKey = getConsultantStateKey(
                       consultant.phone,
+                      consultant.stateUf,
                     );
                     const alreadyShared = Boolean(
-                      appointment.sharedWith?.includes(consultantName),
+                      appointment.sharedWith?.includes(consultant.name),
                     );
                     return (
                       <button
-                        key={`${consultant.nameKey}-${consultant.phone ?? "no-phone"}`}
+                        key={consultant.id}
                         type="button"
                         onClick={() =>
                           void handleShareWithConsultant(
-                            consultantName,
+                            consultant.name,
                             consultant.phone,
                           )
                         }
@@ -3838,7 +3847,7 @@ export default function AppointmentDetail() {
                         className="flex items-center justify-between gap-2 rounded-2xl border border-border bg-white px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-surface-muted disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-foreground-muted"
                       >
                         <span className="flex items-center gap-2 text-left">
-                          <span>{consultantName}</span>
+                          <span>{consultant.name}</span>
                           {consultant.isWtg ? (
                             <span className="rounded-full bg-surface-muted px-2 py-1 text-[10px] font-semibold text-foreground-muted">
                               {t("ui.wtg")}

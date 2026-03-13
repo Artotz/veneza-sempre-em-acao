@@ -56,6 +56,21 @@ export type CompanyContact = {
   createdAt?: string | null;
 };
 
+export type ShareContactSegment = "pecas" | "servicos";
+
+export type ShareContact = {
+  id: string;
+  name: string;
+  phone: string;
+  segment: ShareContactSegment;
+  stateUf?: string | null;
+  isWtg?: boolean | null;
+  sortOrder?: number | null;
+  active?: boolean | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+};
+
 export type Company = {
   id: string;
   name: string;
