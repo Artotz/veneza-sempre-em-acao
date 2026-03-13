@@ -206,50 +206,73 @@ const NEW_CONTACT_ID = "new-contact";
 const DASHBOARD_APPOINTMENT_BASE_URL =
   "https://venezafieldservicedashboard.vercel.app/cronograma";
 
+type ShareConsultant = {
+  nameKey: string;
+  phone?: string;
+  isWtg?: boolean;
+};
+
+const dddToStateKey: Record<string, string> = {
+  "71": "ui.estado_bahia",
+  "73": "ui.estado_bahia",
+  "79": "ui.estado_sergipe",
+  "81": "ui.estado_pernambuco",
+  "83": "ui.estado_paraiba",
+  "84": "ui.estado_rio_grande_do_norte",
+  "85": "ui.estado_ceara",
+  "87": "ui.estado_pernambuco",
+};
+
+const getConsultantStateKey = (phone?: string) => {
+  if (!phone) return null;
+  const digitsOnly = phone.replace(/\D/g, "");
+  const ddd = digitsOnly.startsWith("55")
+    ? digitsOnly.slice(2, 4)
+    : digitsOnly.slice(0, 2);
+  return dddToStateKey[ddd] ?? null;
+};
+
 const partsConsultants = [
-  { nameKey: "ui.consultor_pecas_ana_rocha", phone: "+55 81 8940-1727" },
-  { nameKey: "ui.consultor_pecas_david_santana", phone: "+55 87 9195-4758" },
-  { nameKey: "ui.consultor_pecas_diogo_satiro", phone: "+55 81 9251-5560" },
   {
     nameKey: "ui.consultor_pecas_edmilson_almeida",
     phone: "+55 71 8270-8091",
   },
+  { nameKey: "ui.consultor_pecas_weldon_santos", phone: "+55 71 8187-0122" },
+  {
+    nameKey: "ui.consultor_pecas_elysson_paulo",
+    phone: "+55 71 8303-1821",
+    isWtg: true,
+  },
+  { nameKey: "ui.consultor_pecas_marcos_ferreira", phone: "+55 73 8178-1690" },
+  { nameKey: "ui.consultor_pecas_rannyel_borges", phone: "+55 83 9196-7885" },
+  { nameKey: "ui.consultor_pecas_breno_sousa", phone: "+55 85 9125-9600" },
+  {
+    nameKey: "ui.consultor_pecas_lorena_felix",
+    phone: "+55 85 9154-8084",
+    isWtg: true,
+  },
+  { nameKey: "ui.consultor_pecas_david_santana", phone: "+55 87 9195-4758" },
+  { nameKey: "ui.consultor_pecas_ana_rocha", phone: "+55 81 8940-1727" },
+  { nameKey: "ui.consultor_pecas_diogo_satiro", phone: "+55 81 9251-5560" },
   {
     nameKey: "ui.consultor_pecas_natalia_mendonca",
     phone: "+55 81 9272-8634",
   },
-  { nameKey: "ui.consultor_pecas_rannyel_borges", phone: "+55 83 9196-7885" },
-  { nameKey: "ui.consultor_pecas_weldon_santos", phone: "+55 71 8187-0122" },
-  { nameKey: "ui.consultor_pecas_marcos_ferreira", phone: "+55 73 8178-1690" },
   {
     nameKey: "ui.consultor_pecas_marcelo_andrade",
     phone: "+55 81 7329-0717",
   },
-  { nameKey: "ui.consultor_pecas_breno_sousa", phone: "+55 85 9125-9600" },
-] as const;
+  {
+    nameKey: "ui.consultor_pecas_gabriela_almeida",
+    phone: "+55 81 8932-8232",
+    isWtg: true,
+  },
+] as const satisfies readonly ShareConsultant[];
 
 const serviceConsultants = [
   {
-    nameKey: "ui.consultor_servicos_ricardo_coutinho",
-    phone: "+55 81 99246-3966",
-  },
-  {
-    nameKey: "ui.consultor_servicos_vitor_almeida",
-    phone: "+55 81 99907-9499",
-  },
-  { nameKey: "ui.consultor_servicos_breno_silva", phone: "+55 81 99254-8938" },
-  { nameKey: "ui.consultor_servicos_rick_jansen", phone: "+55 81 97344-9143" },
-  {
-    nameKey: "ui.consultor_servicos_viviane_maia",
-    phone: "+55 87 99197-4159",
-  },
-  {
     nameKey: "ui.consultor_servicos_ronaldo_carvalho",
     phone: "+55 85 99231-6668",
-  },
-  {
-    nameKey: "ui.consultor_servicos_daniel_silva",
-    phone: "+55 84 98161-1420",
   },
   { nameKey: "ui.consultor_servicos_cicero_sousa", phone: "+55 85 99606-2359" },
   {
@@ -260,7 +283,49 @@ const serviceConsultants = [
     nameKey: "ui.consultor_servicos_julio_mendonca",
     phone: "+55 85 99202-9703",
   },
-] as const;
+  {
+    nameKey: "ui.consultor_servicos_daniel_silva",
+    phone: "+55 84 98161-1420",
+  },
+  {
+    nameKey: "ui.consultor_servicos_deividy_carlos",
+    phone: "+55 79 8135-1948",
+  },
+  {
+    nameKey: "ui.consultor_servicos_ricardo_coutinho",
+    phone: "+55 81 99246-3966",
+  },
+  {
+    nameKey: "ui.consultor_servicos_gabriely_silva",
+    phone: "+55 81 9164-1862",
+  },
+  {
+    nameKey: "ui.consultor_servicos_vitor_almeida",
+    phone: "+55 81 99907-9499",
+  },
+  { nameKey: "ui.consultor_servicos_breno_silva", phone: "+55 81 99254-8938" },
+  { nameKey: "ui.consultor_servicos_rick_jansen", phone: "+55 81 97344-9143" },
+  {
+    nameKey: "ui.consultor_servicos_daiane_kellys",
+    phone: "+55 81 9490-3504",
+    isWtg: true,
+  },
+  {
+    nameKey: "ui.consultor_servicos_webster_herculano",
+    phone: "+55 81 9263-8141",
+    isWtg: true,
+  },
+  {
+    nameKey: "ui.consultor_servicos_luiz_vinicius",
+    phone: "+55 81 8943-4515",
+    isWtg: true,
+  },
+  {
+    nameKey: "ui.consultor_servicos_viviane_maia",
+    phone: "+55 87 99197-4159",
+  },
+  // { nameKey: "ui.consultor_servicos_mauro_augusto", phone: undefined },
+] as const satisfies readonly ShareConsultant[];
 
 const isImageMime = (mimeType?: string | null) =>
   Boolean(mimeType && mimeType.startsWith("image/"));
@@ -1907,9 +1972,9 @@ export default function AppointmentDetail() {
 
   const handleShareWithConsultant = async (
     consultantName: string,
-    phone: string,
+    phone?: string,
   ) => {
-    if (!appointment) return;
+    if (!appointment || !phone) return;
     setError(null);
 
     const nextSharedWith = Array.from(
@@ -2516,7 +2581,7 @@ export default function AppointmentDetail() {
     (appointment.pendingSync && pendingItemBase === 0 ? 1 : 0);
   const dashboardVisitUrl = `${DASHBOARD_APPOINTMENT_BASE_URL}/${appointment.id}`;
   const whatsappShareMessage = `${t("ui.confira_essa_visita_que_fiz")}\n${dashboardVisitUrl}`;
-  const activeConsultants =
+  const activeConsultants: readonly ShareConsultant[] =
     shareTarget === "pecas" ? partsConsultants : serviceConsultants;
   const activeConsultantsTitle =
     shareTarget === "pecas"
@@ -3749,12 +3814,15 @@ export default function AppointmentDetail() {
                 <div className="grid max-h-64 gap-2 overflow-y-auto pr-1">
                   {activeConsultants.map((consultant) => {
                     const consultantName = t(consultant.nameKey);
+                    const consultantStateKey = getConsultantStateKey(
+                      consultant.phone,
+                    );
                     const alreadyShared = Boolean(
                       appointment.sharedWith?.includes(consultantName),
                     );
                     return (
                       <button
-                        key={consultant.phone}
+                        key={`${consultant.nameKey}-${consultant.phone ?? "no-phone"}`}
                         type="button"
                         onClick={() =>
                           void handleShareWithConsultant(
@@ -3762,14 +3830,29 @@ export default function AppointmentDetail() {
                             consultant.phone,
                           )
                         }
-                        className="flex items-center justify-between gap-2 rounded-2xl border border-border bg-white px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-surface-muted"
+                        disabled={!consultant.phone}
+                        className="flex items-center justify-between gap-2 rounded-2xl border border-border bg-white px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-surface-muted disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-foreground-muted"
                       >
-                        <span>{consultantName}</span>
-                        {alreadyShared ? (
-                          <span className="rounded-full bg-success/15 px-2 py-1 text-[10px] font-semibold text-success">
-                            {t("ui.enviado")}
-                          </span>
-                        ) : null}
+                        <span className="flex items-center gap-2 text-left">
+                          <span>{consultantName}</span>
+                          {consultant.isWtg ? (
+                            <span className="rounded-full bg-surface-muted px-2 py-1 text-[10px] font-semibold text-foreground-muted">
+                              {t("ui.wtg")}
+                            </span>
+                          ) : null}
+                          {consultantStateKey ? (
+                            <span className="rounded-full bg-info/10 px-2 py-1 text-[10px] font-semibold text-info">
+                              {t(consultantStateKey)}
+                            </span>
+                          ) : null}
+                        </span>
+                        <span className="flex items-center gap-2">
+                          {alreadyShared ? (
+                            <span className="rounded-full bg-success/15 px-2 py-1 text-[10px] font-semibold text-success">
+                              {t("ui.enviado")}
+                            </span>
+                          ) : null}
+                        </span>
                       </button>
                     );
                   })}
